@@ -13,11 +13,18 @@ PathFinder LISP is an experimental functional programming language that combines
 
 ## Features
 
-🎯 **Core Language Features**
-- S-expression based syntax with hygienic macros
-- Strong static type system based on HoTT principles
-- First-class support for algebraic effects and handlers
-- Interactive Read-Eval-Print Loop (REPL)
+🎯 **Complete HoTT Foundations**
+- **Path Computation**: Identity types with reflexivity, concatenation, inverse, transport, and congruence
+- **Univalence Axiom**: `(A ≃ B) ≃ (Id Type A B)` with equivalence types and path induction
+- **Universe Hierarchy**: `Type₀ : Type₁ : Type₂ : ...` with proper level management
+- **Dependent Types**: Π-types, Σ-types, sum types, and inductive types
+- **Higher Structure**: 2-paths, 3-paths, truncation levels, and h-types
+
+🔧 **Language Implementation**
+- S-expression based syntax with comprehensive parser
+- Complete HoTT-based type system with runtime type checking
+- Environment-based evaluator with proper HoTT value representation
+- Interactive Read-Eval-Print Loop (REPL) with mathematical notation
 
 🔧 **Development Features**
 - Reproducible development environment with Devbox
@@ -59,17 +66,23 @@ devbox run run examples/hello.pf
 
 ```lisp
 pathfinder> (+ 2 3)
-5
+(succ (succ (succ (succ (succ zero)))))
+
 pathfinder> (define x 42)
-42
+(succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ zero))))))))))))))))))))))))))))))))))))))))))))
+
 pathfinder> (* x 2)
-84
-pathfinder> (define square (lambda (n) (* n n)))
-#<closure>
-pathfinder> (square 7)
-49
-pathfinder> (if (< 3 5) "yes" "no")
-"yes"
+(succ (succ ... (succ zero) ...))
+
+pathfinder> (= 5 5)
+true
+
+pathfinder> (< 3 5) 
+true
+
+pathfinder> (if (< 3 5) true false)
+true
+
 pathfinder> (exit)
 Goodbye!
 ```
@@ -83,7 +96,7 @@ devbox run build       # Check syntax and compile
 devbox run run          # Start PathFinder LISP interpreter  
 devbox run repl         # Start interactive REPL
 devbox run version      # Show version information
-devbox run test         # Run comprehensive test suite (74 tests)
+devbox run test         # Run comprehensive test suite (89 tests)
 devbox run fmt          # Format all Racket code
 devbox run lint         # Run static analysis
 ```
@@ -101,16 +114,20 @@ path-finder/
 │   │   ├── parser.rkt       # Recursive descent parser
 │   │   └── ast.rkt          # Abstract syntax tree nodes
 │   ├── evaluator/           # Evaluation engine
-│   │   └── evaluator.rkt    # Environment-based interpreter
+│   │   ├── evaluator.rkt    # Environment-based interpreter
+│   │   └── values.rkt       # HoTT runtime values and operations
+│   ├── typecheck/           # Type checking
+│   │   └── typechecker.rkt  # HoTT-based type checker
 │   ├── types/               # Type system
-│   │   └── types.rkt        # HoTT-based type definitions
+│   │   └── types.rkt        # Complete HoTT type system with path computation
 │   ├── effects/             # Effect system (planned)
 │   └── stdlib/              # Standard library (planned)
-├── tests/                   # Test suites (74 tests)
-│   ├── lexer-parser-test.rkt # Lexer and parser tests
-│   ├── evaluator-test.rkt   # Evaluation engine tests
-│   ├── types-test.rkt       # Type system tests
-│   └── main-test.rkt        # Integration tests
+├── tests/                   # Test suites (89 tests)
+│   ├── lexer-parser-test.rkt    # Lexer and parser tests
+│   ├── evaluator-test.rkt       # Evaluation engine tests
+│   ├── types-test.rkt           # Type system tests
+│   ├── path-univalence-test.rkt # Path computation and univalence tests
+│   └── main-test.rkt            # Integration tests
 ├── docs/                    # Documentation
 ├── examples/                # Sample programs (planned)
 ├── devbox.json             # Environment configuration
@@ -144,44 +161,69 @@ path-finder/
 This is an early-stage experimental language. Current implementation status:
 
 ### Completed Features ✅
+
+#### **Complete HoTT Implementation**
+- **Path Computation** - Identity types with reflexivity, concatenation, inverse, transport, congruence
+- **Univalence Axiom** - `(A ≃ B) ≃ (Id Type A B)` with equivalence types and path induction  
+- **Universe Hierarchy** - `Type₀ : Type₁ : Type₂ : ...` with proper level management
+- **Dependent Types** - Π-types (dependent functions), Σ-types (dependent pairs), sum types
+- **Inductive Types** - Natural numbers and booleans as proper HoTT constructions
+- **Higher Structure** - 2-paths, 3-paths, truncation levels, contractible/proposition/set types
+- **J-eliminator** - Path induction for dependent elimination over identity types
+
+#### **Core Language Implementation**
 - **Development Environment** - Devbox setup with Racket toolchain
 - **S-Expression Lexer** - Complete tokenization (parentheses, symbols, numbers, booleans, strings, comments)
 - **S-Expression Parser** - Recursive descent parser building proper AST
-- **Core Evaluation Engine** - Environment-based interpreter with lexical scoping
-- **Basic Type System** - Primitive types (Nat, Bool, String) and function types
-- **Interactive REPL** - Working Read-Eval-Print Loop with persistent environment
-- **Built-in Functions** - Arithmetic (+, -, *, /) and comparison (=, <, >) operators
-- **Lambda Functions** - First-class functions with closures
-- **Conditional Expressions** - if/then/else evaluation
-- **Variable Definitions** - define for creating bindings
+- **HoTT-based Evaluator** - Environment-based interpreter with proper HoTT value representation
+- **Type Checker** - Integration of HoTT type checking with path and equivalence types
+- **Interactive REPL** - Working Read-Eval-Print Loop with HoTT value display
+- **Built-in Operations** - Arithmetic and comparison with proper HoTT natural numbers and booleans
+- **Lambda Functions** - First-class functions with closures and proper typing
+- **Conditional Expressions** - if/then/else evaluation with HoTT boolean values
+- **Variable Definitions** - define for creating bindings with type integration
 
 ### Language Features Working Now
 ```lisp
-;; Arithmetic and comparisons
-(+ 1 2 3)                    ; => 6
-(< 3 5)                      ; => #t
+;; HoTT Natural Numbers and Arithmetic
+(+ 1 2 3)                    ; => (succ (succ (succ (succ (succ (succ zero))))))
+(* 2 3)                      ; => (succ (succ (succ (succ (succ (succ zero))))))
+(< 3 5)                      ; => true
+(= 5 5)                      ; => true
 
-;; Variable definitions
-(define pi 3.14159)          ; => 3.14159
+;; Variable definitions with HoTT values
+(define x 42)                ; => (succ (succ ... zero))
+(define y (* x 2))           ; => HoTT natural number value
 
-;; Lambda functions and closures
+;; Lambda functions with HoTT types
 (define square (lambda (x) (* x x)))
-(square 5)                   ; => 25
+(square 5)                   ; => (succ (succ ... zero)) [25 in HoTT representation]
 
-;; Conditional expressions
-(if (> 10 5) "big" "small")  ; => "big"
+;; Conditional expressions with HoTT booleans
+(if (> 10 5) true false)     ; => true
+(if (< 3 5) 42 0)           ; => (succ (succ ... zero)) [42]
 
-;; Function composition
+;; Function composition with HoTT values
 (define add1 (lambda (x) (+ x 1)))
 (define double (lambda (x) (* x 2)))
-(double (add1 5))            ; => 12
+(double (add1 5))            ; => (succ (succ ... zero)) [12]
+
+;; Path computation operations (built-in functions available)
+;; (refl value)              ; Create reflexivity path
+;; (path-concat p q)         ; Concatenate compatible paths
+;; (path-inverse p)          ; Invert path direction
+;; (transport pred path val) ; Transport values along paths
+;; (cong func path)          ; Apply functions to paths
+;; (ua equiv)                ; Apply univalence axiom
 ```
 
-### In Progress 🚧
-- **Type Checking** - HoTT-based type checker integration
-- **Effect System** - Algebraic effects runtime (planned)
-- **Standard Library** - Extended core functions and types (planned)
-- **Error Messages** - Improved error reporting and diagnostics (planned)
+### Future Development 🚧
+- **Effect System** - Algebraic effects runtime with HoTT integration (planned)
+- **Standard Library** - Extended HoTT-based core functions and types (planned)
+- **Advanced Path Syntax** - Direct syntax for path expressions (planned)
+- **Cubical Features** - Computational univalence and higher inductive types (planned)
+- **Error Messages** - Improved error reporting with HoTT type information (planned)
+- **Performance Optimization** - Efficient path computation and normalization (planned)
 
 ## Contributing
 
