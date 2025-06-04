@@ -58,9 +58,18 @@ devbox run run examples/hello.pf
 ### Example Session
 
 ```lisp
+pathfinder> (+ 2 3)
+5
 pathfinder> (define x 42)
-pathfinder> (+ x 8)
-50
+42
+pathfinder> (* x 2)
+84
+pathfinder> (define square (lambda (n) (* n n)))
+#<closure>
+pathfinder> (square 7)
+49
+pathfinder> (if (< 3 5) "yes" "no")
+"yes"
 pathfinder> (exit)
 Goodbye!
 ```
@@ -74,27 +83,40 @@ devbox run build       # Check syntax and compile
 devbox run run          # Start PathFinder LISP interpreter  
 devbox run repl         # Start interactive REPL
 devbox run version      # Show version information
-devbox run test         # Run test suite
+devbox run test         # Run comprehensive test suite (74 tests)
+devbox run fmt          # Format all Racket code
+devbox run lint         # Run static analysis
 ```
 
 ### Project Structure
 
 ```
 path-finder/
-├── src/                    # Core source code
-│   ├── main.rkt           # Main entry point
-│   ├── lexer/             # Lexical analysis
-│   ├── parser/            # Syntax analysis  
-│   ├── types/             # Type system
-│   ├── effects/           # Effect system
-│   ├── evaluator/         # Evaluation engine
-│   └── stdlib/            # Standard library
-├── tests/                 # Test suites
-├── docs/                  # Documentation
-├── examples/              # Sample programs
-├── devbox.json           # Environment configuration
-├── info.rkt              # Package metadata
-└── README.md             # This file
+├── src/                      # Core source code
+│   ├── main.rkt             # Main entry point and CLI
+│   ├── lexer/               # Lexical analysis
+│   │   ├── lexer.rkt        # S-expression tokenizer
+│   │   └── tokens.rkt       # Token definitions
+│   ├── parser/              # Syntax analysis  
+│   │   ├── parser.rkt       # Recursive descent parser
+│   │   └── ast.rkt          # Abstract syntax tree nodes
+│   ├── evaluator/           # Evaluation engine
+│   │   └── evaluator.rkt    # Environment-based interpreter
+│   ├── types/               # Type system
+│   │   └── types.rkt        # HoTT-based type definitions
+│   ├── effects/             # Effect system (planned)
+│   └── stdlib/              # Standard library (planned)
+├── tests/                   # Test suites (74 tests)
+│   ├── lexer-parser-test.rkt # Lexer and parser tests
+│   ├── evaluator-test.rkt   # Evaluation engine tests
+│   ├── types-test.rkt       # Type system tests
+│   └── main-test.rkt        # Integration tests
+├── docs/                    # Documentation
+├── examples/                # Sample programs (planned)
+├── devbox.json             # Environment configuration
+├── Makefile                # Build automation
+├── info.rkt                # Package metadata
+└── README.md               # This file
 ```
 
 ## Language Design Goals
@@ -121,12 +143,45 @@ path-finder/
 
 This is an early-stage experimental language. Current implementation status:
 
-- ✅ **Development Environment** - Devbox setup complete
-- ✅ **Basic Infrastructure** - REPL and CLI framework
-- 🚧 **Core Parser** - S-expression parsing (in progress)
-- 🚧 **Type System** - HoTT-based type checker (planned)
-- 🚧 **Effect System** - Algebraic effects runtime (planned)
-- 🚧 **Standard Library** - Core functions and types (planned)
+### Completed Features ✅
+- **Development Environment** - Devbox setup with Racket toolchain
+- **S-Expression Lexer** - Complete tokenization (parentheses, symbols, numbers, booleans, strings, comments)
+- **S-Expression Parser** - Recursive descent parser building proper AST
+- **Core Evaluation Engine** - Environment-based interpreter with lexical scoping
+- **Basic Type System** - Primitive types (Nat, Bool, String) and function types
+- **Interactive REPL** - Working Read-Eval-Print Loop with persistent environment
+- **Built-in Functions** - Arithmetic (+, -, *, /) and comparison (=, <, >) operators
+- **Lambda Functions** - First-class functions with closures
+- **Conditional Expressions** - if/then/else evaluation
+- **Variable Definitions** - define for creating bindings
+
+### Language Features Working Now
+```lisp
+;; Arithmetic and comparisons
+(+ 1 2 3)                    ; => 6
+(< 3 5)                      ; => #t
+
+;; Variable definitions
+(define pi 3.14159)          ; => 3.14159
+
+;; Lambda functions and closures
+(define square (lambda (x) (* x x)))
+(square 5)                   ; => 25
+
+;; Conditional expressions
+(if (> 10 5) "big" "small")  ; => "big"
+
+;; Function composition
+(define add1 (lambda (x) (+ x 1)))
+(define double (lambda (x) (* x 2)))
+(double (add1 5))            ; => 12
+```
+
+### In Progress 🚧
+- **Type Checking** - HoTT-based type checker integration
+- **Effect System** - Algebraic effects runtime (planned)
+- **Standard Library** - Extended core functions and types (planned)
+- **Error Messages** - Improved error reporting and diagnostics (planned)
 
 ## Contributing
 
