@@ -2,7 +2,7 @@
   "packages": [
     "git",
     "gnumake",
-    "racket-minimal@latest",
+    "racket@latest",
     "nodejs@20"
   ],
   "shell": {
@@ -12,23 +12,29 @@
       "echo '   Node.js version: '$(node --version)",
       "echo '   Project: PathFinder LISP - HoTT-based functional language'",
       "echo '   Commands:'",
-      "echo '     devbox run build       # Check syntax'",
-      "echo '     racket src/main.rkt     # Run interpreter'",
-      "echo '     devbox run test        # Run tests (when implemented)'",
-      "echo '     npm run tasks          # View project tasks'",
-      "echo '     npm run next           # Get next task to work on'",
-      "echo '     devbox run setup       # Install dependencies'",
+      "echo '     devbox run build       # Check syntax and compile'",
+      "echo '     devbox run test        # Run comprehensive test suite'",
+      "echo '     devbox run fmt         # Format all Racket code'",
+      "echo '     devbox run lint        # Run static analysis'",
+      "echo '     devbox run repl        # Start interactive REPL'",
+      "echo '     task-master next       # Get next development task'",
       "echo ''"
     ],
     "scripts": {
-      "build":        "racket -c src/main.rkt",
+      "setup":        "raco pkg install --auto rackunit typed-racket",
+      "build":        "raco setup . && raco check-deps src/",
       "run":          "racket src/main.rkt",
-      "repl":         "racket src/main.rkt --interactive",
+      "repl":         "racket src/main.rkt --interactive", 
       "version":      "racket src/main.rkt --version",
-      "test":         "find tests -name '*.rkt' -exec racket {} \\;",
-      "docs":         "echo 'Documentation generation requires full Racket installation'",
-      "setup":        "npm install",
-      "install-deps": "npm install",
+      "test":         "raco test src/ tests/",
+      "test-coverage": "raco cover src/ tests/",
+      "fmt":          "find src tests -name '*.rkt' -exec raco fmt -i {} \\;",
+      "check-fmt":    "find src tests -name '*.rkt' -exec raco fmt --check {} \\;",
+      "lint":         "raco check-deps src/ && find src tests -name '*.rkt' -exec raco expand {} \\; > /dev/null",
+      "docs":         "raco scribble docs/manual.scrbl",
+      "clean":        "find . -name 'compiled' -type d -exec rm -rf {} + 2>/dev/null || true",
+      "ci":           "devbox run build && devbox run check-fmt && devbox run lint && devbox run test",
+      "install-deps": "devbox run setup",
       "tasks":        "npm run tasks",
       "next-task":    "npm run next", 
       "task-status":  "npm run task"
@@ -36,6 +42,7 @@
   },
   "env": {
     "PATHFINDER_VERSION":     "0.1.0",
-    "RACKET_COLLECTION_PATH": "./src"
+    "RACKET_COLLECTION_PATH": "./src",
+    "PLTCOLLECTS":           "./src:$PLTCOLLECTS"
   }
 }

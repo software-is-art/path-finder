@@ -1,0 +1,8 @@
+{
+  "max-width": 80,
+  "indent": 2,
+  "preserve-case": true,
+  "format-strings": true,
+  "sort-requires": true,
+  "group-requires": true
+}

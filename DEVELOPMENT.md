@@ -1,91 +1,58 @@
-# PathFinder LISP Development Environment
+# PathFinder LISP Development Guide
 
-## Implementation Language Choice
-
-**Primary Language:** Racket (`#lang racket/base`)  
-**Alternative:** Rhombus with shrubbery/forest macros
-
-### Rationale
-
-PathFinder LISP is implemented in Racket for the following reasons:
-
-1. **Native S-expression Support** - Racket's homoiconic nature makes parsing and AST manipulation natural
-2. **Advanced Macro System** - Essential for implementing PathFinder's hygienic macro system
-3. **Language-Oriented Programming** - Racket excels at creating new languages
-4. **Typed Racket Integration** - Provides foundation for advanced type system implementation
-5. **Built-in REPL** - Simplifies interactive development environment
-6. **Syntax Manipulation Tools** - Excellent support for metaprogramming
-
-### Rhombus Alternative
-
-If using Rhombus:
-- Leverage shrubbery/forest macros for more flexible syntax manipulation
-- Better support for syntax experimentation and language evolution
-- More powerful macro system for domain-specific constructs
-
-## Development Environment Setup
-
-### Prerequisites
-
-1. **Devbox** - Install from https://www.jetify.com/devbox/
-   ```bash
-   curl -fsSL https://get.jetify.com/devbox | bash
-   ```
-
-2. **Development Tools** (optional, but recommended)
-   - **DrRacket** (full Racket IDE - install separately if needed)
-   - **VS Code** with Racket LSP extension
-   - **Emacs** with racket-mode
-   - **Vim/Neovim** with vim-racket
-
-### Quick Start
-
-1. **Clone and Enter Environment**
-   ```bash
-   git clone <repository-url>
-   cd path-finder
-   devbox shell
-   ```
-
-2. **Install Dependencies**
-   ```bash
-   devbox run setup
-   # Installs task-master-ai and other Node.js dependencies
-   ```
-
-3. **Verify Installation**
-   ```bash
-   devbox run version
-   # Should output: PathFinder LISP v0.1.0
-   
-   npm run tasks
-   # Should show project task dashboard
-   ```
-
-4. **Run the Interpreter**
-   ```bash
-   devbox run repl
-   ```
-
-### Available Commands
+## Quick Start
 
 ```bash
-# Core development commands
+# Setup development environment
+make dev-setup
+
+# Development workflow
+make check    # Quick lint + test
+make ci       # Full CI pipeline
+```
+
+## Development Environment
+
+### Prerequisites
+- [Devbox](https://www.jetify.com/devbox/) for reproducible environment
+- Git for version control
+
+### Environment Setup
+```bash
+# Enter development environment
+devbox shell
+
+# Install Racket dependencies
+devbox run setup
+
+# Install git hooks
+make install-hooks
+```
+
+## Available Commands
+
+### Core Development
+```bash
 devbox run build       # Check syntax and compile
-devbox run run          # Start PathFinder LISP interpreter
-devbox run repl         # Start interactive REPL
-devbox run version      # Show version information
+devbox run test        # Run comprehensive test suite  
+devbox run fmt         # Format all Racket code
+devbox run lint        # Run static analysis
+devbox run repl        # Start interactive REPL
+```
 
-# Task management commands
-npm run tasks           # View project task dashboard
-npm run next            # Show next task to work on
-npm run task <id>       # Show specific task details
-npm run status <id> <status>  # Update task status
-npm run expand <id>     # Break down task into subtasks
+### Code Quality
+```bash
+devbox run check-fmt   # Check formatting without changes
+devbox run ci          # Full CI pipeline
+devbox run clean       # Remove compiled files
+```
 
-# Testing and setup
-devbox run test         # Run test suite (when implemented)
-devbox run setup        # Install dependencies and setup environment
+### Convenience (via Makefile)
+```bash
+make help              # Show all available commands
+make check             # Quick development check
+make dev-setup         # Complete development setup
+make release-check     # Full release validation
 ```
 
 ### Project Structure

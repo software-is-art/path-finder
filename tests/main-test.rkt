@@ -1,60 +1,33 @@
 #lang racket/base
 
-(require "../src/main.rkt")
+(require "../src/main.rkt"
+         rackunit)
 
-;; PathFinder LISP Test Suite
-;; Basic tests to verify the testing framework and core functionality
-;; Using simple assertions since rackunit is not available in racket-minimal
+;; Basic functionality tests
+(test-case "version information"
+  (check-equal? pathfinder-version "0.1.0"))
 
-(define test-count 0)
-(define pass-count 0)
+(test-case "main function exists"
+  (check-true (procedure? main)))
 
-(define (test-assert name condition)
-  (set! test-count (+ test-count 1))
-  (if condition
-      (begin
-        (set! pass-count (+ pass-count 1))
-        (printf "✓ ~a~n" name))
-      (printf "✗ ~a~n" name)))
+(test-case "start-repl function exists"  
+  (check-true (procedure? start-repl)))
 
-(define (test-equal name actual expected)
-  (test-assert name (equal? actual expected)))
+(test-case "evaluate-string function exists"
+  (check-true (procedure? evaluate-string)))
 
-(define (test-procedure name proc)
-  (test-assert name (procedure? proc)))
+(test-case "evaluate-file function exists"
+  (check-true (procedure? evaluate-file)))
 
-(define (test-exception name thunk)
-  (set! test-count (+ test-count 1))
-  (with-handlers ([exn:fail? (lambda (e) 
-                              (set! pass-count (+ pass-count 1))
-                              (printf "✓ ~a (expected exception)~n" name))]
-                 [exn? (lambda (e) 
-                        (printf "✗ ~a (unexpected exception type)~n" name))])
-    (thunk)
-    (printf "✗ ~a (no exception thrown)~n" name)))
+(test-case "tokenize function exists"
+  (check-true (procedure? tokenize)))
 
-(printf "Running PathFinder LISP Tests...~n~n")
+(test-case "parse function exists"
+  (check-true (procedure? parse)))
 
-;; Run tests
-(test-equal "version information" pathfinder-version "0.1.0")
-(test-procedure "main function exists" main)
-(test-procedure "start-repl function exists" start-repl)
-(test-procedure "evaluate-string function exists" evaluate-string)
-(test-procedure "evaluate-file function exists" evaluate-file)
+;; Test that unimplemented features throw errors as expected  
+(test-case "type checker not implemented"
+  (check-exn exn:fail? (lambda () (evaluate-string "hello"))))
 
-;; Test that unimplemented features throw errors as expected
-(test-exception "placeholder: lexer not implemented"
-                (lambda () (evaluate-string "(+ 1 2)")))
-(test-exception "placeholder: parser not implemented"
-                (lambda () (evaluate-string "42")))
-(test-exception "placeholder: type checker not implemented"
-                (lambda () (evaluate-string "hello")))
-(test-exception "placeholder: evaluator not implemented"
-                (lambda () (evaluate-string "(define x 1)")))
-
-;; Report results
-(printf "~n=== Test Results ===~n")
-(printf "Passed: ~a/~a tests~n" pass-count test-count)
-(if (= pass-count test-count)
-    (printf "All tests passed! ✓~n")
-    (printf "Some tests failed. ✗~n"))
+(test-case "evaluator not implemented"
+  (check-exn exn:fail? (lambda () (evaluate-string "(define x 1)"))))

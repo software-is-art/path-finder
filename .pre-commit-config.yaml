@@ -1,0 +1,22 @@
+repos:
+  - repo: local
+    hooks:
+      - id: racket-fmt
+        name: Racket Format
+        entry: raco fmt --check
+        language: system
+        files: \.rkt$
+        
+      - id: racket-syntax-check
+        name: Racket Syntax Check
+        entry: raco expand
+        language: system
+        files: \.rkt$
+        
+      - id: racket-test
+        name: Racket Tests
+        entry: raco test
+        language: system
+        files: \.rkt$
+        pass_filenames: false
+        args: [src/, tests/]
