@@ -227,4 +227,127 @@
                      [(= (length args) 2) (proc (first args) (second args))]
                      [else (error "Built-in function" name "expects 2 arguments, got" (length args))])]
                   
-                  [_ (error "Cannot call non-function value: " func)]))])))]))
+                  [_ (error "Cannot call non-function value: " func)]))])))]
+    
+    ;; ============================================================================
+    ;; PATTERN MATCHING EVALUATION
+    ;; ============================================================================
+    
+    ;; Match expressions
+    [(match-expr scrutinee cases)
+     (let ([scrutinee-value (evaluate scrutinee env)])
+       (evaluate-match-cases scrutinee-value cases env))]
+    
+    [_ (error "Unknown AST node type: " ast)]))
+
+;; ============================================================================
+;; PATTERN MATCHING EVALUATION FUNCTIONS
+;; ============================================================================
+
+;; Evaluate match cases against a scrutinee value
+(define/contract (evaluate-match-cases scrutinee-value cases env)
+  (-> value/c (listof match-case?) environment? value/c)
+  (if (null? cases)
+      (error "No matching pattern found (non-exhaustive match)")
+      (let ([first-case (first cases)])
+        (let ([pattern (match-case-pattern first-case)]
+              [body (match-case-body first-case)])
+          (let ([match-result (try-match-pattern pattern scrutinee-value env)])
+            (if match-result
+                ;; Pattern matched, evaluate body with extended environment
+                (evaluate body match-result)
+                ;; Pattern didn't match, try next case
+                (evaluate-match-cases scrutinee-value (rest cases) env)))))))
+
+;; Try to match a pattern against a value, return extended environment if successful, #f if not
+(define/contract (try-match-pattern pattern value env)
+  (-> pattern-node/c value/c environment? (or/c environment? #f))
+  (match pattern
+    ;; Wildcard pattern always matches
+    [(wildcard-pattern) env]
+    
+    ;; Variable pattern always matches and binds the variable
+    [(variable-pattern name)
+     (let ([new-env (make-environment env)])
+       (env-define! new-env name value)
+       new-env)]
+    
+    ;; Literal patterns must match exactly
+    [(literal-pattern literal-value)
+     (if (literal-matches? literal-value value)
+         env
+         #f)]
+    
+    ;; HoTT-specific patterns
+    [(zero-pattern)
+     (if (and (constructor-value? value)
+              (string=? (constructor-value-constructor-name value) "zero"))
+         env
+         #f)]
+    
+    [(successor-pattern sub-pattern)
+     (if (and (constructor-value? value)
+              (string=? (constructor-value-constructor-name value) "succ")
+              (= (length (constructor-value-args value)) 1))
+         (try-match-pattern sub-pattern (first (constructor-value-args value)) env)
+         #f)]
+    
+    [(true-pattern)
+     (if (and (constructor-value? value)
+              (string=? (constructor-value-constructor-name value) "true"))
+         env
+         #f)]
+    
+    [(false-pattern)
+     (if (and (constructor-value? value)
+              (string=? (constructor-value-constructor-name value) "false"))
+         env
+         #f)]
+    
+    ;; General constructor patterns: (constructor-name sub-patterns...)
+    [(constructor-pattern constructor-name sub-patterns)
+     (if (constructor-value? value)
+         (let ([value-constructor (constructor-value-constructor-name value)]
+               [value-args (constructor-value-args value)])
+           (if (and (string=? constructor-name value-constructor)
+                    (= (length sub-patterns) (length value-args)))
+               ;; Try to match all sub-patterns
+               (try-match-sub-patterns sub-patterns value-args env)
+               #f))
+         #f)]
+    
+    [_ (error "Unknown pattern type: " pattern)]))
+
+;; Try to match a list of sub-patterns against a list of values
+(define/contract (try-match-sub-patterns patterns values env)
+  (-> (listof pattern-node/c) (listof value/c) environment? (or/c environment? #f))
+  (if (null? patterns)
+      env  ; All patterns matched
+      (let ([first-pattern (first patterns)]
+            [first-value (first values)])
+        (let ([partial-env (try-match-pattern first-pattern first-value env)])
+          (if partial-env
+              ;; First pattern matched, try the rest
+              (try-match-sub-patterns (rest patterns) (rest values) partial-env)
+              ;; First pattern didn't match
+              #f)))))
+
+;; Check if a literal value matches a runtime value
+(define/contract (literal-matches? literal-value runtime-value)
+  (-> any/c value/c boolean?)
+  (cond
+    [(number? literal-value)
+     (and (constructor-value? runtime-value)
+          (nat-value? runtime-value)
+          (= literal-value (nat-value->racket-number runtime-value)))]
+    
+    [(boolean? literal-value)
+     (and (constructor-value? runtime-value)
+          (bool-value? runtime-value)
+          (eq? literal-value (bool-value->racket-boolean runtime-value)))]
+    
+    [(string? literal-value)
+     ;; String literals not yet implemented in HoTT system
+     #f]
+    
+    [else #f]))
