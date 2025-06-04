@@ -5,7 +5,8 @@
          racket/string
          racket/file
          "lexer/lexer.rkt"
-         "parser/parser.rkt")
+         "parser/parser.rkt"
+         "evaluator/evaluator.rkt")
 
 ;; PathFinder LISP - Main Entry Point
 ;; A HoTT-based functional programming language with algebraic effects
@@ -32,17 +33,15 @@
   ;; Task 4: Type checker implementation
   (error "Type checker not yet implemented"))
 
-(define (evaluate ast)
-  ;; Task 2: Evaluator implementation
-  (error "Evaluator not yet implemented"))
+;; evaluate function is now imported from evaluator module
 
 ;; Main evaluation pipeline
 (define (evaluate-string input)
   "Evaluate a PathFinder LISP expression from string"
   (let* ([tokens (tokenize input)]
-         [ast (parse tokens)]
-         [typed-ast (type-check ast)])
-    (evaluate typed-ast)))
+         [ast (parse tokens)])
+    ;; Skip type checking for now - Task 4
+    (evaluate ast)))
 
 ;; File evaluation
 (define (evaluate-file filename)
@@ -57,23 +56,25 @@
   (displayln "A HoTT-based functional language with algebraic effects")
   (displayln "Type (exit) to quit")
   (newline)
-  (repl-loop))
+  (repl-loop (make-global-environment)))
 
-(define (repl-loop)
-  "Main REPL loop"
+(define (repl-loop env)
+  "Main REPL loop with persistent environment"
   (display "pathfinder> ")
   (flush-output)
   (let ([input (read-line)])
     (cond
       [(eof-object? input) (displayln "\nGoodbye!")]
       [(string=? (string-trim input) "(exit)") (displayln "Goodbye!")]
-      [(string=? (string-trim input) "") (repl-loop)]
+      [(string=? (string-trim input) "") (repl-loop env)]
       [else
        (with-handlers ([exn:fail? (lambda (e)
                                    (displayln (string-append "Error: " (exn-message e))))])
-         (let ([result (evaluate-string input)])
+         (let* ([tokens (tokenize input)]
+                [ast (parse tokens)]
+                [result (evaluate ast env)])
            (displayln (format "~a" result))))
-       (repl-loop)])))
+       (repl-loop env)])))
 
 ;; Command line interface
 (define (main . args)
