@@ -2,17 +2,22 @@
   "packages": [
     "git",
     "gnumake",
-    "racket-minimal@latest"
+    "racket-minimal@latest",
+    "nodejs@20"
   ],
   "shell": {
     "init_hook": [
       "echo '🚀 PathFinder LISP Development Environment'",
       "echo '   Racket version: '$(racket --version | head -1)",
+      "echo '   Node.js version: '$(node --version)",
       "echo '   Project: PathFinder LISP - HoTT-based functional language'",
       "echo '   Commands:'",
       "echo '     devbox run build       # Check syntax'",
       "echo '     racket src/main.rkt     # Run interpreter'",
       "echo '     devbox run test        # Run tests (when implemented)'",
+      "echo '     npm run tasks          # View project tasks'",
+      "echo '     npm run next           # Get next task to work on'",
+      "echo '     devbox run setup       # Install dependencies'",
       "echo ''"
     ],
     "scripts": {
@@ -22,8 +27,11 @@
       "version":      "racket src/main.rkt --version",
       "test":         "find tests -name '*.rkt' -exec racket {} \\;",
       "docs":         "echo 'Documentation generation requires full Racket installation'",
-      "setup":        "echo 'Setup complete - using racket-minimal'",
-      "install-deps": "echo 'Package installation requires full Racket installation'"
+      "setup":        "npm install",
+      "install-deps": "npm install",
+      "tasks":        "npm run tasks",
+      "next-task":    "npm run next", 
+      "task-status":  "npm run task"
     }
   },
   "env": {

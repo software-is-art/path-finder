@@ -1,0 +1,37 @@
+{
+  "name": "pathfinder-lisp",
+  "version": "0.1.0",
+  "description": "PathFinder LISP: A HoTT-based functional programming language with algebraic effects",
+  "type": "module",
+  "main": "src/main.rkt",
+  "scripts": {
+    "tasks": "task-master list",
+    "next": "task-master next", 
+    "task": "task-master show",
+    "status": "task-master set-status",
+    "expand": "task-master expand"
+  },
+  "keywords": [
+    "lisp",
+    "functional-programming",
+    "homotopy-type-theory",
+    "algebraic-effects",
+    "racket"
+  ],
+  "author": "PathFinder Development Team",
+  "license": "(Apache-2.0 OR MIT)",
+  "dependencies": {
+    "task-master-ai": "^0.16.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/path-finder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/path-finder/issues"
+  },
+  "homepage": "https://github.com/your-org/path-finder#readme"
+}

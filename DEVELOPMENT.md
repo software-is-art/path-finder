@@ -47,13 +47,22 @@ If using Rhombus:
    devbox shell
    ```
 
-2. **Verify Installation**
+2. **Install Dependencies**
+   ```bash
+   devbox run setup
+   # Installs task-master-ai and other Node.js dependencies
+   ```
+
+3. **Verify Installation**
    ```bash
    devbox run version
    # Should output: PathFinder LISP v0.1.0
+   
+   npm run tasks
+   # Should show project task dashboard
    ```
 
-3. **Run the Interpreter**
+4. **Run the Interpreter**
    ```bash
    devbox run repl
    ```
@@ -67,9 +76,16 @@ devbox run run          # Start PathFinder LISP interpreter
 devbox run repl         # Start interactive REPL
 devbox run version      # Show version information
 
-# Testing and documentation
+# Task management commands
+npm run tasks           # View project task dashboard
+npm run next            # Show next task to work on
+npm run task <id>       # Show specific task details
+npm run status <id> <status>  # Update task status
+npm run expand <id>     # Break down task into subtasks
+
+# Testing and setup
 devbox run test         # Run test suite (when implemented)
-devbox run setup        # Environment setup verification
+devbox run setup        # Install dependencies and setup environment
 ```
 
 ### Project Structure
@@ -118,8 +134,15 @@ path-finder/
 
 The development environment is configured using Devbox with:
 - **Racket Minimal** v8.16 - Core Racket runtime
+- **Node.js** v20 - JavaScript runtime for task management
 - **Git** - Version control
 - **GNU Make** - Build automation
+
+### Package Management (`package.json`)
+
+Project dependencies are managed through npm:
+- **task-master-ai** - AI-powered task management system
+- **Node.js scripts** - Convenient task management commands
 
 Custom scripts provide convenient commands for development workflow.
 
@@ -162,9 +185,31 @@ find tests -name '*.rkt' -exec racket {} \;
 Always work within the devbox environment:
 ```bash
 devbox shell  # Activates environment with welcome message
+devbox run setup  # Install dependencies (first time only)
 ```
 
-### 2. Module Development
+### 2. Task Management Workflow
+
+PathFinder LISP uses AI-powered task management for organized development:
+
+```bash
+# View current project status
+npm run tasks
+
+# See what to work on next
+npm run next
+
+# Start working on a task
+npm run status 1 in-progress
+
+# View specific task details
+npm run task 1
+
+# Mark task as complete
+npm run status 1 done
+```
+
+### 3. Module Development
 
 Each major component (lexer, parser, type checker, etc.) should be:
 - Implemented as separate Racket modules
@@ -172,7 +217,7 @@ Each major component (lexer, parser, type checker, etc.) should be:
 - Documented with contracts
 - Integrated incrementally
 
-### 3. REPL-Driven Development
+### 4. REPL-Driven Development
 
 ```bash
 # Start the PathFinder REPL
@@ -183,7 +228,7 @@ racket src/main.rkt --version
 racket src/main.rkt --interactive
 ```
 
-### 4. Syntax Checking
+### 5. Syntax Checking
 
 ```bash
 # Check syntax without running
@@ -246,27 +291,36 @@ devbox run build
 - Use immutable data structures by default
 - Consider performance optimization in later development phases
 
-## Troubleshooting
+### Troubleshooting
 
 ### Common Issues
 
 1. **"racket: command not found"**
    - Ensure you're in the devbox environment: `devbox shell`
 
-2. **Missing dependencies**
+2. **"task-master: command not found"**
+   - Run `devbox run setup` to install Node.js dependencies
+   - Use `npm run tasks` instead of direct `task-master` commands
+
+3. **Missing dependencies**
    - The minimal Racket installation includes core packages
    - For advanced features, consider installing full Racket separately
+   - Run `npm install` if task management commands fail
 
-3. **Build failures**
+4. **Build failures**
    - Check syntax with `devbox run build`
    - Verify all `require` statements are correct
 
-4. **Environment issues**
+5. **Environment issues**
    - Restart devbox environment: `exit` then `devbox shell`
    - Update devbox: `devbox update`
+   - Reinstall dependencies: `devbox run setup`
 
 ### Getting Help
 
 - Check `devbox run` for available commands
+- Use `npm run` for task management commands
 - Use `racket --help` for Racket-specific options
+- Run `npm run next` to see what to work on next
 - Refer to task files in `.taskmaster/tasks/` for implementation guidance
+- View task dashboard with `npm run tasks`
