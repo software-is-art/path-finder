@@ -29,5 +29,5 @@
 (test-case "type checker not implemented"
   (check-exn exn:fail? (lambda () (evaluate-string "hello"))))
 
-(test-case "evaluator not implemented"
-  (check-exn exn:fail? (lambda () (evaluate-string "(define x 1)"))))
+(test-case "evaluator works"
+  (check-equal? (evaluate-string "(+ 1 2)") 3))
