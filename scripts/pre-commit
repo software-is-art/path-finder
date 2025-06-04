@@ -1,0 +1,43 @@
+#!/bin/bash
+# PathFinder LISP pre-commit hook
+
+set -e
+
+echo "🚀 PathFinder LISP Pre-commit Checks"
+echo "===================================="
+
+# Check if devbox is available
+if ! command -v devbox &> /dev/null; then
+    echo "❌ devbox not found. Please install devbox first."
+    exit 1
+fi
+
+# Format check
+echo "📝 Checking code formatting..."
+if ! devbox run check-fmt; then
+    echo "❌ Code formatting issues found. Run 'devbox run fmt' to fix."
+    exit 1
+fi
+
+# Linting
+echo "🔍 Running static analysis..."
+if ! devbox run lint; then
+    echo "❌ Linting failed. Please fix the issues above."
+    exit 1
+fi
+
+# Tests
+echo "🧪 Running tests..."
+if ! devbox run test; then
+    echo "❌ Tests failed. Please fix failing tests."
+    exit 1
+fi
+
+# Build check
+echo "🔨 Checking build..."
+if ! devbox run build; then
+    echo "❌ Build failed. Please fix compilation errors."
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"

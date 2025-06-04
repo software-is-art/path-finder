@@ -3,7 +3,9 @@
 (require racket/cmdline
          racket/port
          racket/string
-         racket/file)
+         racket/file
+         "lexer/lexer.rkt"
+         "parser/parser.rkt")
 
 ;; PathFinder LISP - Main Entry Point
 ;; A HoTT-based functional programming language with algebraic effects
@@ -13,19 +15,18 @@
          pathfinder-version
          start-repl
          evaluate-file
-         evaluate-string)
+         evaluate-string
+         tokenize
+         parse)
 
 ;; Version information
 (define pathfinder-version "0.1.0")
 
-;; Placeholder modules (to be implemented in subsequent tasks)
-(define (tokenize input)
-  ;; Task 1: S-Expression Lexer implementation
-  (error "Lexer not yet implemented"))
+;; Tokenization (implemented in lexer/lexer.rkt)
+;; tokenize function is now imported from lexer module
 
-(define (parse tokens)
-  ;; Task 1: Parser implementation  
-  (error "Parser not yet implemented"))
+;; Parser (implemented in parser/parser.rkt)
+;; parse function is now imported from parser module
 
 (define (type-check ast)
   ;; Task 4: Type checker implementation
