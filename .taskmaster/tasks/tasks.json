@@ -10,7 +10,7 @@
       "dependencies": [
         "21"
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -18,7 +18,7 @@
           "description": "Define the core data structures for tokens (e.g., LPAREN, RPAREN, SYMBOL, NUMBER, BOOLEAN, STRING, EOF) and Abstract Syntax Tree (AST) nodes (Atom(Symbol), Atom(Number), Atom(String), Atom(Boolean), SExpr(List[ASTNode])). This establishes the vocabulary for the lexer and parser.",
           "dependencies": [],
           "details": "Create enums or classes for token types, including their potential value payloads (e.g., string value for SYMBOL, numeric value for NUMBER). For AST nodes, define a base class/interface (e.g., `ASTNode`) and specific derived classes for each atom type and for S-expressions. `Atom(Symbol)` should store its string value preserving case. `SExpr` should hold a list of `ASTNode` children.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "No direct executable tests for definitions, but these structures will be validated implicitly by tests for lexer and parser. Optionally, create simple instantiation tests to ensure constructors and properties work as expected."
         },
         {
@@ -29,7 +29,7 @@
             1
           ],
           "details": "The lexer function should take a string as input and return a list of Token objects. Implement using character-by-character scanning or regular expressions. For symbols, ensure they are captured case-sensitively. For numbers, initially support integers. Booleans `#t` and `#f` should be recognized as distinct keywords/tokens. Ensure proper handling of end-of-input (e.g., an EOF token).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test with various input strings: `(add 1 2)`, `#t`, `my-Symbol`, `(  symbol1   #f  123 )`. Verify the correct sequence, type, and value of tokens produced. Test edge cases like empty input, input with only whitespace, and input ending abruptly."
         },
         {
@@ -40,7 +40,7 @@
             2
           ],
           "details": "For string literals, parse content between double quotes. Implement support for `\\\"` and `\\\\` escape sequences. The string token's value should be the unescaped content. For comments, when a `;` is encountered, the lexer should skip all subsequent characters on that line. Comments should not produce any tokens.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test inputs with strings: `(\"a string\")`, `(\"with \\\"quotes\\\" and \\\\backslash\\\\\")`. Test inputs with comments: `(add 1 2) ; this is a comment`, `; entire line comment`, `(define x \"value\" ; comment after string\n  y 10)`. Verify correct token stream and that comments are ignored."
         },
         {
@@ -52,7 +52,7 @@
             3
           ],
           "details": "Implement using recursive descent or a parser combinator library. Create a main `parse` function that takes a list of tokens. A helper function, say `parse_expression`, will determine if the next token(s) form an atom or an S-expression. If it's an atom, convert the token to the appropriate `Atom` AST node. If it's an `LPAREN` token, start parsing an S-expression: consume subsequent tokens as atoms until an `RPAREN` is found. Handle errors for unexpected tokens or premature end of input (e.g., missing `RPAREN`).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test with token streams representing: `my-symbol`, `123`, `#t`, `\"a string\"`, `(one two three)`. Verify the generated AST structure is correct (e.g., `Atom(Symbol(\"my-symbol\"))`, `SExpr([Atom(Symbol(\"one\")), Atom(Symbol(\"two\")), Atom(Symbol(\"three\"))])`). Test error handling for mismatched parentheses at this simple level (e.g., `(a b` or `a b)`)."
         },
         {
@@ -63,7 +63,7 @@
             4
           ],
           "details": "Modify the S-expression parsing logic (e.g., within the part that handles `LPAREN`) to recursively call the `parse_expression` function for each element found before the closing `RPAREN`. This `parse_expression` function should now be capable of returning either an `Atom` node or an `SExpr` node. This recursive structure will naturally handle nesting. Ensure proper error handling for malformed nested structures.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test with token streams representing nested S-expressions: `(a (b c) d)`, `((()))`, `(list 1 (quote (a b)) \"str\")`, `()`. Verify the deeply nested AST structure is accurately constructed. Test error handling for complex mismatched parentheses or unexpected tokens within nested structures (e.g., `(a (b c d)`)."
         }
       ]
@@ -78,7 +78,7 @@
       "dependencies": [
         1
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -86,7 +86,7 @@
           "description": "Implement the data structures for all required Abstract Syntax Tree (AST) nodes: Literals (Number, Boolean, String), Symbol, FunctionCall, Lambda, Define, and If. These structures will represent the parsed code.",
           "dependencies": [],
           "details": "Use classes, structs, or algebraic data types for each AST node. For example: `LiteralNode(value)`, `SymbolNode(name)`, `FunctionCallNode(callee: ASTNode, arguments: List[ASTNode])`, `LambdaNode(params: List[SymbolNode], body: ASTNode)`, `DefineNode(name: SymbolNode, value: ASTNode)`, `IfNode(condition: ASTNode, thenBranch: ASTNode, elseBranch: ASTNode)`. Consider a common base type or interface `ASTNode`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test each AST node constructor to ensure correct initialization and storage of its components. Verify that node types can be distinguished."
         },
         {
@@ -97,7 +97,7 @@
             1
           ],
           "details": "Implement the environment as a chain of hash maps (dictionaries). Each `Environment` instance should have a local store for bindings and a reference to an optional parent (outer) environment. Key methods: `define(name: String, value: Any)`, `lookup(name: String) -> Any`, `extend() -> Environment`. `lookup` should search the current environment, then delegate to the parent if not found, throwing an error if the variable is undefined.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test `Environment` operations: define a variable and look it up in the same scope. Look up a variable defined in an outer scope from an inner scope. Test extending scopes and ensuring inner scope definitions do not affect outer scopes. Test lookup of an undefined variable."
         },
         {
@@ -109,7 +109,7 @@
             2
           ],
           "details": "The `evaluate(node: ASTNode, env: Environment)` function will use pattern matching or type checking on the `node` to dispatch to specific evaluation logic. \n- Literals: Return their intrinsic value (e.g., number, boolean, string).\n- Symbols: Use `env.lookup(symbolName)` to retrieve the variable's value.\n- `DefineNode`: Evaluate the `value` sub-expression using `evaluate(defineNode.value, env)`. Then, use `env.define(defineNode.name.name, evaluatedValue)`. The `define` expression could return a special confirmation value or the evaluated value.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test evaluation of: number, string, boolean literals. Test `define`: evaluate `(define x 10)`, then evaluate `x` to check if it returns 10. Test error handling for unbound symbols."
         },
         {
@@ -120,7 +120,7 @@
             3
           ],
           "details": "When `evaluate` encounters a `LambdaNode`, it should create a `Closure` object (or an equivalent data structure). This `Closure` must store: \n1. The lambda's parameters (list of symbol names).\n2. The lambda's body (the ASTNode representing the function body).\n3. A reference to the environment active at the point of the lambda's definition (this is crucial for lexical scoping). \nThe `Closure` object itself is the runtime value representing the function.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test `lambda` evaluation: ensure a `Closure` object is returned. Verify that the closure correctly captures the parameters, body, and the defining environment (e.g., by inspecting the closure or by simple calls in later tests)."
         },
         {
@@ -131,7 +131,7 @@
             4
           ],
           "details": "For `FunctionCallNode`:\n1. Evaluate the `callee` sub-expression. This should yield a `Closure` (from subtask 4).\n2. Evaluate each `argument` sub-expression in the *current* environment to get argument values.\n3. Create a new `Environment` for the function execution. This new environment's parent should be the `Closure`'s captured environment.\n4. Bind the `Closure`'s parameter names to the evaluated argument values in this new environment.\n5. Evaluate the `Closure`'s body ASTNode within this new, extended environment. The result of this evaluation is the result of the function call.\nFor `IfNode`:\n1. Evaluate the `condition` sub-expression.\n2. If the result is truthy (e.g., not `false`), evaluate and return the result of the `thenBranch`.\n3. Otherwise, evaluate and return the result of the `elseBranch`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test `if` expressions: test both true and false conditions. Unit test function calls: \n- Simple call: `((lambda (x) x) 10)` should yield 10.\n- Closure behavior: `(define y 5) (define f (lambda (x) (+ x y))) (f 10)` should yield 15 (assuming `+` is predefined or part of a later task; for now, can test with identity or simple operations).\n- Argument evaluation order (if relevant, though typically left-to-right).\n- Recursive calls if the language structure allows for it (e.g., `(define fac (lambda (n) (if (= n 0) 1 (* n (fac (- n 1)))))) (fac 3)`)."
         }
       ]
@@ -146,7 +146,7 @@
       "dependencies": [
         2
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -154,7 +154,7 @@
           "description": "Establish the core data structure or enumeration that will serve as the basis for all type representations in the system. This will define the common contract for different kinds of types.",
           "dependencies": [],
           "details": "Define an abstract base class, interface, or an enum (e.g., using a tagged union or sum type pattern if the language supports it well) named `Type`. This structure should be designed to be extensible for future type kinds (e.g., product types, sum types). For now, it just needs to be a common ancestor or variant type that `TypeAtom` and `FunctionType` can conform to or be variants of.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Verify that the `Type` definition exists and can be referenced. Static analysis or compilation success is sufficient at this stage."
         },
         {
@@ -165,7 +165,7 @@
             1
           ],
           "details": "Define a class or struct `TypeAtom` that inherits from or implements the base `Type` (from subtask 1). It must contain a `name` field (e.g., a string) to store the identifier of the atomic type (e.g., 'Nat', 'Bool'). Ensure it can be instantiated.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Instantiate `TypeAtom` with different names (e.g., 'Nat', 'TestType'). Verify that the `name` property is correctly stored and accessible. Check that `TypeAtom` instances are considered instances of the base `Type`."
         },
         {
@@ -176,7 +176,7 @@
             1
           ],
           "details": "Define a class or struct `FunctionType` that inherits from or implements the base `Type` (from subtask 1). It should contain: \n1. `parameter_types`: A list or array of `Type` instances representing the types of the function's parameters. \n2. `return_type`: A `Type` instance representing the function's return type. \nEnsure it can be instantiated with appropriate `Type` instances (which could be `TypeAtom` or other `FunctionType` instances) for its fields.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Instantiate `FunctionType` using mock `Type` instances (or `TypeAtom` instances if subtask 2 is testable in isolation first) for parameter and return types. For example, `FunctionType([mockType1, mockType2], mockReturnType)`. Verify that `parameter_types` and `return_type` are correctly stored and accessible. Check that `FunctionType` instances are considered instances of the base `Type`."
         },
         {
@@ -187,7 +187,7 @@
             2
           ],
           "details": "In a suitable module or globally accessible scope, define constant instances of `TypeAtom` for 'Nat', 'Bool', and 'String'. For example: `const TYPE_NAT = new TypeAtom('Nat');`, `const TYPE_BOOL = new TypeAtom('Bool');`, `const TYPE_STRING = new TypeAtom('String');`. These should be readily available for use throughout the type system.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Verify that the predefined instances `TYPE_NAT`, `TYPE_BOOL`, `TYPE_STRING` exist, are of type `TypeAtom` (and thus `Type`), and have the correct names ('Nat', 'Bool', 'String' respectively)."
         },
         {
@@ -199,7 +199,7 @@
             3
           ],
           "details": "Implement an equality comparison method or function that can take two `Type` instances. \n- For `TypeAtom`: Two `TypeAtom` instances are equal if their `name` fields are identical (case-sensitive). \n- For `FunctionType`: Two `FunctionType` instances are equal if: \n    1. They have the same number of parameter types. \n    2. Each corresponding parameter type is equal (recursively using this equality logic). \n    3. Their return types are equal (recursively). \n- If comparing types of different kinds (e.g., `TypeAtom` vs `FunctionType`), they are not equal. \nThis comparison should be part of the `Type` interface/base class or a dispatching utility function.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test cases using predefined types (from subtask 4) and custom ones: \n1. `TYPE_NAT` == `TYPE_NAT`. \n2. `TYPE_NAT` != `TYPE_BOOL`. \n3. `new TypeAtom('Nat')` == `TYPE_NAT`. \n4. `FunctionType([TYPE_NAT], TYPE_BOOL)` == `FunctionType([TYPE_NAT], TYPE_BOOL)`. \n5. `FunctionType([TYPE_NAT], TYPE_BOOL)` != `FunctionType([TYPE_NAT], TYPE_STRING)`. \n6. `FunctionType([TYPE_NAT], TYPE_BOOL)` != `FunctionType([TYPE_STRING], TYPE_BOOL)`. \n7. `FunctionType([TYPE_NAT, TYPE_BOOL], TYPE_STRING)` != `FunctionType([TYPE_NAT], TYPE_STRING)`. \n8. `TYPE_NAT` != `FunctionType([], TYPE_NAT)`."
         }
       ]

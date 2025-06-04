@@ -1,6 +1,6 @@
 # Task ID: 1
 # Title: S-Expression Lexer and Parser Implementation
-# Status: pending
+# Status: done
 # Dependencies: 21
 # Priority: medium
 # Description: Implement the lexer and parser for PathFinder LISP's S-expression syntax, adhering to Scheme conventions and case-sensitive identifiers. This forms the foundational input processing layer.
@@ -11,31 +11,31 @@ Implement using recursive descent or a parser combinator library. Define tokens 
 Unit tests with a comprehensive suite of S-expressions: simple atoms, empty list, nested lists, lists with mixed atom types, comments, and edge cases (e.g., mismatched parentheses, invalid tokens). Validate the structure of the generated AST for each test case.
 
 # Subtasks:
-## 1. Define Token Types and AST Node Structures [pending]
+## 1. Define Token Types and AST Node Structures [done]
 ### Dependencies: None
 ### Description: Define the core data structures for tokens (e.g., LPAREN, RPAREN, SYMBOL, NUMBER, BOOLEAN, STRING, EOF) and Abstract Syntax Tree (AST) nodes (Atom(Symbol), Atom(Number), Atom(String), Atom(Boolean), SExpr(List[ASTNode])). This establishes the vocabulary for the lexer and parser.
 ### Details:
 Create enums or classes for token types, including their potential value payloads (e.g., string value for SYMBOL, numeric value for NUMBER). For AST nodes, define a base class/interface (e.g., `ASTNode`) and specific derived classes for each atom type and for S-expressions. `Atom(Symbol)` should store its string value preserving case. `SExpr` should hold a list of `ASTNode` children.
 
-## 2. Implement Lexer: Basic Tokenization (Parentheses, Symbols, Numbers, Booleans) [pending]
+## 2. Implement Lexer: Basic Tokenization (Parentheses, Symbols, Numbers, Booleans) [done]
 ### Dependencies: 1.1
 ### Description: Implement the lexer to scan an input string and produce a sequence of tokens. This subtask focuses on recognizing parentheses `(` and `)`, case-sensitive symbols (identifiers), integers, and booleans (`#t`, `#f`). Handle whitespace (spaces, tabs, newlines) as delimiters, which should be ignored and not produce tokens.
 ### Details:
 The lexer function should take a string as input and return a list of Token objects. Implement using character-by-character scanning or regular expressions. For symbols, ensure they are captured case-sensitively. For numbers, initially support integers. Booleans `#t` and `#f` should be recognized as distinct keywords/tokens. Ensure proper handling of end-of-input (e.g., an EOF token).
 
-## 3. Extend Lexer: Add String Literal and Comment Handling [pending]
+## 3. Extend Lexer: Add String Literal and Comment Handling [done]
 ### Dependencies: 1.2
 ### Description: Enhance the lexer to correctly tokenize string literals enclosed in double quotes (e.g., `"hello world"`), including support for basic escape characters (e.g., `\"` for a double quote within the string, `\\` for a backslash). Implement logic to identify and ignore single-line comments starting with `;` until the end of the line.
 ### Details:
 For string literals, parse content between double quotes. Implement support for `\"` and `\\` escape sequences. The string token's value should be the unescaped content. For comments, when a `;` is encountered, the lexer should skip all subsequent characters on that line. Comments should not produce any tokens.
 
-## 4. Implement Parser: Atomic Expressions and Simple S-Expressions [pending]
+## 4. Implement Parser: Atomic Expressions and Simple S-Expressions [done]
 ### Dependencies: 1.1, 1.3
 ### Description: Develop the initial parser logic to consume tokens produced by the lexer and build an AST. This subtask focuses on parsing atomic expressions (symbols, numbers, booleans, strings) into their corresponding `Atom` AST nodes, and parsing simple, non-nested S-expressions (e.g., `(a b c)`) into `SExpr` AST nodes containing a list of `Atom` nodes.
 ### Details:
 Implement using recursive descent or a parser combinator library. Create a main `parse` function that takes a list of tokens. A helper function, say `parse_expression`, will determine if the next token(s) form an atom or an S-expression. If it's an atom, convert the token to the appropriate `Atom` AST node. If it's an `LPAREN` token, start parsing an S-expression: consume subsequent tokens as atoms until an `RPAREN` is found. Handle errors for unexpected tokens or premature end of input (e.g., missing `RPAREN`).
 
-## 5. Extend Parser: Nested S-Expressions and Full AST Construction [pending]
+## 5. Extend Parser: Nested S-Expressions and Full AST Construction [done]
 ### Dependencies: 1.4
 ### Description: Enhance the parser to handle arbitrarily nested S-expressions (e.g., `(a (b (c)) d)`). This involves making the S-expression parsing rule fully recursive, allowing S-expressions to contain other S-expressions as elements, in addition to atoms. Ensure the AST correctly represents the hierarchical structure.
 ### Details:

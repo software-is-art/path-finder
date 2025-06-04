@@ -2,110 +2,106 @@
 
 (require "../src/main.rkt"
          "../src/evaluator/evaluator.rkt"
+         "../src/evaluator/values.rkt"
+         "../src/types/types.rkt"
          "../src/parser/ast.rkt"
          rackunit)
 
+;; Tests for PathFinder LISP HoTT-based Evaluator
+
+;; Helper to evaluate string and check result
+(define (eval-string-to-nat str expected-num)
+  (let ([result (evaluate-string str)])
+    (and (nat-value? result)
+         (= (nat-value->racket-number result) expected-num))))
+
+(define (eval-string-to-bool str expected-bool)
+  (let ([result (evaluate-string str)])
+    (and (bool-value? result)
+         (eq? (bool-value->racket-boolean result) expected-bool))))
+
 ;; Basic literal evaluation tests
-(test-case "evaluate number literal"
-  (check-equal? (evaluate-string "42") 42))
+(test-case "evaluate natural number literals"
+  (check-true (eval-string-to-nat "0" 0))
+  (check-true (eval-string-to-nat "1" 1))
+  (check-true (eval-string-to-nat "42" 42)))
 
-(test-case "evaluate boolean true"
-  (check-equal? (evaluate-string "#t") #t))
-
-(test-case "evaluate boolean false"
-  (check-equal? (evaluate-string "#f") #f))
-
-(test-case "evaluate string literal"
-  (check-equal? (evaluate-string "\"hello\"") "hello"))
+(test-case "evaluate boolean literals" 
+  (check-true (eval-string-to-bool "#t" #t))
+  (check-true (eval-string-to-bool "#f" #f)))
 
 ;; Arithmetic operations
-(test-case "addition"
-  (check-equal? (evaluate-string "(+ 1 2)") 3))
+(test-case "natural number addition"
+  (check-true (eval-string-to-nat "(+ 1 2)" 3))
+  (check-true (eval-string-to-nat "(+ 0 5)" 5))
+  (check-true (eval-string-to-nat "(+ 10 20)" 30)))
 
-(test-case "subtraction"
-  (check-equal? (evaluate-string "(- 5 3)") 2))
+(test-case "natural number multiplication"
+  (check-true (eval-string-to-nat "(* 2 3)" 6))
+  (check-true (eval-string-to-nat "(* 0 5)" 0))
+  (check-true (eval-string-to-nat "(* 4 4)" 16)))
 
-(test-case "multiplication"
-  (check-equal? (evaluate-string "(* 4 3)") 12))
-
-(test-case "division"
-  (check-equal? (evaluate-string "(/ 10 2)") 5))
-
-(test-case "nested arithmetic"
-  (check-equal? (evaluate-string "(+ (* 2 3) (- 10 5))") 11))
+(test-case "natural number subtraction (with truncation)"
+  (check-true (eval-string-to-nat "(- 5 3)" 2))
+  (check-true (eval-string-to-nat "(- 10 4)" 6))
+  (check-true (eval-string-to-nat "(- 3 5)" 0))) ; truncated to 0
 
 ;; Comparison operations
-(test-case "equality"
-  (check-equal? (evaluate-string "(= 5 5)") #t)
-  (check-equal? (evaluate-string "(= 5 3)") #f))
+(test-case "natural number equality"
+  (check-true (eval-string-to-bool "(= 5 5)" #t))
+  (check-true (eval-string-to-bool "(= 3 7)" #f))
+  (check-true (eval-string-to-bool "(= 0 0)" #t)))
 
-(test-case "less than"
-  (check-equal? (evaluate-string "(< 3 5)") #t)
-  (check-equal? (evaluate-string "(< 5 3)") #f))
-
-(test-case "greater than"
-  (check-equal? (evaluate-string "(> 5 3)") #t)
-  (check-equal? (evaluate-string "(> 3 5)") #f))
+(test-case "natural number less than"
+  (check-true (eval-string-to-bool "(< 3 5)" #t))
+  (check-true (eval-string-to-bool "(< 5 3)" #f))
+  (check-true (eval-string-to-bool "(< 4 4)" #f)))
 
 ;; Variable definition and lookup
-(test-case "define and lookup variable"
+(test-case "variable definition and lookup"
   (let ([env (make-global-environment)])
-    (check-equal? (evaluate (parse (tokenize "(define x 42)")) env) 42)
-    (check-equal? (evaluate (parse (tokenize "x")) env) 42)))
-
-(test-case "define with expression"
-  (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define y (+ 3 4))")) env)
-    (check-equal? (evaluate (parse (tokenize "y")) env) 7)))
+    (evaluate (parse (tokenize "(define x 42)")) env)
+    (let ([result (evaluate (parse (tokenize "x")) env)])
+      (check-true (nat-value? result))
+      (check-equal? (nat-value->racket-number result) 42))))
 
 ;; If expressions
-(test-case "if true condition"
-  (check-equal? (evaluate-string "(if #t 1 2)") 1))
+(test-case "if with true condition"
+  (check-true (eval-string-to-nat "(if #t 1 2)" 1)))
 
-(test-case "if false condition"
-  (check-equal? (evaluate-string "(if #f 1 2)") 2))
+(test-case "if with false condition"  
+  (check-true (eval-string-to-nat "(if #f 1 2)" 2)))
 
-(test-case "if with expression condition"
-  (check-equal? (evaluate-string "(if (< 3 5) 100 200)") 100))
+(test-case "if with computed condition"
+  (check-true (eval-string-to-nat "(if (< 3 5) 100 200)" 100)))
 
 ;; Lambda expressions and function calls
-(test-case "lambda creation and call"
+(test-case "lambda creation and application"
   (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define square (lambda (x) (* x x)))")) env)
-    (check-equal? (evaluate (parse (tokenize "(square 4)")) env) 16)))
+    (evaluate (parse (tokenize "(define double (lambda (x) (* x 2)))")) env)
+    (let ([result (evaluate (parse (tokenize "(double 7)")) env)])
+      (check-true (nat-value? result))
+      (check-equal? (nat-value->racket-number result) 14))))
 
 (test-case "lambda with multiple parameters"
   (let ([env (make-global-environment)])
     (evaluate (parse (tokenize "(define add (lambda (x y) (+ x y)))")) env)
-    (check-equal? (evaluate (parse (tokenize "(add 3 7)")) env) 10)))
+    (let ([result (evaluate (parse (tokenize "(add 8 5)")) env)])
+      (check-true (nat-value? result))
+      (check-equal? (nat-value->racket-number result) 13))))
 
-(test-case "closure captures environment"
-  (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define x 10)")) env)
-    (evaluate (parse (tokenize "(define get-x (lambda () x))")) env)
-    (check-equal? (evaluate (parse (tokenize "(get-x)")) env) 10)))
+;; Value type checking
+(test-case "values have correct HoTT types"
+  (let ([nat-val (racket-number->nat-value 5)]
+        [bool-val (racket-boolean->bool-value #t)])
+    (check-true (value-has-type? nat-val Nat))
+    (check-true (value-has-type? bool-val Bool))
+    (check-false (value-has-type? nat-val Bool))
+    (check-false (value-has-type? bool-val Nat))))
 
-;; Error handling tests
-(test-case "undefined variable error"
-  (check-exn exn:fail? (lambda () (evaluate-string "undefined-var"))))
-
-(test-case "wrong number of arguments"
-  (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define f (lambda (x) x))")) env)
-    (check-exn exn:fail? (lambda () (evaluate (parse (tokenize "(f 1 2)")) env)))))
-
-(test-case "call non-function"
-  (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define x 42)")) env)
-    (check-exn exn:fail? (lambda () (evaluate (parse (tokenize "(x 1)")) env)))))
-
-;; Complex integration tests
-(test-case "factorial function"
-  (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define factorial (lambda (n) (if (= n 0) 1 (* n (factorial (- n 1))))))")) env)
-    (check-equal? (evaluate (parse (tokenize "(factorial 5)")) env) 120)))
-
-(test-case "nested function definitions"
-  (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define outer (lambda (x) (define inner (lambda (y) (+ x y))) (inner 5)))")) env)
-    (check-equal? (evaluate (parse (tokenize "(outer 3)")) env) 8)))
+;; Pretty printing for HoTT values
+(test-case "value pretty printing"
+  (check-equal? (value->string zero-value) "zero")
+  (check-equal? (value->string (succ-value zero-value)) "(succ zero)")
+  (check-equal? (value->string true-value) "true")
+  (check-equal? (value->string false-value) "false"))

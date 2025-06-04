@@ -6,7 +6,9 @@
          racket/file
          "lexer/lexer.rkt"
          "parser/parser.rkt"
-         "evaluator/evaluator.rkt")
+         "evaluator/evaluator.rkt"
+         "evaluator/values.rkt"
+         "typecheck/typechecker.rkt")
 
 ;; PathFinder LISP - Main Entry Point
 ;; A HoTT-based functional programming language with algebraic effects
@@ -29,9 +31,7 @@
 ;; Parser (implemented in parser/parser.rkt)
 ;; parse function is now imported from parser module
 
-(define (type-check ast)
-  ;; Task 4: Type checker implementation
-  (error "Type checker not yet implemented"))
+;; Type checker is now imported from typecheck module
 
 ;; evaluate function is now imported from evaluator module
 
@@ -39,8 +39,9 @@
 (define (evaluate-string input)
   "Evaluate a PathFinder LISP expression from string"
   (let* ([tokens (tokenize input)]
-         [ast (parse tokens)])
-    ;; Skip type checking for now - Task 4
+         [ast (parse tokens)]
+         [checked-type (type-check ast)])
+    ;; Type checking is now integrated
     (evaluate ast)))
 
 ;; File evaluation
@@ -73,7 +74,7 @@
          (let* ([tokens (tokenize input)]
                 [ast (parse tokens)]
                 [result (evaluate ast env)])
-           (displayln (format "~a" result))))
+           (displayln (value->string result))))
        (repl-loop env)])))
 
 ;; Command line interface
