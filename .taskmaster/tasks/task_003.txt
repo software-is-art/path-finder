@@ -1,0 +1,53 @@
+# Task ID: 3
+# Title: Basic Type System Implementation (Primitive Types & Function Types)
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Implement the foundational components of the HoTT-based type system, including representations for basic predefined types (e.g., `Nat`, `Bool`, `String`) and simple function types.
+# Details:
+Define data structures to represent types, e.g., `TypeAtom(name)`, `FunctionType(param_types, return_type)`. Predefine instances for `Nat`, `Bool`, `String`. The type system should be able to represent these types and allow for their comparison (equality of types). This does not yet include type checking logic, only the representation.
+
+# Test Strategy:
+Unit tests for creating and representing basic types (`Nat`, `Bool`) and function types (e.g., `(-> Nat Bool)`, `(-> Nat Nat Nat)`). Verify that type representations are distinct and can be compared for equality.
+
+# Subtasks:
+## 1. Define Base 'Type' Interface/Enum [pending]
+### Dependencies: None
+### Description: Establish the core data structure or enumeration that will serve as the basis for all type representations in the system. This will define the common contract for different kinds of types.
+### Details:
+Define an abstract base class, interface, or an enum (e.g., using a tagged union or sum type pattern if the language supports it well) named `Type`. This structure should be designed to be extensible for future type kinds (e.g., product types, sum types). For now, it just needs to be a common ancestor or variant type that `TypeAtom` and `FunctionType` can conform to or be variants of.
+
+## 2. Implement 'TypeAtom' Structure for Primitive Types [pending]
+### Dependencies: 3.1
+### Description: Create the data structure for representing atomic, predefined types like `Nat`, `Bool`, `String`. This structure will hold the name of the atomic type.
+### Details:
+Define a class or struct `TypeAtom` that inherits from or implements the base `Type` (from subtask 1). It must contain a `name` field (e.g., a string) to store the identifier of the atomic type (e.g., 'Nat', 'Bool'). Ensure it can be instantiated.
+
+## 3. Implement 'FunctionType' Structure [pending]
+### Dependencies: 3.1
+### Description: Create the data structure for representing function types, which consist of a list of parameter types and a single return type.
+### Details:
+Define a class or struct `FunctionType` that inherits from or implements the base `Type` (from subtask 1). It should contain: 
+1. `parameter_types`: A list or array of `Type` instances representing the types of the function's parameters. 
+2. `return_type`: A `Type` instance representing the function's return type. 
+Ensure it can be instantiated with appropriate `Type` instances (which could be `TypeAtom` or other `FunctionType` instances) for its fields.
+
+## 4. Predefine Constant Instances for Nat, Bool, String [pending]
+### Dependencies: 3.2
+### Description: Create and store globally accessible constant instances for the primitive types `Nat`, `Bool`, and `String` using the `TypeAtom` structure.
+### Details:
+In a suitable module or globally accessible scope, define constant instances of `TypeAtom` for 'Nat', 'Bool', and 'String'. For example: `const TYPE_NAT = new TypeAtom('Nat');`, `const TYPE_BOOL = new TypeAtom('Bool');`, `const TYPE_STRING = new TypeAtom('String');`. These should be readily available for use throughout the type system.
+
+## 5. Implement Type Equality Comparison Logic [pending]
+### Dependencies: 3.2, 3.3
+### Description: Implement a mechanism to compare two type instances for structural equality. This must handle `TypeAtom` and `FunctionType` correctly.
+### Details:
+Implement an equality comparison method or function that can take two `Type` instances. 
+- For `TypeAtom`: Two `TypeAtom` instances are equal if their `name` fields are identical (case-sensitive). 
+- For `FunctionType`: Two `FunctionType` instances are equal if: 
+    1. They have the same number of parameter types. 
+    2. Each corresponding parameter type is equal (recursively using this equality logic). 
+    3. Their return types are equal (recursively). 
+- If comparing types of different kinds (e.g., `TypeAtom` vs `FunctionType`), they are not equal. 
+This comparison should be part of the `Type` interface/base class or a dispatching utility function.
+

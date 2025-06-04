@@ -1,0 +1,43 @@
+# Task ID: 7
+# Title: Algebraic Effect System Core: Declaration and Basic Handling
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Implement the core infrastructure for algebraic effects, including effect declaration (`defeffect`) and a basic mechanism for performing effects and handling them with `try/handle` (or `try/catch` for specific effects).
+# Details:
+Parse `(defeffect EffectName (operation (params) : ReturnType) ...)` to define effects and their operations. Implement a `perform (EffectName.operation args)` primitive that suspends computation. Implement `(try body-expr (:handle (EffectName op) (k arg) handler-body) ...)` where `k` is the continuation. The handler body can resume the computation using `(resume k value)`. This requires a continuation-passing style transformation or similar mechanism in the evaluator.
+
+# Test Strategy:
+Define a simple custom effect (e.g., `State` with `get`/`put` operations). Write programs that perform these effects. Implement handlers that manage the effect (e.g., provide state). Verify that effects suspend computation and handlers can resume them, demonstrating non-local control flow.
+
+# Subtasks:
+## 1. Implement `defeffect` Parser and Effect Registry [pending]
+### Dependencies: None
+### Description: Parse `(defeffect EffectName (operation (params) : ReturnType) ...)` syntax. Store effect definitions, including their operations, parameters, and return types, in a central registry accessible by the runtime.
+### Details:
+Modify the language parser to recognize the `defeffect` keyword and its structure (EffectName, list of operations, each with parameters and an optional ReturnType). Create data structures to represent `EffectDefinition` and `OperationSignature`. Implement a global or module-scoped registry (e.g., a hash map) to store these definitions, keyed by `EffectName`. Each `EffectName` would map to an object/struct containing its defined operations and their signatures. Ensure validation of effect and operation names (e.g., uniqueness, valid identifiers).
+
+## 2. Implement `perform` Primitive and Initial Suspension Signal [pending]
+### Dependencies: 7.1
+### Description: Implement the `(perform EffectName.operation args)` primitive. When `perform` is called, it should identify the effect and operation, package the arguments, and signal a suspension of the current computation by propagating an effect instance.
+### Details:
+Add `perform` as a built-in function or special form. It should look up `EffectName.operation` in the registry (from subtask 1) to validate the operation and arity of `args`. Create a unique, identifiable object (e.g., an "EffectInstance" or a special throwable object) that encapsulates the specific effect operation being performed and its arguments. The evaluator must be modified to recognize this signal and halt normal execution flow, propagating this signal upwards. This signal will later be caught by a `try/handle` block.
+
+## 3. Implement `try/handle` Syntax Parsing and Handler Scope Setup [pending]
+### Dependencies: 7.1
+### Description: Parse the `(try body-expr (:handle (EffectName op) (k arg) handler-body) ...)` syntax. During evaluation of a `try` expression, establish a dynamic scope that registers the provided handlers for specific effects and operations.
+### Details:
+Extend the parser to support the `try` special form and its `:handle` clauses. Each `:handle` clause specifies an `EffectName`, an `operation` name (`op`), a continuation parameter (`k`), an argument parameter (`arg`), and a `handler-body`. When a `try` expression is evaluated, push a new frame onto a runtime "handler stack". This frame should store a mapping from `(EffectName, operationName)` pairs to their corresponding handler functions (closures created from `handler-body` capturing `k` and `arg` parameters and the lexical environment). The `body-expr` is then evaluated within this scope. Upon normal completion or an effect being handled and resumed out of the `try` block, this handler frame should be popped.
+
+## 4. Implement Effect Handling Logic and Continuation Capturing [pending]
+### Dependencies: 7.2, 7.3
+### Description: Integrate `perform` with `try/handle`. When an effect is signaled (from subtask 2) within a `try` block, search the handler stack for a matching handler. If found, capture the current continuation and invoke the handler with the continuation and effect arguments.
+### Details:
+Modify the evaluator's response to the "EffectInstance" signal. When an effect is signaled, the evaluator should search the current handler stack (from subtask 3) for a handler matching the `EffectName` and `operationName` from the EffectInstance. If a handler is found: 1. Capture the current state of computation as a "continuation" object/function. This continuation, when invoked later with a value, should resume execution as if the `perform` call returned that value. 2. Invoke the matched handler function, passing it the captured continuation (`k`) and the arguments from the `perform` call (bound to `arg`). If no handler is found, the effect signal should continue propagating upwards.
+
+## 5. Implement `resume` Primitive for Continuation Invocation [pending]
+### Dependencies: 7.4
+### Description: Implement the `(resume k value)` primitive. This primitive takes a continuation (captured in subtask 4) and a value, and resumes the suspended computation, making the original `perform` call appear to return `value`.
+### Details:
+Add `resume` as a built-in function or primitive. It expects a continuation object (as created in subtask 4) and a result value. Invoking `(resume k value)` should: 1. Restore the evaluation context (e.g., stack, relevant parts of the environment) associated with the continuation. 2. Make the original `perform` call (that was suspended) evaluate to `value`. 3. Ensure that the handler stack is correctly managed; the handler that called `resume` is typically no longer active for the resumed computation unless it re-establishes handlers. The control flow returns to the point after the `perform` call.
+

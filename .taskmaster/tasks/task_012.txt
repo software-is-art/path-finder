@@ -1,0 +1,43 @@
+# Task ID: 12
+# Title: Effect Polymorphism for CIFs with Dependent Constraints
+# Status: pending
+# Dependencies: 9, 10, 11
+# Priority: medium
+# Description: Enhance CIFs to support effect polymorphism based on dependent constraints, allowing them to be pure if a proof is available or effectful otherwise, as specified by `:constraint-proof` and `:performs-when-unproven`.
+# Details:
+Extend `deftype` syntax: `(:constraint-proof (p : ProofType))` and `(:performs-when-unproven EffectToPerform)`. When a CIF is called: 1. Check if a proof for `ProofType` (often an `Id` type or a boolean proposition) is statically available (e.g., from type refinements of inputs, or given via `(:given proof-term)` at call site). 2. If proof is available, CIF is pure. 3. If proof is not available, CIF performs `EffectToPerform` (or `ConstructionFailure` if not specified). This requires the type system to handle proof terms and potentially rudimentary proof checking/inference. Example: `(deftype NonEmptyVec ((A : Type) (n : Nat)) (Array A) (:constraint-proof (p : (not (Id Nat n Nat.zero)))) (:performs-when-unproven ConstructionFailure))`.
+
+# Test Strategy:
+Use the `NonEmptyVec` example from PRD. Test pure instantiation when `n` is statically non-zero (e.g., `(NonEmptyVec Int 1)`). Test effectful instantiation when `n` is a variable, requiring `try/catch`. Test providing an explicit proof via `(:given ...)`. Test with refined types like `Nat-Positive` that implicitly provide the proof, making the CIF pure.
+
+# Subtasks:
+## 1. Extend `deftype` Syntax and AST for Constraint Proofs and Effects [pending]
+### Dependencies: None
+### Description: Modify the language parser and Abstract Syntax Tree (AST) to support the new `:constraint-proof` and `:performs-when-unproven` clauses within `deftype` definitions for Custom Inductive Families (CIFs).
+### Details:
+Update the parser (e.g., LALR grammar, recursive descent parser) for `deftype` to recognize `(:constraint-proof (p : ProofType))` and `(:performs-when-unproven EffectToPerform)`. Extend the AST nodes for CIF definitions to store the proof variable name (e.g., `p`), the `ProofType` (as an AST representation of a type), and the `EffectToPerform` (as an identifier or a special marker like `ConstructionFailure`). Ensure robust error handling for malformed syntax.
+
+## 2. Type System Representation for `ProofType` and Proof Terms [pending]
+### Dependencies: 12.1
+### Description: Enhance the type system to represent, type-check, and validate `ProofType` expressions (e.g., `(Id Nat n Nat.zero)`, boolean propositions) specified in CIFs, and to handle associated proof terms.
+### Details:
+Define internal representations for `ProofType` within the type checker, potentially recognizing specific patterns like `Id` types or general propositional types. Implement type checking for `ProofType` expressions themselves to ensure they are well-formed. Establish how proof terms are represented (e.g., as specific AST nodes or by leveraging existing term representations). If `Id` types are central (e.g., `(Id T a b)`), ensure they can be robustly handled as propositions.
+
+## 3. Implement Static Proof Derivation from Type Refinements [pending]
+### Dependencies: 12.2
+### Description: Develop logic within the type checker to statically infer the availability of a proof for a CIF's `ProofType` based on type refinements of its input arguments at the call site.
+### Details:
+When a CIF is called, retrieve its declared `ProofType` (from AST, understood by type system via Subtask 2). Substitute CIF type parameters in `ProofType` with actual types/values from the call. Analyze the types of the provided arguments, looking for refinements (e.g., `x : Nat where x > 0`). Implement a mechanism (e.g., a small SMT query interface, a set of specialized inference rules) to determine if the available refinements logically entail the `ProofType`. For example, if `ProofType` is `(not (Id Nat n Nat.zero))` and an argument `n_val` for `n` has a refined type implying `n_val != 0`, the proof is considered available.
+
+## 4. Implement Handling of Explicit `(:given proof-term)` at Call Sites [pending]
+### Dependencies: 12.2
+### Description: Extend CIF call-site syntax and type-checking to support explicitly provided proof terms via `(:given proof-term)`, and validate these terms against the CIF's `ProofType`.
+### Details:
+Modify the parser for function/CIF calls to accept an optional `(:given proof-term)` clause. Store the provided `proof-term` (as an AST expression) in the call-site AST node. During type checking of the CIF call, if `(:given proof-term)` is present: type-check the `proof-term` itself. Verify that the type of the `proof-term` is compatible with or proves the CIF's `ProofType` (after substituting CIF parameters, using `ProofType` understanding from Subtask 2). This constitutes the 'rudimentary proof checking' for explicit proofs. If valid, the proof is considered available.
+
+## 5. Integrate Proof Availability into Effect Typing for CIF Calls [pending]
+### Dependencies: 12.3, 12.4
+### Description: Modify the CIF call resolution and effect typing mechanism to use the determined proof availability (from implicit derivation or explicit provision) to assign either a 'pure' effect or the specified `EffectToPerform` (or default `ConstructionFailure`).
+### Details:
+At each CIF call site, invoke the proof availability checks: first, the static derivation from refinements (Subtask 3), then the check for an explicit `(:given proof-term)` (Subtask 4). If a proof is deemed available through either mechanism: the CIF call is assigned a 'pure' effect in the effect system. If no proof is available: the CIF call is assigned the effect specified by `:performs-when-unproven` in its `deftype`. If `:performs-when-unproven` is not specified, assign a default `ConstructionFailure` effect (this effect must be defined and handled by the effect system, possibly as a compile-time error if unhandled or a specific runtime exception). Ensure the overall type and effect inference system correctly propagates these conditional effects.
+

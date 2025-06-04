@@ -1,0 +1,59 @@
+# Task ID: 2
+# Title: Core AST Definition and Basic Evaluation Engine
+# Status: pending
+# Dependencies: 1
+# Priority: medium
+# Description: Define the core Abstract Syntax Tree (AST) structures for all language constructs and implement a basic evaluation engine for simple functional expressions, variable definitions, and lookups within a lexical scope.
+# Details:
+AST nodes should cover: literals (numbers, booleans, strings), symbols (variables), function calls `(f arg1 arg2)`, lambda definitions `(lambda (params) body)`, variable definitions `(define x value)`, conditional expressions `(if cond then-expr else-expr)`. Implement an environment model for lexical scoping (e.g., a chain of hash maps). The evaluator will recursively walk the AST. For `(define x value)`, store `value` in the current environment. For symbols, look them up. For `(lambda ...)`, create a closure object capturing the current environment. For function calls, evaluate arguments, extend environment with params, and evaluate body.
+
+# Test Strategy:
+Test evaluation of simple arithmetic and boolean expressions. Test variable definition and lookup in global and local scopes. Test lambda creation and application. Verify correct evaluation of conditional expressions. Test basic error handling for unbound variables.
+
+# Subtasks:
+## 1. Define Core AST Node Structures [pending]
+### Dependencies: None
+### Description: Implement the data structures for all required Abstract Syntax Tree (AST) nodes: Literals (Number, Boolean, String), Symbol, FunctionCall, Lambda, Define, and If. These structures will represent the parsed code.
+### Details:
+Use classes, structs, or algebraic data types for each AST node. For example: `LiteralNode(value)`, `SymbolNode(name)`, `FunctionCallNode(callee: ASTNode, arguments: List[ASTNode])`, `LambdaNode(params: List[SymbolNode], body: ASTNode)`, `DefineNode(name: SymbolNode, value: ASTNode)`, `IfNode(condition: ASTNode, thenBranch: ASTNode, elseBranch: ASTNode)`. Consider a common base type or interface `ASTNode`.
+
+## 2. Implement Environment Model for Lexical Scoping [pending]
+### Dependencies: 2.1
+### Description: Create an `Environment` class or structure to manage variable bindings and lexical scopes. It should support defining variables, looking up variable values, and creating nested scopes.
+### Details:
+Implement the environment as a chain of hash maps (dictionaries). Each `Environment` instance should have a local store for bindings and a reference to an optional parent (outer) environment. Key methods: `define(name: String, value: Any)`, `lookup(name: String) -> Any`, `extend() -> Environment`. `lookup` should search the current environment, then delegate to the parent if not found, throwing an error if the variable is undefined.
+
+## 3. Implement Basic Evaluator for Literals, Symbols, and `define` [pending]
+### Dependencies: 2.1, 2.2
+### Description: Develop the initial `evaluate` function that takes an AST node and an environment. Implement evaluation logic for Literal nodes, Symbol lookups, and `(define x value)` expressions.
+### Details:
+The `evaluate(node: ASTNode, env: Environment)` function will use pattern matching or type checking on the `node` to dispatch to specific evaluation logic. 
+- Literals: Return their intrinsic value (e.g., number, boolean, string).
+- Symbols: Use `env.lookup(symbolName)` to retrieve the variable's value.
+- `DefineNode`: Evaluate the `value` sub-expression using `evaluate(defineNode.value, env)`. Then, use `env.define(defineNode.name.name, evaluatedValue)`. The `define` expression could return a special confirmation value or the evaluated value.
+
+## 4. Implement Evaluator for `lambda` Expressions and Closure Creation [pending]
+### Dependencies: 2.3
+### Description: Extend the evaluator to handle `(lambda (params) body)` expressions. This involves creating `Closure` objects that capture the current lexical environment.
+### Details:
+When `evaluate` encounters a `LambdaNode`, it should create a `Closure` object (or an equivalent data structure). This `Closure` must store: 
+1. The lambda's parameters (list of symbol names).
+2. The lambda's body (the ASTNode representing the function body).
+3. A reference to the environment active at the point of the lambda's definition (this is crucial for lexical scoping). 
+The `Closure` object itself is the runtime value representing the function.
+
+## 5. Implement Evaluator for Function Calls and `if` Expressions [pending]
+### Dependencies: 2.4
+### Description: Complete the core evaluation engine by implementing logic for `FunctionCallNode` (evaluating function calls) and `IfNode` (conditional execution).
+### Details:
+For `FunctionCallNode`:
+1. Evaluate the `callee` sub-expression. This should yield a `Closure` (from subtask 4).
+2. Evaluate each `argument` sub-expression in the *current* environment to get argument values.
+3. Create a new `Environment` for the function execution. This new environment's parent should be the `Closure`'s captured environment.
+4. Bind the `Closure`'s parameter names to the evaluated argument values in this new environment.
+5. Evaluate the `Closure`'s body ASTNode within this new, extended environment. The result of this evaluation is the result of the function call.
+For `IfNode`:
+1. Evaluate the `condition` sub-expression.
+2. If the result is truthy (e.g., not `false`), evaluate and return the result of the `thenBranch`.
+3. Otherwise, evaluate and return the result of the `elseBranch`.
+

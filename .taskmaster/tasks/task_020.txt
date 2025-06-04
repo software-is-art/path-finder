@@ -1,0 +1,82 @@
+# Task ID: 20
+# Title: Implement Basic Proof Search and Constraint Inference System
+# Status: pending
+# Dependencies: 18
+# Priority: medium
+# Description: Develop a system for basic proof search and constraint inference to enable automatic constraint satisfaction. This system will include simple proof generation, type-level computation for constraint checking, and integration with effect polymorphism decisions as specified in the PRD's effect polymorphic CIF system.
+# Details:
+**1. Proof Representation and Basic Search Algorithm:**
+   - Define data structures for representing proof steps, proof trees, and logical formulae relevant to constraints.
+   - Implement a foundational proof search algorithm (e.g., a simple tableau prover, or a resolution-based method tailored to the constraint language from Task 18).
+   - The search should be capable of taking a constraint goal and attempting to derive its validity based on axioms and existing type information.
+
+**2. Constraint Inference Engine:**
+   - Design and implement a set of inference rules applicable to the language's constraint expressions (e.g., transitivity, symmetry for equality, rules for type properties, custom rules from PRD).
+   - Create an engine that can apply these rules to a given set of constraints to deduce new, implied constraints. This engine will support the proof search mechanism.
+
+**3. Type-Level Computation for Constraint Checking:**
+   - Extend the constraint validation logic (from Task 18) to utilize the proof search and inference engine.
+   - During type checking or CIF instantiation, when a constraint needs verification, the system will first attempt direct evaluation. If this is insufficient, it will invoke the proof search mechanism.
+   - Enable the evaluation or symbolic reasoning about type-level functions or predicates within constraints.
+
+**4. Simple Proof Generation:**
+   - Upon successful satisfaction of a constraint via proof search, the system should be able to generate a simplified trace or certificate of the proof.
+   - This output can be used for debugging, providing explanations to the developer, or potentially for more advanced compiler analyses in the future.
+
+**5. Integration with Effect Polymorphism (as per PRD):**
+   - Thoroughly review the PRD specifications for the "effect polymorphic CIF system."
+   - Ensure the proof search and constraint inference mechanisms are equipped to handle constraints related to computational effects (e.g., purity, specific effect signatures, effect subsumption).
+   - The system must aid in deciding or verifying effect-related properties for polymorphic types and functions, aligning with the PRD's requirements for CIFs. For instance, inferring that a function `f : (A -> B) -> C` is pure if its argument function `(A -> B)` is proven pure via constraints.
+
+# Test Strategy:
+**1. Unit Tests:**
+   - **Proof Search:** Create test cases with constraints that are trivially true, require multi-step derivations, and are unsatisfiable. Verify correct outcomes and termination.
+   - **Constraint Inference:** Test individual inference rules with known inputs and expected outputs. Verify the engine's ability to derive a complete set of implied constraints.
+   - **Type-Level Computation:** Define types with constraints involving type-level functions/predicates (e.g., list length, arithmetic properties) and verify correct validation by the proof system.
+   - **Proof Generation:** For constraints proven true, inspect the generated proof trace for correctness and clarity.
+
+**2. Integration Tests:**
+   - **Interaction with Task 18 (Constraint System):**
+     - Define `deftype` expressions with `:where` clauses that necessitate the proof search/inference capabilities (e.g., involving quantifiers or complex logical combinations if supported).
+     - Test that types are correctly accepted/rejected based on the provability of their constraints during compile-time checks.
+     - Test CIF instantiation where runtime constraint checks leverage the inference engine.
+   - **Effect Polymorphism Scenarios (aligned with PRD):**
+     - Implement test cases for polymorphic functions and types with effect-related constraints (e.g., a higher-order function whose effect signature depends on the proven effects of its function arguments).
+     - Verify that the system correctly infers or proves these effect properties, leading to correct type checking and CIF behavior as per the PRD.
+     - Example: Test a scenario where a CIF's effect polymorphism is resolved by proving a constraint like `(effect_of(X) subset_of allowed_effects)`.
+
+**3. Scenario-Based Testing (PRD Alignment):**
+   - Develop comprehensive test scenarios based directly on examples or specifications from the PRD for the effect polymorphic CIF system.
+   - Ensure the end-to-end behavior (parsing, type checking, constraint satisfaction, CIF instantiation) matches the PRD's intent when the new proof search and inference system is active.
+
+# Subtasks:
+## 1. Define Proof Data Structures and Implement Foundational Proof Search [pending]
+### Dependencies: None
+### Description: Establish core data structures for representing proof steps, proof trees, and logical formulae for constraints. Implement a foundational proof search algorithm (e.g., tableau or resolution-based) capable of deriving constraint validity from axioms and existing type information.
+### Details:
+Data structures should be compatible with constraints defined in Task 18. The search algorithm will take a constraint goal and attempt to prove its validity. Initial implementation can use a simple depth-first or breadth-first search. Axioms and type information form the knowledge base.
+
+## 2. Develop Constraint Inference Engine with Rule Application Logic [pending]
+### Dependencies: 20.1
+### Description: Design and implement a set of inference rules (e.g., transitivity, symmetry, type property rules, custom rules from PRD). Create an engine that applies these rules to a given set of constraints to deduce new, implied constraints, thereby supporting the proof search mechanism.
+### Details:
+The inference engine will take known constraints and apply rules to expand this set. Rules should be designed for extensibility and configurability. This engine will be invoked by the proof search (from subtask 1) to generate intermediate proof steps or explore new deduction paths.
+
+## 3. Integrate Proof System into Type-Level Constraint Checking [pending]
+### Dependencies: 20.1, 20.2
+### Description: Extend the existing constraint validation logic (from Task 18) to utilize the proof search and inference engine. When direct evaluation of a constraint is insufficient, the system will invoke the proof mechanism. Enable symbolic reasoning about type-level functions or predicates within constraints.
+### Details:
+Modify the type checking or Constraint Intermediate Form (CIF) instantiation logic. If a constraint check fails direct evaluation, formulate it as a goal for the proof search system. The system must handle type-level functions/predicates, potentially by treating them as uninterpreted functions or by applying specific axioms/rules defined for them.
+
+## 4. Implement Simple Proof Trace Generation for Successful Proofs [pending]
+### Dependencies: 20.1, 20.2, 20.3
+### Description: Upon successful satisfaction of a constraint via the proof search mechanism, the system should generate a simplified trace or certificate of the proof. This output will serve debugging, developer explanation, or future compiler analyses.
+### Details:
+Augment the proof search algorithm (from subtask 1) and inference engine (subtask 2) to record the sequence of applied rules, axioms, and derived facts leading to the proof. Develop a formatter to present this trace in a human-readable or structured (e.g., JSON) format. Focus on clarity and essential information for debugging and understanding the proof.
+
+## 5. Adapt Proof System for Effect Polymorphism Constraints (PRD) [pending]
+### Dependencies: 20.1, 20.2, 20.3
+### Description: Review PRD specifications for the 'effect polymorphic CIF system.' Adapt the proof search and constraint inference mechanisms to handle constraints related to computational effects (e.g., purity, specific effect signatures, effect subsumption). The system must aid in deciding or verifying effect-related properties for polymorphic types and functions.
+### Details:
+Identify specific effect-related constraint types from the PRD (e.g., `isPure(X)`, `hasEffect(E, X)`). Define corresponding axioms or inference rules (e.g., for purity propagation, effect composition, effect subsumption). Integrate these into the inference engine (subtask 2) and ensure the proof search (subtask 1) can utilize them within the context of constraint checking (subtask 3). Example: inferring purity of `f : (A -> B) -> C` if its argument function `(A -> B)` is proven pure via constraints.
+

@@ -1,0 +1,291 @@
+# Overview
+PathFinder LISP is a statically-typed, functional programming language with a LISP-based syntax that brings the power and safety of Homotopy Type Theory (HoTT) to practical software development. It treats types as mathematical spaces with inherent notions of equality (paths) and equivalence, providing exceptionally strong compile-time guarantees. Each type definition inherently specifies a single, canonical way to construct an instance (Canonical Instantiation Function - CIF), with type construction being a computational effect managed through an algebraic effect system. The language targets programming language researchers, developers working on high-assurance systems, and those familiar with advanced functional programming and type theory.
+
+# Core Features
+**HoTT-Based Type System**
+- Types as mathematical spaces with values as "points" in these spaces
+- Equality as paths (Id A x y) - equality propositions are types themselves
+- Functions as continuous maps that preserve path structure between types
+- Direct support for dependent types, universes, product types, sum types, and identity types
+- Univalence axiom support: isomorphic types are equal
+
+**Canonical Instantiation Functions (CIFs)**
+- Every type has exactly one primary way to be instantiated using the type name as constructor
+- Type instantiation is a computational effect that can fail or invoke other effects
+- Effect polymorphism: CIFs can be pure when constraints are encoded in dependent types, effectful when runtime checking is needed
+- Automatic inference of pure vs effectful CIFs based on constraints and underlying structures
+- Built-in ConstructionFailure effect for constraint violations when proofs are unavailable
+- Gradual transition from runtime checks to compile-time proofs as constraint encoding improves
+
+**Effect Polymorphism in Detail**
+CIFs support effect polymorphism, allowing the same type constructor to be either pure or effectful depending on available constraint proofs:
+
+Basic Example - NonEmptyVec:
+```
+; Traditional approach - always effectful
+(deftype NonEmptyVec ((A : Type) (n : Nat))
+    (Array A)
+    (:where (not (Id Nat n Nat.zero))))
+
+; Enhanced approach - effect polymorphic
+(deftype NonEmptyVec ((A : Type) (n : Nat))
+    (Array A)
+    (:constraint-proof (p : (not (Id Nat n Nat.zero))))
+    (:performs-when-unproven (ConstructionFailure)))
+```
+
+Usage patterns demonstrate the polymorphism:
+```
+; Pure usage - proof trivially available
+(NonEmptyVec Int (Nat.succ Nat.zero))  ; No effects, no try/catch needed
+
+; Effectful usage - proof unavailable at compile time
+(try (NonEmptyVec Int user-input-nat)
+     (:catch (e : ConstructionError) fallback-handling))
+
+; Explicit proof usage - pure with complex constraints
+(NonEmptyVec Int complex-nat (:given proof-of-nonzero))
+```
+
+Constraint encoding through refined types:
+```
+; Define refined types that encode constraints
+(deftype Nat-Positive () 
+    Nat 
+    (:constraint-proof (p : (Id Bool (> self Nat.zero) Bool.true))))
+
+; CIF becomes automatically pure when using refined types
+(deftype PositiveVec ((A : Type) (n : Nat-Positive))
+    (Array A))  ; No constraint needed - encoded in parameter type
+```
+
+The compiler automatically determines CIF purity based on:
+- Static availability of constraint proofs
+- Purity of underlying type constructors
+- Explicit proof parameters provided at call site
+- Refinement types that encode constraints in the type system
+
+**Algebraic Effect System**
+- Separation of computational logic from effect handling
+- Type-safe non-local control flow through effects and handlers
+- ConstructionFailure as primary error handling mechanism for type construction
+- User-defined effects with operation declarations and handlers
+
+**Scheme-like LISP Syntax**
+- S-expression based syntax for ease of parsing and metaprogramming
+- Homoiconic representation enabling powerful syntactic abstractions
+- Hygienic macro system for language extension and experimentation
+- Case-sensitive identifiers and minimalist design philosophy
+
+**Strong Static Guarantees**
+- Compile-time error detection through HoTT principles
+- Propositions as types (logical propositions represented as types)
+- Path-based reasoning about program equivalence
+- Separation of effectful construction logic from pure computational logic
+
+# User Experience
+**Target User Personas**
+- Programming language researchers exploring HoTT and effect systems
+- Developers working on high-assurance systems requiring verifiability
+- Programmers familiar with LISP dialects (especially Scheme) and advanced type systems
+- Mathematicians and logicians interested in computational HoTT perspectives
+
+**Key User Flows**
+- Type definition using deftype with automatic CIF generation
+- Pure type instantiation for simple cases without effect handling
+- Effectful type construction with try/catch blocks for constraint violations
+- Effect declaration and handling for custom computational effects
+- Pattern matching and recursion for data manipulation
+- Module organization and namespace management
+
+**UI/UX Considerations**
+- REPL-driven development experience optimized for type theory exploration
+- Clear error messages for type constraint violations and effect handling
+- Debugging tools that understand HoTT concepts and path reasoning
+- Documentation and examples emphasizing conceptual clarity over beginner-friendliness
+- Integration with proof assistants and formal verification tools
+
+# Technical Architecture
+**Core Language Components**
+- Lexer and parser for S-expression syntax with LISP conventions
+- Type checker implementing HoTT principles and dependent types
+- Effect system compiler for algebraic effects and CIF analysis
+- Code generator with focus on correctness over performance optimization
+
+**Type System Implementation**
+- Universe hierarchy (Type, Type 1, etc.) with polymorphism support
+- Identity type implementation with path constructors and induction principles
+- Dependent function types (Π-types) and dependent product types (Σ-types)
+- Sum type support through enum variants in deftype
+- Univalence axiom implementation for type equivalence reasoning
+
+**Effect System Architecture**
+- Effect declaration syntax and semantic analysis
+- Effect polymorphism for CIFs with dependent constraint encoding
+- CIF purity analysis and automatic effect inference based on available constraint proofs
+- Handler compilation with continuation-based control flow
+- ConstructionFailure effect integration with constraint checking
+- Proof search and inference for automatic constraint satisfaction
+- Runtime/compile-time decision making for constraint validation
+
+**Runtime System**
+- Algebraic effect interpreter with proper continuation handling
+- Memory management for functional data structures
+- Pattern matching compilation for efficiency
+- Module system with namespace isolation
+
+**Development Tools**
+- REPL with type information display and interactive development
+- Error reporting system with HoTT-aware messages
+- Debugging tools for effect traces and type constraint analysis
+- Documentation generator for type signatures and effect annotations
+
+# Development Roadmap
+**Phase 1: Core Language Foundation (MVP)**
+- Basic LISP parser and lexer implementation
+- Fundamental type system with simple types (Bool, Nat, Option, List)
+- Basic CIF mechanism for pure type construction
+- Simple pattern matching and function definitions
+- REPL with basic type checking and evaluation
+
+**Phase 2: Effect System Integration**
+- Algebraic effect system implementation
+- ConstructionFailure effect and constraint checking
+- Effect handlers and try/catch syntax
+- CIF purity analysis and automatic effect inference
+- Enhanced error reporting for effect-related issues
+
+**Phase 3: Advanced Type Theory Features**
+- Identity types and path reasoning implementation
+- Dependent types and universe hierarchy
+- Dependent constraint types for CIF effect polymorphism
+- Univalence axiom support for type equivalence
+- Advanced pattern matching with dependent elimination
+- Propositional logic integration (propositions as types)
+
+**Phase 4: Standard Library and Tooling**
+- Effect polymorphic CIF implementations for standard types
+- Comprehensive standard library with foundational types
+- Advanced data structures (vectors, trees, maps) with constraint encoding
+- Identity type manipulation utilities and path operations
+- Proof search and automatic constraint inference
+- Module system with import/export mechanisms
+- Documentation and tutorial system
+
+**Phase 5: Metaprogramming and Extensibility**
+- Hygienic macro system implementation
+- Syntax extension mechanisms for domain-specific constructs
+- User-defined type formers and HoTT-specific DSLs
+- Integration with external proof assistants
+- Performance optimization and compiler improvements
+
+**Future Enhancements**
+- Higher Inductive Types (HITs) for advanced topological constructs
+- Concurrency model with effect-based parallelism
+- Interoperability with mainstream languages
+- Advanced optimization techniques for functional code
+- IDE integration and development environment improvements
+
+# Logical Dependency Chain
+**Foundation Layer (Build First)**
+- LISP parser and lexer for S-expression syntax
+- Basic abstract syntax tree representation
+- Symbol table and namespace management
+- Core evaluation engine for functional expressions
+
+**Type System Core**
+- Basic type representation and type checking infrastructure
+- Simple type constructors (products, sums, functions)
+- Type inference and unification algorithms
+- Error reporting system for type mismatches
+
+**CIF Implementation**
+- Type definition parsing and CIF generation
+- Pure CIF evaluation without effects
+- Constraint representation and basic validation
+- Integration with type system for constructor calls
+
+**Effect System Foundation**
+- Effect declaration parsing and representation
+- Basic effect performance and suspension
+- Simple handler mechanism without advanced control flow
+- ConstructionFailure effect as primary use case
+
+**Advanced Features Integration**
+- Dependent types built on top of basic type system
+- Effect polymorphism integration with dependent constraint types
+- Identity types and path reasoning using effect infrastructure
+- Advanced pattern matching leveraging type information
+- Standard library implementation using established foundations with effect polymorphic CIFs
+
+**Development Experience**
+- REPL integration with all core components
+- Enhanced error messages using type and effect information
+- Debugging tools built on interpreter infrastructure
+- Documentation system using type signature extraction
+
+# Risks and Mitigations
+**Technical Challenges**
+- Risk: Complexity of implementing dependent types and HoTT concepts correctly
+- Mitigation: Start with simplified versions, extensive testing against known examples, collaboration with type theory experts
+
+- Risk: Performance implications of algebraic effects and continuation-based control
+- Mitigation: Focus on correctness first, profile and optimize later, consider effect compilation strategies
+
+- Risk: Difficulty in providing clear error messages for advanced type theory concepts
+- Mitigation: Invest heavily in error reporting infrastructure, provide educational examples, iterative improvement based on user feedback
+
+- Risk: Added complexity of effect polymorphism and automatic proof search
+- Mitigation: Implement effect polymorphism incrementally, starting with simple constraint patterns, provide explicit syntax for both pure and effectful paths, extensive testing of proof inference edge cases
+
+**MVP Definition and Scope**
+- Risk: Feature creep leading to overambitious initial implementation
+- Mitigation: Strict focus on core functionality first, deferring advanced features like HITs and optimization
+
+- Risk: Balancing theoretical purity with practical usability, especially with effect polymorphism adding cognitive overhead
+- Mitigation: Maintain clear separation between research features and practical programming needs, prioritize working code over perfect theory, provide simple syntax defaults that hide complexity
+
+**Resource Constraints**
+- Risk: Limited expertise in both LISP implementation and advanced type theory
+- Mitigation: Leverage existing LISP implementation techniques, study existing dependently-typed languages, seek academic collaboration
+
+- Risk: Maintaining momentum on long-term research-oriented project
+- Mitigation: Focus on achieving tangible milestones quickly, demonstrate capabilities through concrete examples, build community interest
+
+**User Adoption Challenges**
+- Risk: High learning curve deterring potential users, compounded by effect polymorphism complexity
+- Mitigation: Extensive documentation, tutorial materials, clear progression from basic LISP to advanced features, provide simple modes that hide effect polymorphism initially
+
+- Risk: Developers may find effect polymorphism confusing when same syntax behaves differently based on available proofs
+- Mitigation: Clear visual indicators in tooling for pure vs effectful CIF calls, comprehensive error messages explaining why effects are needed, optional explicit syntax for disambiguation
+
+- Risk: Competition from established dependently-typed languages
+- Mitigation: Focus on unique LISP-based approach and metaprogramming capabilities, emphasize research and experimentation benefits
+
+# Appendix
+**Research Foundations**
+- Homotopy Type Theory Book (primary reference for theoretical foundations)
+- Algebraic Effects and Handlers literature for effect system design
+- Scheme specification and implementation techniques for LISP foundation
+- Existing dependently-typed languages (Agda, Idris, Coq) for comparison and inspiration
+
+**Technical Specifications**
+- S-expression syntax following Scheme conventions with case-sensitive identifiers
+- Effect declaration syntax: (defeffect Name (operation (params) : ReturnType))
+- Type definition syntax: (deftype Name (params) underlying-structure (:where constraints) (:constraint-proof proof-params) (:performs effects) (:performs-when-unproven effects))
+- Handler syntax: (try computation (:handle (Effect op) (match op patterns)) (:catch (err : Type) handler))
+
+**Implementation References**
+- Parser implementation using standard LISP parsing techniques
+- Type checker design following bidirectional type checking principles
+- Effect system implementation using capability-based approaches
+- Standard library organization following functional programming patterns
+
+**Future Research Directions**
+- Integration of Higher Inductive Types for advanced topological reasoning
+- Exploration of computational interpretations of advanced HoTT concepts
+- Investigation of optimization techniques for effect-heavy code
+- Advanced proof search and constraint inference for effect polymorphism
+- Development of proof tactics and automation within the LISP framework
+- Exploration of category theory concepts through LISP metaprogramming
+- Gradual typing integration for smooth transition between effectful and pure CIFs

@@ -1,0 +1,71 @@
+# Task ID: 21
+# Title: Set Up Racket/Rhombus Development Environment and Project Structure
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Establish the development environment using Racket #lang (or Rhombus with shrubbery/forest macros), including implementation language choice, initial project structure, build system, testing framework, and development tools. This task is foundational for all subsequent implementation work.
+# Details:
+1. **Language Choice & Setup**: Evaluate and decide between standard Racket (e.g., `#lang racket/base`) and Rhombus. If Rhombus, identify and integrate necessary base layers like `shrubbery` and `forest`. Document the choice and install the chosen Racket version or Rhombus distribution.
+2. **Project Structure**: Create a standard directory layout: `src/` for core source code, `tests/` for unit/integration tests, `examples/` for sample programs, `docs/` for documentation, and `scripts/` for utility scripts. Initialize a main entry point file if applicable (e.g., `src/main.rkt`).
+3. **Version Control**: Initialize a Git repository (`git init`). Create a comprehensive `.gitignore` file tailored for Racket/Rhombus projects (e.g., ignoring `compiled/` directories, editor-specific files, OS-specific files).
+4. **Build System**: Configure Racket's `raco make` for building the project or set up the equivalent build process for Rhombus. Create initial build configuration files (e.g., `info.rkt` for Racket package metadata if the project will be structured as a package).
+5. **Testing Framework**: Integrate the `rackunit` testing framework. Create a main test runner file (e.g., `tests/main-tests.rkt`) to discover and run all tests. Include a simple placeholder test.
+6. **Dependency Management**: Document the process for managing external Racket packages using `raco pkg`. List any known core external libraries required from the outset.
+7. **Development Tools**: Recommend and document setup for IDEs/editors (e.g., DrRacket, VS Code with Racket LSP, Emacs with racket-mode). Investigate and optionally set up linters (e.g., `raco lint`) and code formatters.
+8. **Documentation Setup**: Set up Scribble for project documentation. Create a basic `docs/main.scrbl` file and configure `raco setup` or `raco scribble` for building documentation.
+
+# Test Strategy:
+1. **Environment Verification**: Confirm successful installation and activation of the chosen Racket version or Rhombus environment on a clean system or in a container.
+2. **Project Initialization & Git**: Clone the repository after the initial commit. Verify the directory structure matches the definition. Confirm the `.gitignore` file is present and correctly excludes common Racket artifacts (e.g., create dummy compiled files, check `git status`).
+3. **Build Process**: Create a minimal 'hello world' module in `src/`. Successfully build the project using the configured build command (e.g., `raco make src/main.rkt`). Verify compiled outputs are generated and handled correctly by version control.
+4. **Testing Framework**: Create a simple test case in `tests/` (e.g., using `rackunit` `check-equal?`). Run the test suite (e.g., `raco test tests/main-tests.rkt`) and confirm tests are discovered and pass.
+5. **REPL & Tooling**: Launch the Racket/Rhombus REPL in the project directory. Successfully `require` a module from `src/`. If linters/formatters are set up, run them on a sample file and verify they function as expected.
+6. **Dependency Management Check**: If a sample external dependency is identified, attempt to install it via `raco pkg install` and `require` it in a test module to ensure the process works.
+7. **Documentation Generation**: Add minimal content to `docs/main.scrbl`. Run the documentation build command (e.g., `raco scribble +m docs/main.scrbl`) and verify that HTML or other specified output is generated correctly.
+
+# Subtasks:
+## 1. Language Selection, Installation, and Version Control Initialization [done]
+### Dependencies: None
+### Description: Decide between standard Racket and Rhombus, install the chosen language environment, initialize a Git repository, and create a tailored .gitignore file.
+### Details:
+1. **Language Evaluation & Choice**: Evaluate standard Racket (e.g., `#lang racket/base`) versus Rhombus (potentially with `shrubbery` and `forest` macros). Document the decision and its rationale.
+2. **Installation**: Install the chosen Racket version or Rhombus distribution. Verify the installation by running the REPL (e.g., `racket` or `rhombus`).
+3. **Version Control Setup**: Initialize a Git repository in the project's root directory using `git init`.
+4. **.gitignore File**: Create a comprehensive `.gitignore` file. Include patterns for Racket/Rhombus compiled files (e.g., `compiled/`, `*.zo`), editor-specific files (e.g., `.vscode/`, `*.elc`), OS-specific files (e.g., `.DS_Store`, `Thumbs.db`), and any local configuration files.
+
+## 2. Establish Core Project Directory Structure and Basic Build Configuration [done]
+### Dependencies: 21.1
+### Description: Create the standard directory layout for source code, tests, examples, documentation, and scripts. Set up the initial build system configuration using Racket's tools.
+### Details:
+1. **Directory Structure**: Create the following directories in the project root: `src/` (for core source code), `tests/` (for unit and integration tests), `examples/` (for sample programs using the library/application), `docs/` (for project documentation), and `scripts/` (for utility and build scripts).
+2. **Main Entry Point**: Create an initial main entry point file if applicable (e.g., `src/main.rkt` containing a basic module definition like `(#lang racket/base (provide main)) (define (main) (displayln "Hello, Project!"))`).
+3. **Build System Setup**: Configure Racket's `raco make` for building the project. This involves creating an `info.rkt` file in the project root if structuring the project as a Racket package. The `info.rkt` should define essential metadata like project name, version, and initial (empty or core) dependencies.
+4. **Initial Build Test**: Ensure that `raco make` (or the Rhombus equivalent) can process the `info.rkt` and compile files in `src/`.
+
+## 3. Integrate Testing Framework and Create Initial Test Suite [done]
+### Dependencies: 21.2
+### Description: Integrate the `rackunit` testing framework. Create a main test runner file and include a simple placeholder test to ensure the testing setup is functional.
+### Details:
+1. **Framework Integration**: Ensure `rackunit` is available (it's typically bundled with Racket). If developing a package, list `rackunit` as a test dependency in `info.rkt`.
+2. **Test Runner**: Create a main test runner file, e.g., `tests/main-tests.rkt`. This file should `(require rackunit)` and be structured to discover and run all test files within the `tests/` directory (e.g., by explicitly requiring other test files or using a helper to find them).
+3. **Placeholder Test**: Add a simple placeholder test case in `tests/main-tests.rkt` or a separate `tests/example-test.rkt` file (e.g., `(require rackunit) (test-case "Placeholder Test" (check-true #t "This is a basic truth test."))`).
+4. **Test Execution Script/Command**: Configure the build system or create a script (e.g., in `scripts/run-tests.sh` or a Racket script `scripts/run-tests.rkt`) to execute all tests (e.g., by running `racket tests/main-tests.rkt`).
+
+## 4. Set Up Dependency Management and Initial Documentation Infrastructure [done]
+### Dependencies: 21.2
+### Description: Document the process for managing external Racket packages using `raco pkg`. Set up the basic infrastructure for project documentation using Scribble, including an initial document and build configuration.
+### Details:
+1. **Dependency Management Documentation**: In a `README.md` or `CONTRIBUTING.md` file, document how to manage external Racket packages using `raco pkg` commands (e.g., `raco pkg install <package>`, `raco pkg update <package>`).
+2. **Initial Dependencies**: List any known core external libraries required from the outset. If the project is a package, add these to the `deps` list in `info.rkt`.
+3. **Scribble Setup**: Set up Scribble for project documentation. Create a basic `docs/main.scrbl` file with a title (e.g., `@title[My Project Documentation]`) and a minimal section.
+4. **Documentation Build**: Configure `raco setup` (if the project is a package and `info.rkt` specifies Scribble docs) or use `raco scribble` commands (e.g., `raco scribble --htmls ++xref-in Scribble-xref.rktd docs/main.scrbl`) to build the documentation. Consider adding a script to `scripts/build-docs.sh` for this process.
+
+## 5. Configure Development Tools and Finalize Project Scripts [done]
+### Dependencies: 21.4
+### Description: Recommend and document setup for IDEs/editors, linters (e.g., `raco lint`), and code formatters. Review and finalize utility scripts for common development tasks.
+### Details:
+1. **IDE/Editor Setup**: Document recommended IDEs/editors (e.g., DrRacket, VS Code with Racket/LSP extension, Emacs with racket-mode). Provide basic setup instructions or links to relevant extensions/plugins in `README.md` or a development guide.
+2. **Linter Setup**: Investigate and set up `raco lint` for static analysis. Document its usage (e.g., `raco lint src/**/*.rkt tests/**/*.rkt`). Consider integrating it into a pre-commit hook or a CI pipeline script.
+3. **Code Formatter (Optional)**: Investigate and optionally set up a code formatter compatible with Racket/Rhombus. Document its usage if adopted.
+4. **Finalize Utility Scripts**: Review, refine, and document all scripts in the `scripts/` directory (e.g., for building the project, running tests, generating documentation, linting code). Ensure they are executable and robust.
+

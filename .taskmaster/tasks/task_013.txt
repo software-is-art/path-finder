@@ -1,0 +1,43 @@
+# Task ID: 13
+# Title: Universe Hierarchy Implementation (Type, Type 1, ...)
+# Status: pending
+# Dependencies: 10
+# Priority: medium
+# Description: Implement a basic universe hierarchy (e.g., `Type` or `Type 0`, `Type 1`, ...) to consistently handle types as first-class citizens and avoid paradoxes like Girard's paradox.
+# Details:
+Introduce universe types: `Type_i` (or `Type i`). `Type_i` is itself of type `Type_{i+1}`. All user-defined types, Π-types, Σ-types, Id-types will reside in some universe `Type_i`. The type checker must enforce universe consistency rules (e.g., `(-> A B)` is in `Type_k` if `A : Type_i`, `B : Type_j` and `k = max(i,j)` for non-dependent functions, more complex for dependent). Start with a simple hierarchy like `Type` (for ordinary types) and `Kind` (for `Type` itself), or `Type 0`, `Type 1`.
+
+# Test Strategy:
+Define types that take other types as parameters (e.g., `(List Type)`). Verify that the type checker correctly assigns universe levels and reports errors for universe inconsistencies (e.g., a type trying to contain itself in a way that violates hierarchy).
+
+# Subtasks:
+## 1. Define `Type_i` AST Node and Implement `Type_i : Type_{i+1}` Rule [pending]
+### Dependencies: None
+### Description: Introduce an Abstract Syntax Tree (AST) node for universe types, denoted as `Type_i` (e.g., `Ast.Universe(level: int)`). Implement the fundamental typing rule where `Type_i` is itself of type `Type_{i+1}`. This involves representing universe levels and their hierarchical relationship.
+### Details:
+Create a new AST variant, `UniverseNode(level: int)`, to represent `Type_i`. In the type system, this node itself represents a type. The core logic to be implemented is that `typeof(UniverseNode(i))` is `UniverseNode(i+1)`. This might require special handling in the type inference or type checking mechanism for these universe type constructors. Assume levels are non-negative integers. Consider how `Type_{i+1}` is represented, especially if `i` could reach a maximum representable level (though an unbounded conceptual model is fine for initial implementation).
+
+## 2. Integrate `Type_i` into Core Type System and Basic Type Checking [pending]
+### Dependencies: 13.1
+### Description: Modify the language's core type representation to fully accommodate `Type_i` as a valid type. Update the type checker to recognize, infer types for, and check `Type_i` nodes, specifically enforcing the `Type_i : Type_{i+1}` rule during general type checking operations.
+### Details:
+Ensure that `Type_i` (represented by `UniverseNode`) can appear in any context where a type is expected (e.g., type annotations, function signatures). The type checker's `infer_type(expression)` function should correctly return `UniverseNode(level+1)` when `expression` is `UniverseNode(level)`. The `check_type(expression, expected_type)` function must validate this relationship. This typically involves adding new cases to pattern matches over type structures within the type checker.
+
+## 3. Assign Default Universe Levels to User-Defined and Primitive Types [pending]
+### Dependencies: 13.2
+### Description: Establish a default universe level (typically `Type 0`) for all newly defined data types (e.g., `struct Point`, `enum Color`) and any built-in primitive types (e.g., `Int`, `Bool`, `String`). Update the type definition processing and type checker to assign and verify these base universe levels.
+### Details:
+When a user defines a new type (e.g., `data MyType = ...`), it should be assigned to `Type 0` by default, meaning `MyType : Type 0`. The type checker must be aware of this when `MyType` is used as a type. For example, in `let x : MyType = ...`, the type checker verifies that `MyType` is indeed a type (i.e., it resides in some `Type_i`). This subtask primarily concerns types that are not themselves parameterized by other types that might affect their universe level. If primitive types exist, they should also be assigned to `Type 0` (e.g. `Int : Type 0`).
+
+## 4. Implement Universe Level Calculation for Non-Dependent Function Types (Π-types) [pending]
+### Dependencies: 13.3
+### Description: Update the type checker to calculate and enforce the universe level for non-dependent function types (Π-types). The rule is: if `A -> B` is a function type, where `A : Type_i` and `B : Type_j`, then the type `(A -> B)` itself resides in `Type_{max(i,j)}`.
+### Details:
+Modify the AST node for function types or the type checking logic for them. When type checking a function type constructor `T1 -> T2`: 1. Infer the types of `T1` and `T2`. These must be universe types, say `Type_i` and `Type_j` respectively (meaning `T1 : Type_i` and `T2 : Type_j`). 2. The type of the function type `(T1 -> T2)` is then `Type_{max(i,j)}`. This rule must be enforced. This applies when forming function types, e.g., `(Int -> Bool) : Type 0` because `Int : Type 0` and `Bool : Type 0`, so `max(0,0)=0`.
+
+## 5. Extend Universe Rules to Dependent Π-types, Σ-types, and Id-types [pending]
+### Dependencies: 13.4
+### Description: Extend universe level calculation and checking to dependent function types (Π-types where codomain type depends on a term of the domain type). Also, define and implement rules for Σ-types (dependent pairs) and Id-types (identity/equality types) if they are part of the language, ensuring they reside in appropriate universes.
+### Details:
+For dependent function types `(x:A) -> B(x)`: if `A : Type_i` and for any term `a:A`, the type `B(a) : Type_j`, then the type `((x:A) -> B(x))` resides in `Type_{max(i,j)}`. This requires the type checker to handle type dependencies. For Σ-types `(x:A) * B(x)`: if `A : Type_i` and `B(a) : Type_j` for `a:A`, then `((x:A) * B(x)) : Type_{max(i,j)}`. For Id-types `Id A x y`: if `A : Type_i` (and `x,y:A`), then `(Id A x y) : Type_i`. These rules ensure all major type formers are consistently placed within the universe hierarchy. The focus should be on implementing the rule for dependent Π-types first, then others as applicable.
+

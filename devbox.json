@@ -1,0 +1,33 @@
+{
+  "packages": [
+    "git",
+    "gnumake",
+    "racket-minimal@latest"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo '🚀 PathFinder LISP Development Environment'",
+      "echo '   Racket version: '$(racket --version | head -1)",
+      "echo '   Project: PathFinder LISP - HoTT-based functional language'",
+      "echo '   Commands:'",
+      "echo '     devbox run build       # Check syntax'",
+      "echo '     racket src/main.rkt     # Run interpreter'",
+      "echo '     devbox run test        # Run tests (when implemented)'",
+      "echo ''"
+    ],
+    "scripts": {
+      "build":        "racket -c src/main.rkt",
+      "run":          "racket src/main.rkt",
+      "repl":         "racket src/main.rkt --interactive",
+      "version":      "racket src/main.rkt --version",
+      "test":         "find tests -name '*.rkt' -exec racket {} \\;",
+      "docs":         "echo 'Documentation generation requires full Racket installation'",
+      "setup":        "echo 'Setup complete - using racket-minimal'",
+      "install-deps": "echo 'Package installation requires full Racket installation'"
+    }
+  },
+  "env": {
+    "PATHFINDER_VERSION":     "0.1.0",
+    "RACKET_COLLECTION_PATH": "./src"
+  }
+}

@@ -1,0 +1,121 @@
+# Task ID: 18
+# Title: Implement Constraint System for Type Definitions and CIFs
+# Status: pending
+# Dependencies: 5, 4
+# Priority: medium
+# Description: Extend the type system to support constraints on type definitions using a `:where` clause. This includes parsing constraint expressions, implementing validation logic for both compile-time and runtime checks, and integrating these checks into Canonical Instantiation Functions (CIFs).
+# Details:
+**1. Parser Extension (extending Task 5 `deftype`):**
+   - Modify the parser to recognize an optional `:where` clause in `deftype` expressions.
+   - Syntax: `(deftype TypeName ((field1 Type1) (field2 Type2) ...) :where <constraint-expression>)`
+   - The `<constraint-expression>` is a single expression that should evaluate to a boolean. It will be parsed into an AST node.
+   - Ensure field names (e.g., `field1`, `field2`) are correctly scoped and accessible within the `<constraint-expression>`.
+
+**2. AST Representation:**
+   - Define how the parsed constraint expression is stored within the AST representation of the type definition (e.g., as an additional child node or property of the type definition AST node).
+
+**3. Type Checker Integration (interacting with Task 4):**
+   - **Constraint Expression Type Checking:** The type checker must verify that the `<constraint-expression>` evaluates to a Boolean type. An error should be reported if it does not.
+   - **Compile-Time Constraint Validation:**
+     - Implement logic to attempt static evaluation of constraints if they involve only literal values or other compile-time evaluable expressions.
+     - If a constraint is proven true at compile-time, it can be noted or optimized.
+     - If a constraint is proven false at compile-time, the type definition itself should be considered invalid, and a type error reported.
+
+**4. CIF Modification (extending Task 5 CIFs):**
+   - Modify the generation and/or evaluation logic of Canonical Instantiation Functions (CIFs) for types that have constraints.
+   - **Runtime Constraint Evaluation:** For constraints not fully resolved at compile-time, the CIF must evaluate the constraint expression after the basic instance of the type is created but before it's returned.
+   - The evaluation environment for the constraint expression within the CIF must bind the type's field names to the corresponding values from the instance being created.
+   - If a runtime constraint evaluates to `#f` (false), the CIF must raise a distinct runtime error (e.g., `ConstraintViolationError`), preventing the instantiation of the type.
+
+**5. Evaluation of Constraints:**
+   - Constraint expressions will be evaluated using the existing evaluation engine (developed in Task 2).
+   - Ensure the evaluation context for constraints correctly resolves field names and any functions or values available in the scope where the type is defined or instantiated.
+
+**6. Error Reporting:**
+   - Implement clear and informative error messages for:
+     - Syntax errors in `:where` clauses.
+     - Type errors in constraint expressions (e.g., expression not Boolean-typed).
+     - Compile-time constraint violations (e.g., constraint statically proven false).
+     - Runtime constraint violations, indicating the specific type, the values being instantiated, and the constraint expression that failed.
+
+# Test Strategy:
+**1. Parser Tests:**
+   - Test `deftype` with valid `:where` clauses using various expressions (e.g., `(> field1 0)`, `(and (> field1 0) (< field2 100))`, `(string=? (kind-of-shape) "circle")`).
+   - Test `deftype` with syntactically invalid `:where` clauses.
+   - Test `deftype` without a `:where` clause to ensure backward compatibility.
+
+**2. Type Checker & Compile-Time Constraint Tests:**
+   - Define a type with a constraint that is statically true (e.g., `(deftype T1 (x Nat) :where (> 5 0))`). Verify the type definition is accepted.
+   - Define a type with a constraint that is statically false (e.g., `(deftype T2 (x Nat) :where (< 0 0))`). Verify the type definition is rejected with a compile-time error.
+   - Define a type with a constraint expression that does not evaluate to Boolean (e.g., `(deftype T3 (x Nat) :where x)`). Verify a type error is reported.
+   - Verify correct scoping of field names within constraint expressions during type checking.
+
+**3. CIF & Runtime Constraint Tests:**
+   - Define `(deftype PositiveNat (value Nat) :where (> value 0))`:
+     - Test `(PositiveNat 10)`: Should succeed and return an instance.
+     - Test `(PositiveNat 0)`: Should raise a runtime `ConstraintViolationError`.
+   - Define `(deftype LimitedRange (val Int) :where (and (>= val 0) (<= val 10)))`:
+     - Test `(LimitedRange 5)`: Should succeed.
+     - Test `(LimitedRange -1)`: Should raise a runtime `ConstraintViolationError`.
+     - Test `(LimitedRange 11)`: Should raise a runtime `ConstraintViolationError`.
+   - Define `(deftype OrderedPair (x Nat) (y Nat) :where (< x y))`:
+     - Test `(OrderedPair 1 2)`: Should succeed.
+     - Test `(OrderedPair 2 1)`: Should raise a runtime `ConstraintViolationError`.
+
+**4. Error Reporting Tests:**
+   - For each failure mode (syntax, type error, compile-time violation, runtime violation), verify that the error message is clear, indicates the source of the error, and provides relevant context (e.g., failed constraint expression, values involved).
+
+# Subtasks:
+## 1. Extend Parser and AST for `:where` Constraint Clause [pending]
+### Dependencies: None
+### Description: Modify the `deftype` parser to recognize an optional `:where` clause and define the Abstract Syntax Tree (AST) structure for storing the parsed constraint expression. This forms the foundation for constraint processing.
+### Details:
+1. Update the parser grammar for `deftype` expressions to support the syntax: `(deftype TypeName ((field1 Type1) ...) :where <constraint-expression>)`.
+2. The `<constraint-expression>` should be parsed into a standard AST node.
+3. Define how this constraint AST node is stored within the AST representation of the type definition (e.g., as a dedicated `constraint_expression` field or child node).
+4. Ensure that field names referenced within the `<constraint-expression>` are captured by the parser for later resolution during type checking and evaluation.
+
+## 2. Implement Type Checking for Constraint Expressions [pending]
+### Dependencies: 18.1
+### Description: Integrate logic into the type checker (Task 4) to verify that constraint expressions provided in `:where` clauses are semantically valid and evaluate to a Boolean type. This ensures type safety for constraints.
+### Details:
+1. Access the constraint AST node from the type definition's AST (created in Subtask 1).
+2. Implement a type checking pass for the constraint expression.
+3. The type checking environment for the constraint expression must include the type's fields (e.g., `field1`, `field2`) with their declared types, making them accessible within the expression.
+4. Verify that the constraint expression ultimately resolves to a Boolean type. If not, report a type error.
+5. Report errors for any undefined variables or type mismatches within the constraint expression itself.
+
+## 3. Implement Compile-Time Constraint Validation [pending]
+### Dependencies: 18.2
+### Description: Enhance the type checker to perform static evaluation of constraints when possible. If a constraint can be proven false at compile-time, the type definition itself should be considered invalid.
+### Details:
+1. After a constraint expression has been successfully type-checked as Boolean (from Subtask 2), attempt to statically evaluate it.
+2. Use the existing evaluation engine (from Task 2 development) for this purpose. The evaluation context should only include compile-time constant values and functions that are safe for compile-time evaluation.
+3. If the constraint expression evaluates to a literal `#f` (false) at compile-time, report a specific compile-time error indicating that the type definition is invalid due to an unsatisfiable constraint.
+4. If the constraint evaluates to a literal `#t` (true), this can be noted (e.g., for potential optimization, though the primary goal is validation).
+5. If the constraint cannot be fully evaluated at compile-time (e.g., it depends on runtime field values or non-foldable function calls), it should be passed through for runtime checking.
+
+## 4. Modify CIFs for Runtime Constraint Evaluation [pending]
+### Dependencies: 18.3
+### Description: Update the generation and/or evaluation logic of Canonical Instantiation Functions (CIFs) to evaluate type constraints at runtime. If a constraint fails during instantiation, the CIF must raise a specific runtime error.
+### Details:
+1. For types that have a constraint (AST from Subtask 1) not fully resolved or proven true at compile-time (by Subtask 3):
+   a. Modify the CIF logic. After the basic instance of the type is created (fields are populated with initial values), the constraint expression must be evaluated.
+   b. The evaluation environment for the constraint expression within the CIF must bind the type's field names to the corresponding actual values from the instance being created.
+   c. Use the existing evaluation engine (Task 2) for this runtime evaluation.
+2. If the constraint expression evaluates to `#f` (false) at runtime, the CIF must raise a distinct runtime error (e.g., `ConstraintViolationError`). This error should prevent the instantiation of the type and the CIF should not return the partially formed instance.
+3. If the constraint evaluates to `#t` (true), the instantiation process completes normally, and the CIF returns the new instance.
+
+## 5. Implement Comprehensive Error Reporting for Constraints [pending]
+### Dependencies: 18.4
+### Description: Ensure clear, informative, and user-friendly error messages are generated for all potential issues related to type constraints, including syntax errors, type errors, compile-time violations, and runtime violations.
+### Details:
+1. **Syntax Errors (Parser - Subtask 1):** Refine error messages for malformed `:where` clauses (e.g., `SyntaxError: Invalid constraint syntax in :where clause for type 'TypeName'. Expected single expression.`).
+2. **Type Errors (Type Checker - Subtask 2):** Ensure errors clearly state that a constraint expression must be Boolean, or if fields are used incorrectly (e.g., `TypeError: Constraint expression for type 'TypeName' must evaluate to Boolean, got 'Integer'.`).
+3. **Compile-Time Violations (Compile-Time Validation - Subtask 3):** Provide specific messages when a constraint is statically proven false (e.g., `CompileTimeError: Constraint for type 'TypeName' is statically false: '(<constraint-src>)'.`).
+4. **Runtime Violations (CIFs - Subtask 4):** Design the `ConstraintViolationError` to include:
+   - The name of the type being instantiated.
+   - The source form of the constraint expression that failed.
+   - The actual field names and their values for the instance that failed validation (e.g., `RuntimeError: Constraint violation for type 'TypeName'. Constraint '(<constraint-src>)' failed with values (field1: val1, field2: val2).`).
+5. Review and standardize all error messages for consistency and clarity.
+

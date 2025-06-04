@@ -1,0 +1,63 @@
+# Task ID: 15
+# Title: Hygienic Macro System (Initial Implementation)
+# Status: pending
+# Dependencies: 1
+# Priority: medium
+# Description: Implement an initial version of a hygienic macro system, allowing users to define syntactic abstractions using `define-syntax` and syntax rules, following Scheme principles.
+# Details:
+Implement `(define-syntax keyword (syntax-rules (literals...) ((pattern) template) ...))`. The macro expander should run after parsing but before type checking/evaluation. Focus on achieving hygiene to prevent accidental variable capture. This involves careful handling of symbols and their lexical contexts during macro expansion.
+
+# Test Strategy:
+Define simple macros like `when`, `unless`, `let*` (if `let` is basic). Test macro expansion to ensure correct output AST. Crucially, test for hygiene: define macros that introduce bindings and use them in contexts where those binding names might clash with existing variables, verifying that the macro's bindings do not capture or shadow unintended variables.
+
+# Subtasks:
+## 1. Extend Parser for `define-syntax` and `syntax-rules` [pending]
+### Dependencies: None
+### Description: Modify the language's parser to recognize and correctly parse `define-syntax` forms. This includes parsing the `syntax-rules` structure, capturing the macro keyword, the list of literal identifiers, and the set of pattern-template rules.
+### Details:
+Update the grammar to include `define-syntax` as a new top-level form or special form. The parser should produce an Abstract Syntax Tree (AST) node specifically representing a macro definition. This AST node must clearly delineate: 1. The keyword (symbol) being defined as a macro. 2. The list of literal symbols specified in `(literals...)`. 3. An ordered list of rules, where each rule is a pair of (pattern, template). Ensure the parser can handle nested structures within patterns and templates (e.g., nested lists, multiple pattern variables).
+
+## 2. Implement Macro Definition Storage and Retrieval [pending]
+### Dependencies: 15.1
+### Description: Develop a system for storing parsed macro definitions and retrieving them when a potential macro invocation is encountered. This system will act as a compile-time macro environment.
+### Details:
+Design a data structure (e.g., a hash map or a dedicated environment structure) to store macro definitions. This structure will map macro keywords (symbols) to their parsed `syntax-rules` objects (as produced by subtask 1). Implement functions to: 1. Add a new macro definition to this storage when a `define-syntax` form is processed. 2. Look up a macro definition by its keyword. This lookup will be used by the macro expander. The storage should be managed appropriately within the compilation phases.
+
+## 3. Implement `syntax-rules` Pattern Matching and Template Instantiation [pending]
+### Dependencies: 15.2
+### Description: Implement the core logic for `syntax-rules` expansion. This involves matching an input syntax form against the patterns of a macro's rules and, upon a successful match, instantiating the corresponding template.
+### Details:
+Implement a pattern matcher that supports: 
+- Identifiers as pattern variables (capturing parts of the input syntax).
+- Literal identifiers (as specified in the `literals...` list of `syntax-rules`), which must match exactly.
+- The underscore `_` as a wildcard pattern that matches anything without binding it.
+- The ellipsis `...` for matching zero or more occurrences of a preceding sub-pattern.
+- Nested list/vector patterns.
+Implement template instantiation logic that:
+- Substitutes pattern variables with the syntax they captured.
+- Handles ellipsis `...` in templates to correctly structure output based on sequence captures.
+- Reconstructs the output syntax (AST) based on the template. Initially, this can be non-hygienic, focusing on structural transformation.
+
+## 4. Implement Hygiene Mechanism for Macro Expansion [pending]
+### Dependencies: 15.3
+### Description: Introduce hygiene into the macro expansion process to prevent accidental variable capture. This ensures that identifiers maintain their correct lexical scope across macro expansion boundaries.
+### Details:
+Choose and implement a hygiene algorithm (e.g., automatic renaming based on lexical context, or syntax objects carrying lexical information). 
+Key aspects:
+1. When a macro expands, identifiers introduced by the macro's template (not originating from pattern variables) must be treated as if they were defined in the macro definition's lexical environment. This typically involves 'coloring' or 'tagging' symbols with their lexical context or renaming them to be unique.
+2. Identifiers captured by pattern variables from the macro call site must retain their original call-site lexical meaning.
+3. Literal identifiers in patterns should be compared based on their symbolic identity within their respective lexical contexts.
+This subtask modifies the template instantiation part of subtask 3 to incorporate hygiene.
+
+## 5. Integrate Macro Expander into Compilation Pipeline [pending]
+### Dependencies: 15.1, 15.4
+### Description: Integrate the hygienic macro expander into the overall compilation/evaluation pipeline. The expander should operate on the AST after parsing and before subsequent phases like type checking or evaluation.
+### Details:
+Modify the compiler/interpreter's main workflow to include a macro expansion phase. This phase takes the AST produced by the parser (subtask 1) as input.
+Implement a traversal mechanism (e.g., a tree walk) over the AST. When a form that could be a macro call is encountered:
+1. Look up the identifier in the macro definition storage (from subtask 2).
+2. If it's a macro, invoke the hygienic expansion logic (from subtask 4).
+3. Replace the original macro call AST node with the expanded AST node.
+4. Recursively expand the resulting syntax, as macro expansions can produce new macro calls.
+The expansion process continues until no more macro calls are present in the AST. The fully expanded AST is then passed to the next compilation stage (e.g., semantic analysis, type checking, or code generation/evaluation). Ensure `define-syntax` itself is handled correctly by this phase (i.e., it defines a macro rather than being expanded further).
+

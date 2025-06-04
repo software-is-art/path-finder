@@ -1,0 +1,58 @@
+# Task ID: 14
+# Title: Basic Module System (Import/Export, Namespacing)
+# Status: pending
+# Dependencies: 6
+# Priority: medium
+# Description: Implement a basic module system for namespace management, allowing definitions to be organized into modules and selectively imported/exported.
+# Details:
+Syntax for defining modules: `(module ModuleName (export symbol1 symbol2) body...)`. Syntax for importing: `(import ModuleName)` or `(import ModuleName (only symbol1) (prefix p-))`. The evaluator and type checker need to respect module boundaries and resolve symbols accordingly. Each module should have its own environment, linked to imported modules.
+
+# Test Strategy:
+Create multiple module files. Define types and functions in one module, export some. Import them into another module and use them. Test for name collisions and how they are handled (e.g., qualified names or errors). Test different import syntaxes (full import, selective import, prefixed import).
+
+# Subtasks:
+## 1. Extend Parser for Module and Import Syntax [pending]
+### Dependencies: None
+### Description: Modify the language parser to correctly recognize and parse `(module ModuleName (export ...) body...)` and `(import ModuleName ...)` expressions, generating corresponding Abstract Syntax Tree (AST) nodes.
+### Details:
+Update the lexical analyzer (if necessary) and parser rules. Define new AST node types for `ModuleDefinition` (capturing module name, export list, and body expressions) and `ImportStatement` (capturing the module to import, an optional `only` list of symbols, and an optional `prefix` string). Ensure the parser can handle variations in export lists (e.g., empty, single, multiple symbols) and import options.
+
+## 2. Implement Module Representation and Registry [pending]
+### Dependencies: 14.1
+### Description: Define data structures for representing modules, their environments, and exported symbols. Implement a global registry to manage and access defined modules.
+### Details:
+Create a `Module` class or struct. This structure should contain: its name (string), a dedicated `Environment` instance (which can chain to a global environment or other imported module environments), a list or map of its exported symbols (mapping exported names to their actual values/definitions within the module), and the parsed AST of its body. Implement a `ModuleRegistry` (e.g., a singleton class or a global hash map) to store `Module` instances indexed by their names. This registry will be used to resolve module names during import and to prevent or manage redefinition of modules.
+
+## 3. Process Module Definitions and Handle Exports [pending]
+### Dependencies: 14.2
+### Description: Implement the logic to process parsed `ModuleDefinition` AST nodes. This involves creating a new module instance, evaluating its body within its specific environment, and populating its export list based on the `(export ...)` clause.
+### Details:
+When the evaluator encounters a `ModuleDefinition` AST node: 
+1. Create a new `Module` instance using the parsed name and body.
+2. Register this new module in the `ModuleRegistry`.
+3. Create a new, isolated `Environment` for this module. This environment should be used for evaluating the module's body.
+4. Evaluate the expressions in the module's `body` within this new module-specific environment.
+5. After evaluation, for each symbol listed in the `(export ...)` clause, verify it's defined in the module's environment. If so, add it to the module's list/map of accessible exports (e.g., storing a mapping from the exported name to its evaluated value or definition within the module's environment).
+
+## 4. Implement Import Statement Processing [pending]
+### Dependencies: 14.3
+### Description: Implement the logic to process parsed `ImportStatement` AST nodes, making exported symbols from one module available in the current (importing) module's environment, respecting `(only ...)` and `(prefix ...)` clauses.
+### Details:
+When the evaluator encounters an `ImportStatement` AST node within the context of a current (importing) module or top-level environment:
+1. Resolve the target module name specified in the import statement by looking it up in the `ModuleRegistry`. Handle errors if the module is not found.
+2. Retrieve the target module's list of exported symbols.
+3. For each exported symbol from the target module:
+    a. If an `(only symbol1 ...)` clause is present in the import statement, only consider symbols that are explicitly listed in this `only` clause.
+    b. Determine the name to be used for the symbol in the importing environment: if a `(prefix p- ...)` clause is present, prepend the specified prefix to the original symbol name. Otherwise, use the original symbol name.
+    c. Add a binding for this (potentially filtered and prefixed) name into the importing module's environment. This binding should effectively link to the original definition in the imported module's environment (e.g., by copying the value, creating an alias, or a thunk that resolves to the original).
+
+## 5. Integrate Module System into Evaluator and Type Checker [pending]
+### Dependencies: 14.4
+### Description: Update the symbol resolution logic in the language's evaluator and type checker to be module-aware. This means respecting the current module's environment, its imports, and ensuring proper encapsulation.
+### Details:
+Modify the core symbol lookup mechanisms:
+*   **Evaluator**: When resolving a symbol, the evaluator must first search the local environment of the current module. If the symbol is not found locally, it should then search through the symbols imported into the current module (respecting any prefixes or `only` restrictions applied during import). The evaluator needs to maintain a concept of the "current module context" during execution.
+*   **Type Checker**: Similarly, the type checker's symbol resolution for type lookups and variable type inference must follow the same module-aware path: local module environment first, then imported symbols. Type checking of a module's body should occur within its own isolated scope, considering its imports.
+*   Define how top-level definitions (code not explicitly within a `(module ...)` form) are handled. They might be placed in a default global module, or all code might be required to reside within modules.
+*   Ensure that the evaluation of a module body (during `(module ...)` processing) and import statements correctly sets and restores the current module context.
+

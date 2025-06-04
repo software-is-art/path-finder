@@ -1,0 +1,71 @@
+# Task ID: 19
+# Title: Enhanced Error Reporting and Diagnostics System
+# Status: pending
+# Dependencies: 3, 4
+# Priority: medium
+# Description: Implement a comprehensive error reporting and diagnostics system. This system will generate HoTT-aware error messages, report type constraint violations and effect-related errors, and provide user-friendly diagnostic information to improve developer experience.
+# Details:
+1. **Error Data Structures**: Define robust data structures for representing various error types (e.g., type mismatch, unbound variable, arity mismatch, constraint violation, effect errors). These structures should capture detailed contextual information: source location (file, line, column), relevant AST nodes, expected vs. actual types/values, and any HoTT-specific information.
+2. **HoTT-Aware Message Generation**: Develop a module to translate error data structures into human-readable, HoTT-aware messages. Messages should use precise HoTT terminology where appropriate (e.g., explaining path equality issues, universe inconsistencies, or type family application errors). Leverage type representations from Task 3 (Basic Type System) for accurate display and explanation of types.
+3. **Type Constraint Violation Reporting**: Integrate with the type checker (Task 4) to receive information about type constraint violations. Clearly explain which constraint was violated and why, providing context from the source code.
+4. **Effect-Related Error Handling Framework**: Design the system to be extensible for effect-related errors. Implement initial handling for any effect-related errors that can be detected with the current system components. Provide clear messages for effect mismatches or unhandled effects.
+5. **User-Friendly Diagnostics**: Focus on clarity, conciseness, and actionability of error messages. Include suggestions for fixes where possible. Ensure error messages clearly point to the source code location of the error.
+6. **Integration**: Integrate this system with the type checker (Task 4) and potentially other compiler phases that can generate errors. Ensure that error reporting is consistent across the system.
+
+# Test Strategy:
+1. **Unit Tests for Error Message Generation**: Create mock error data objects for various scenarios (type mismatches, HoTT-specific errors, constraint violations). Verify that generated messages are accurate, informative, HoTT-aware, and correctly formatted, using type definitions from Task 3.
+2. **Integration Tests with Type Checker (Task 4)**: Use code snippets designed to produce specific type errors. Run them through the type checker (once Task 4 is complete) and verify that the enhanced error reporting system produces the expected user-friendly and HoTT-aware diagnostic messages, including correct source locations.
+3. **Constraint Violation Tests**: Write test cases where type constraints are violated. Ensure error messages clearly identify the violated constraint.
+4. **Effect-Related Error Tests**: Test basic effect error reporting capabilities and the extensibility of the framework using simulated effect errors.
+5. **User-Friendliness Review**: Conduct reviews of error messages for clarity, helpfulness, and actionability.
+6. **HoTT-Awareness Validation**: Specifically test scenarios involving HoTT concepts in errors, verifying correct terminology and explanations by referencing type structures from Task 3.
+
+# Subtasks:
+## 1. Define Core Error Data Structures and Contextual Information Capture [pending]
+### Dependencies: None
+### Description: Establish the foundational data structures for representing various error types (e.g., type mismatch, unbound variable, arity mismatch, constraint violation, effect errors). These structures must capture detailed contextual information crucial for diagnostics, including source location, relevant AST nodes, expected vs. actual types/values, and HoTT-specific details.
+### Details:
+1. Define an enumeration or a set of classes/structs for high-level error categories (e.g., `TypeError`, `ScopeError`, `ConstraintViolationError`, `EffectError`).
+2. For each specific error type, define fields to store: source location (file path, line, column, span), references/IDs of relevant AST nodes, expected/actual types or values, and any HoTT-specific information (e.g., path details, universe levels).
+3. Implement a central error accumulator or collector service that compiler phases can use to report instances of these error structures.
+4. Ensure data structures are robust and can be serialized if needed for later analysis or tooling.
+
+## 2. Develop HoTT-Aware Error Message Generation Engine [pending]
+### Dependencies: 19.1
+### Description: Create a module responsible for translating the structured error data (from subtask 1) into human-readable, HoTT-aware error messages. This engine will leverage type representations from Task 3 (Basic Type System).
+### Details:
+1. Implement a primary function or class that accepts an error data object (from subtask 1) as input.
+2. Develop formatting logic for each defined error category and specific error type. Prioritize common errors initially.
+3. Ensure messages utilize precise HoTT terminology where appropriate (e.g., explaining path equality issues, universe inconsistencies, type family application errors).
+4. Integrate with type representation utilities (from external Task 3) to display types accurately and understandably within error messages.
+5. Design the engine to be extensible for new error types and customizable message formats (e.g., plain text, markdown, JSON).
+
+## 3. Integrate Type Constraint Violation Reporting with Type Checker [pending]
+### Dependencies: 19.1, 19.2
+### Description: Modify the existing type checker (from external Task 4) to utilize the new error reporting system (subtasks 1 and 2) for reporting type constraint violations. Ensure messages clearly explain the violation and its context.
+### Details:
+1. Identify all points in the type checker (external Task 4) where type constraints are enforced and violations can be detected.
+2. When a violation is detected, instantiate the appropriate error data structure (from subtask 1) with all relevant contextual information (e.g., the specific constraint, involved types/terms, source location of the constraint and the violation).
+3. Report the populated error object using the central error accumulator/collector.
+4. Verify that the message generation engine (subtask 2) produces clear, informative messages for these constraint violations, explaining which constraint was violated and why, referencing source code.
+
+## 4. Implement Framework and Initial Handling for Effect-Related Errors [pending]
+### Dependencies: 19.1, 19.2
+### Description: Design the error reporting system to be extensible for effect-related errors and implement initial detection and reporting for such errors, including effect mismatches or unhandled effects.
+### Details:
+1. Extend the error data structures (subtask 1) to specifically represent effect-related errors (e.g., `EffectMismatchError`, `UnhandledEffectError`, `ForbiddenEffectError`). Include fields for expected effects, actual effects, effect context, and relevant source locations.
+2. Update the message generation engine (subtask 2) to produce clear and specific messages for these new effect error types.
+3. Identify any current system components (e.g., type checker, an early-stage effect analysis pass) that can detect basic effect errors.
+4. Integrate these components to report effect errors using the new structures and message generation.
+5. Ensure the design allows for future expansion as the effect system (if separate) capabilities grow.
+
+## 5. Enhance User-Friendliness of Diagnostics and Add Suggestions [pending]
+### Dependencies: 19.2, 19.3, 19.4
+### Description: Focus on improving the overall developer experience by making all error messages exceptionally clear, concise, actionable, and providing helpful suggestions for fixes where possible. Ensure errors clearly point to source locations.
+### Details:
+1. Review all error messages generated by the system (from subtask 2, for errors from subtask 3, 4, and others). Refine wording for maximum clarity and conciseness, balancing HoTT precision with understandability.
+2. Implement logic to provide actionable suggestions for common error types (e.g., for unbound variables: "Did you mean 'variable_x'?", for type mismatches: "Consider applying function Y or converting X to Z").
+3. Ensure all error messages clearly and accurately point to the source code location (file, line, column, span) of the error. Consider mechanisms to display relevant code snippets.
+4. Develop and document guidelines for writing good error messages to maintain quality as new error types are added.
+5. Collect feedback on error messages from potential users if possible.
+

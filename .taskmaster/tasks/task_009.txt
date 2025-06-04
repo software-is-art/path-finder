@@ -1,0 +1,43 @@
+# Task ID: 9
+# Title: CIF Purity Analysis and Effect Inference (Initial)
+# Status: pending
+# Dependencies: 8
+# Priority: medium
+# Description: Implement initial logic for CIF purity analysis. The compiler/type checker should infer if a CIF is pure or potentially effectful (e.g., due to `ConstructionFailure` from a runtime constraint).
+# Details:
+During `deftype` processing, analyze its definition. If a `(:where ...)` clause exists and its predicate cannot be statically proven true (assume all are runtime checks for now), the CIF is marked as potentially performing `ConstructionFailure`. This information should be associated with the type/CIF and accessible by the type system. Pure CIFs have no `(:where)` or their constraints are trivially true.
+
+# Test Strategy:
+Define types with and without `(:where)` clauses. Query the system (e.g., via a debug interface or by how the type checker treats calls) to verify that CIFs are correctly identified as pure or effectful (performing `ConstructionFailure`).
+
+# Subtasks:
+## 1. Define Data Structure for CIF Purity/Effect Status [pending]
+### Dependencies: None
+### Description: Design and implement the data structure to represent whether a CIF (Constructed Immutable Form) is pure or potentially effectful (e.g., due to `ConstructionFailure`). This structure will be associated with type definitions.
+### Details:
+Introduce an enum or a set of flags (e.g., `PurityStatus { PURE, POTENTIALLY_EFFECTFUL_CONSTRUCTION_FAILURE }`). This status should be attachable to the internal representation of a CIF, likely as a field in the `TypeDefinition` struct or a property in the symbol table entry for the type. Ensure it defaults to a sensible value (e.g., PURE or UNKNOWN) before analysis.
+
+## 2. Implement `deftype` and `(:where)` Clause Detection in AST [pending]
+### Dependencies: None
+### Description: Modify the compiler's Abstract Syntax Tree (AST) traversal mechanism (e.g., during `deftype` processing or a dedicated analysis pass) to identify `deftype` declarations and specifically locate any `(:where ...)` clauses within their definitions.
+### Details:
+Extend the existing AST visitor or parser logic. When a `deftype` node is encountered, traverse its body to find any `(:where ...)` S-expression. The primary output of this step for a given `deftype` is the presence and content (or absence) of this clause. This subtask focuses only on detection, not analysis of the clause's content.
+
+## 3. Initial `(:where)` Clause Analysis for Effect Inference [pending]
+### Dependencies: 9.2
+### Description: Implement the initial, simplified logic to analyze `(:where ...)` clauses. For this initial version, any `deftype` containing one or more `(:where ...)` clauses will be considered potentially effectful, implying a potential `ConstructionFailure`. CIFs without `(:where)` clauses are considered pure.
+### Details:
+Based on the detection from subtask 2: if one or more `(:where ...)` clauses are present in a `deftype` definition, the CIF is provisionally determined to have `POTENTIALLY_EFFECTFUL_CONSTRUCTION_FAILURE` status. If no `(:where)` clause is found, it's provisionally determined to be `PURE`. This step explicitly defers complex static analysis of the predicate within the `(:where)` clause, adhering to the 'assume all are runtime checks for now' constraint.
+
+## 4. Store and Associate Inferred Purity/Effect Status with CIF Representation [pending]
+### Dependencies: 9.1, 9.3
+### Description: Integrate the purity/effect status (determined in subtask 3) into the CIF's persistent representation using the data structure defined in subtask 1. This information must be reliably associated with the type definition for later use.
+### Details:
+After analyzing a `deftype` (as per subtask 3), update the corresponding `TypeDefinition` object, symbol table entry, or other canonical representation of the CIF with the inferred `PurityStatus` (from subtask 1). Ensure this information is correctly stored and accessible throughout subsequent compilation phases where type information is used.
+
+## 5. Expose CIF Purity/Effect Status via Type System API [pending]
+### Dependencies: 9.4
+### Description: Provide a clear and well-defined API or mechanism for the type system and other compiler components (like the type checker or optimizer) to query the stored purity/effect status of any given CIF.
+### Details:
+Add a method or accessor function to the type system's interface or to the type representation itself. For example, `TypeSystem.getCifPurity(typeId: TypeIdentifier) -> PurityStatus` or `TypeDefinition.getPurityStatus() -> PurityStatus`. This API will be the primary way other parts of the compiler access this inferred information.
+
