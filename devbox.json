@@ -2,7 +2,6 @@
   "packages": [
     "git",
     "gnumake",
-    "racket@latest",
     "nodejs@20"
   ],
   "shell": {

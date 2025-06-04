@@ -1,6 +1,6 @@
 # Task ID: 3
 # Title: Basic Type System Implementation (Primitive Types & Function Types)
-# Status: pending
+# Status: done
 # Dependencies: 2
 # Priority: medium
 # Description: Implement the foundational components of the HoTT-based type system, including representations for basic predefined types (e.g., `Nat`, `Bool`, `String`) and simple function types.
@@ -11,19 +11,19 @@ Define data structures to represent types, e.g., `TypeAtom(name)`, `FunctionType
 Unit tests for creating and representing basic types (`Nat`, `Bool`) and function types (e.g., `(-> Nat Bool)`, `(-> Nat Nat Nat)`). Verify that type representations are distinct and can be compared for equality.
 
 # Subtasks:
-## 1. Define Base 'Type' Interface/Enum [pending]
+## 1. Define Base 'Type' Interface/Enum [done]
 ### Dependencies: None
 ### Description: Establish the core data structure or enumeration that will serve as the basis for all type representations in the system. This will define the common contract for different kinds of types.
 ### Details:
 Define an abstract base class, interface, or an enum (e.g., using a tagged union or sum type pattern if the language supports it well) named `Type`. This structure should be designed to be extensible for future type kinds (e.g., product types, sum types). For now, it just needs to be a common ancestor or variant type that `TypeAtom` and `FunctionType` can conform to or be variants of.
 
-## 2. Implement 'TypeAtom' Structure for Primitive Types [pending]
+## 2. Implement 'TypeAtom' Structure for Primitive Types [done]
 ### Dependencies: 3.1
 ### Description: Create the data structure for representing atomic, predefined types like `Nat`, `Bool`, `String`. This structure will hold the name of the atomic type.
 ### Details:
 Define a class or struct `TypeAtom` that inherits from or implements the base `Type` (from subtask 1). It must contain a `name` field (e.g., a string) to store the identifier of the atomic type (e.g., 'Nat', 'Bool'). Ensure it can be instantiated.
 
-## 3. Implement 'FunctionType' Structure [pending]
+## 3. Implement 'FunctionType' Structure [done]
 ### Dependencies: 3.1
 ### Description: Create the data structure for representing function types, which consist of a list of parameter types and a single return type.
 ### Details:
@@ -32,13 +32,13 @@ Define a class or struct `FunctionType` that inherits from or implements the bas
 2. `return_type`: A `Type` instance representing the function's return type. 
 Ensure it can be instantiated with appropriate `Type` instances (which could be `TypeAtom` or other `FunctionType` instances) for its fields.
 
-## 4. Predefine Constant Instances for Nat, Bool, String [pending]
+## 4. Predefine Constant Instances for Nat, Bool, String [done]
 ### Dependencies: 3.2
 ### Description: Create and store globally accessible constant instances for the primitive types `Nat`, `Bool`, and `String` using the `TypeAtom` structure.
 ### Details:
 In a suitable module or globally accessible scope, define constant instances of `TypeAtom` for 'Nat', 'Bool', and 'String'. For example: `const TYPE_NAT = new TypeAtom('Nat');`, `const TYPE_BOOL = new TypeAtom('Bool');`, `const TYPE_STRING = new TypeAtom('String');`. These should be readily available for use throughout the type system.
 
-## 5. Implement Type Equality Comparison Logic [pending]
+## 5. Implement Type Equality Comparison Logic [done]
 ### Dependencies: 3.2, 3.3
 ### Description: Implement a mechanism to compare two type instances for structural equality. This must handle `TypeAtom` and `FunctionType` correctly.
 ### Details:

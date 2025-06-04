@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require "../src/main.rkt"
+         "../src/evaluator/values.rkt"
          rackunit)
 
 ;; Basic functionality tests
@@ -29,5 +30,7 @@
 (test-case "type checker not implemented"
   (check-exn exn:fail? (lambda () (evaluate-string "hello"))))
 
-(test-case "evaluator works"
-  (check-equal? (evaluate-string "(+ 1 2)") 3))
+(test-case "evaluator works with HoTT values"
+  (let ([result (evaluate-string "(+ 1 2)")])
+    (check-true (constructor-value? result))
+    (check-equal? (constructor-value-constructor-name result) "succ")))

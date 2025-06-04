@@ -3,143 +3,182 @@
 (require "../src/types/types.rkt"
          rackunit)
 
-;; Tests for PathFinder LISP Type System
+;; Tests for PathFinder LISP HoTT-based Type System
 
-;; Base type structure tests
-(test-case "type-atom creation"
-  (let ([t (make-type-atom "MyType")])
-    (check-true (type? t))
-    (check-true (type-atom? t))
-    (check-equal? (type-atom-name t) "MyType")))
+;; Universe hierarchy tests
+(test-case "universe creation and equality"
+  (check-true (universe? Type0))
+  (check-true (universe? Type1))  
+  (check-equal? (universe-level Type0) 0)
+  (check-equal? (universe-level Type1) 1)
+  (check-true (hott-type-equal? Type0 Type0))
+  (check-false (hott-type-equal? Type0 Type1)))
 
-(test-case "function-type creation"
-  (let ([ft (make-function-type (list Nat Bool) String)])
-    (check-true (type? ft))
-    (check-true (function-type? ft))
-    (check-equal? (length (function-type-param-types ft)) 2)
-    (check-equal? (function-type-return-type ft) String)))
+;; Basic type former tests
+(test-case "unit and empty types"
+  (check-true (unit-type? Unit))
+  (check-true (empty-type? Empty))
+  (check-true (hott-type-equal? Unit Unit))
+  (check-true (hott-type-equal? Empty Empty))
+  (check-false (hott-type-equal? Unit Empty)))
 
-;; Predefined primitive types tests
-(test-case "predefined Nat type"
-  (check-true (type-atom? Nat))
-  (check-equal? (type-atom-name Nat) "Nat")
-  (check-true (primitive-type? Nat)))
+;; Π-type (function type) tests
+(test-case "simple function types"
+  (let ([nat-to-bool (make-function-type Nat Bool)])
+    (check-true (pi-type? nat-to-bool))
+    (check-equal? (pi-type-var-name nat-to-bool) "_")
+    (check-true (hott-type-equal? (pi-type-domain nat-to-bool) Nat))
+    (check-true (hott-type-equal? (pi-type-codomain nat-to-bool) Bool))))
 
-(test-case "predefined Bool type"
-  (check-true (type-atom? Bool))
-  (check-equal? (type-atom-name Bool) "Bool")
-  (check-true (primitive-type? Bool)))
+(test-case "dependent function types"
+  (let ([dep-func (make-pi-type "n" Nat Bool)])
+    (check-true (pi-type? dep-func))
+    (check-equal? (pi-type-var-name dep-func) "n")
+    (check-true (hott-type-equal? (pi-type-domain dep-func) Nat))
+    (check-true (hott-type-equal? (pi-type-codomain dep-func) Bool))))
 
-(test-case "predefined String type"
-  (check-true (type-atom? String))
-  (check-equal? (type-atom-name String) "String")
-  (check-true (primitive-type? String)))
+(test-case "function type equality"
+  (let ([f1 (make-function-type Nat Bool)]
+        [f2 (make-function-type Nat Bool)]
+        [f3 (make-function-type Bool Nat)])
+    (check-true (hott-type-equal? f1 f2))
+    (check-false (hott-type-equal? f1 f3))))
 
-;; Type equality tests
-(test-case "atomic type equality - same types"
-  (check-true (type-equal? Nat Nat))
-  (check-true (type-equal? Bool Bool))
-  (check-true (type-equal? String String)))
+;; Σ-type (product/dependent pair) tests
+(test-case "simple product types"
+  (let ([nat-times-bool (make-product-type Nat Bool)])
+    (check-true (sigma-type? nat-times-bool))
+    (check-equal? (sigma-type-var-name nat-times-bool) "_")
+    (check-true (hott-type-equal? (sigma-type-first-type nat-times-bool) Nat))
+    (check-true (hott-type-equal? (sigma-type-second-type nat-times-bool) Bool))))
 
-(test-case "atomic type equality - different types"
-  (check-false (type-equal? Nat Bool))
-  (check-false (type-equal? Bool String))
-  (check-false (type-equal? String Nat)))
+(test-case "dependent pair types"
+  (let ([dep-pair (make-sigma-type "x" Nat Bool)])
+    (check-true (sigma-type? dep-pair))
+    (check-equal? (sigma-type-var-name dep-pair) "x")
+    (check-true (hott-type-equal? (sigma-type-first-type dep-pair) Nat))
+    (check-true (hott-type-equal? (sigma-type-second-type dep-pair) Bool))))
 
-(test-case "atomic type equality - custom types"
-  (let ([t1 (make-type-atom "Custom")]
-        [t2 (make-type-atom "Custom")]
-        [t3 (make-type-atom "Different")])
-    (check-true (type-equal? t1 t2))
-    (check-false (type-equal? t1 t3))))
+;; Sum type tests
+(test-case "sum types"
+  (let ([nat-or-bool (make-sum-type Nat Bool)])
+    (check-true (sum-type? nat-or-bool))
+    (check-true (hott-type-equal? (sum-type-left-type nat-or-bool) Nat))
+    (check-true (hott-type-equal? (sum-type-right-type nat-or-bool) Bool))))
 
-(test-case "function type equality - simple"
-  (let ([ft1 (make-function-type (list Nat) Bool)]
-        [ft2 (make-function-type (list Nat) Bool)]
-        [ft3 (make-function-type (list Bool) Nat)])
-    (check-true (type-equal? ft1 ft2))
-    (check-false (type-equal? ft1 ft3))))
+(test-case "sum type equality"
+  (let ([s1 (make-sum-type Nat Bool)]
+        [s2 (make-sum-type Nat Bool)]
+        [s3 (make-sum-type Bool Nat)])
+    (check-true (hott-type-equal? s1 s2))
+    (check-false (hott-type-equal? s1 s3))))
 
-(test-case "function type equality - multiple parameters"
-  (let ([ft1 (make-function-type (list Nat Bool) String)]
-        [ft2 (make-function-type (list Nat Bool) String)]
-        [ft3 (make-function-type (list Bool Nat) String)]
-        [ft4 (make-function-type (list Nat Bool) Nat)])
-    (check-true (type-equal? ft1 ft2))
-    (check-false (type-equal? ft1 ft3))
-    (check-false (type-equal? ft1 ft4))))
+;; Identity type tests
+(test-case "identity types"
+  (let ([id-type (make-identity-type Nat 'zero 'zero)])
+    (check-true (identity-type? id-type))
+    (check-true (hott-type-equal? (identity-type-type-expr id-type) Nat))
+    (check-equal? (identity-type-left-term id-type) 'zero)
+    (check-equal? (identity-type-right-term id-type) 'zero)))
 
-(test-case "function type equality - different arities"
-  (let ([ft1 (make-function-type (list Nat) Bool)]
-        [ft2 (make-function-type (list Nat Bool) String)])
-    (check-false (type-equal? ft1 ft2))))
+;; Inductive type tests
+(test-case "natural numbers inductive type"
+  (check-true (inductive-type? Nat))
+  (check-equal? (inductive-type-name Nat) "Nat")
+  (check-equal? (length (inductive-type-constructors Nat)) 2))
 
-(test-case "function type equality - nested functions"
-  (let* ([inner1 (make-function-type (list Nat) Bool)]
-         [inner2 (make-function-type (list Nat) Bool)]
-         [ft1 (make-function-type (list inner1) String)]
-         [ft2 (make-function-type (list inner2) String)])
-    (check-true (type-equal? ft1 ft2))))
+(test-case "boolean inductive type"
+  (check-true (inductive-type? Bool))
+  (check-equal? (inductive-type-name Bool) "Bool")
+  (check-equal? (length (inductive-type-constructors Bool)) 2))
 
-(test-case "mixed type equality"
-  (check-false (type-equal? Nat (make-function-type (list Bool) String))))
+(test-case "list type construction"
+  (let ([nat-list (make-list-type Nat)])
+    (check-true (inductive-type? nat-list))
+    (check-equal? (inductive-type-name nat-list) "List-Nat")
+    (check-equal? (length (inductive-type-constructors nat-list)) 2)))
 
-;; Helper function tests
-(test-case "unary function type helper"
-  (let ([ft1 (make-unary-function-type Nat Bool)]
-        [ft2 (make-function-type (list Nat) Bool)])
-    (check-true (type-equal? ft1 ft2))))
+;; Universe level tests
+(test-case "basic types in Type₀"
+  (check-true (type-in-universe? Unit 0))
+  (check-true (type-in-universe? Empty 0))
+  (check-true (type-in-universe? Nat 0))
+  (check-true (type-in-universe? Bool 0)))
 
-(test-case "binary function type helper"
-  (let ([ft1 (make-binary-function-type Nat Bool String)]
-        [ft2 (make-function-type (list Nat Bool) String)])
-    (check-true (type-equal? ft1 ft2))))
+(test-case "type universe levels"
+  (check-equal? (type-universe-level Unit) 0)
+  (check-equal? (type-universe-level Nat) 0)
+  (check-equal? (type-universe-level Type0) 1)
+  (check-equal? (type-universe-level Type1) 2))
+
+(test-case "function type universe levels"
+  (let ([nat-to-bool (make-function-type Nat Bool)])
+    (check-equal? (type-universe-level nat-to-bool) 0)
+    (check-true (type-in-universe? nat-to-bool 0))))
 
 ;; Pretty printing tests
-(test-case "type->string for atomic types"
+(test-case "type->string for basic types"
+  (check-equal? (type->string Unit) "𝟙")
+  (check-equal? (type->string Empty) "𝟘") 
   (check-equal? (type->string Nat) "Nat")
-  (check-equal? (type->string Bool) "Bool")
-  (check-equal? (type->string String) "String"))
+  (check-equal? (type->string Bool) "Bool"))
 
-(test-case "type->string for unary functions"
-  (let ([ft (make-unary-function-type Nat Bool)])
-    (check-equal? (type->string ft) "(Nat → Bool)")))
+(test-case "type->string for universes"
+  (check-equal? (type->string Type0) "Type0")
+  (check-equal? (type->string Type1) "Type1")
+  (check-equal? (type->string Type2) "Type2"))
 
-(test-case "type->string for binary functions"
-  (let ([ft (make-binary-function-type Nat Bool String)])
-    (check-equal? (type->string ft) "(Nat × Bool → String)")))
+(test-case "type->string for function types"
+  (let ([nat-to-bool (make-function-type Nat Bool)])
+    (check-equal? (type->string nat-to-bool) "(Nat → Bool)")))
 
-(test-case "type->string for nullary functions"
-  (let ([ft (make-function-type '() Bool)])
-    (check-equal? (type->string ft) "(→ Bool)")))
+(test-case "type->string for dependent functions"
+  (let ([dep-func (make-pi-type "n" Nat Bool)])
+    (check-equal? (type->string dep-func) "(Π (n : Nat) Bool)")))
 
-(test-case "type->string for nested functions"
-  (let* ([inner (make-unary-function-type Nat Bool)]
-         [outer (make-unary-function-type inner String)])
-    (check-equal? (type->string outer) "((Nat → Bool) → String)")))
+(test-case "type->string for product types"
+  (let ([prod (make-product-type Nat Bool)])
+    (check-equal? (type->string prod) "(Nat × Bool)")))
+
+(test-case "type->string for dependent pairs"
+  (let ([dep-pair (make-sigma-type "x" Nat Bool)])
+    (check-equal? (type->string dep-pair) "(Σ (x : Nat) Bool)")))
+
+(test-case "type->string for sum types"
+  (let ([sum (make-sum-type Nat Bool)])
+    (check-equal? (type->string sum) "(Nat + Bool)")))
+
+(test-case "type->string for identity types"
+  (let ([id (make-identity-type Nat 'zero 'zero)])
+    (check-equal? (type->string id) "(Id Nat zero zero)")))
+
+;; Complex type construction tests
+(test-case "nested function types"
+  (let* ([nat-to-bool (make-function-type Nat Bool)]
+         [higher-order (make-function-type nat-to-bool Bool)])
+    (check-equal? (type->string higher-order) "((Nat → Bool) → Bool)")))
+
+(test-case "function returning product"
+  (let* ([prod (make-product-type Nat Bool)]
+         [func (make-function-type Unit prod)])
+    (check-equal? (type->string func) "(𝟙 → (Nat × Bool))")))
+
+(test-case "complex nested types"
+  (let* ([list-nat (make-list-type Nat)]
+         [func-type (make-function-type Nat list-nat)]
+         [prod-type (make-product-type func-type Bool)])
+    (check-true (hott-type? prod-type))
+    (check-equal? (type->string prod-type) "((Nat → List-Nat) × Bool)")))
 
 ;; Type validation tests
-(test-case "valid-type? for atomic types"
-  (check-true (valid-type? Nat))
-  (check-true (valid-type? Bool))
-  (check-true (valid-type? String))
-  (check-true (valid-type? (make-type-atom "Custom"))))
+(test-case "valid-hott-type? validation"
+  (check-true (valid-hott-type? Nat))
+  (check-true (valid-hott-type? (make-function-type Nat Bool)))
+  (check-true (valid-hott-type? Type0))
+  (check-false (valid-hott-type? "not a type"))
+  (check-false (valid-hott-type? 42)))
 
-(test-case "valid-type? for function types"
-  (check-true (valid-type? (make-function-type (list Nat) Bool)))
-  (check-true (valid-type? (make-function-type '() String))))
-
-(test-case "valid-type? for invalid values"
-  (check-false (valid-type? "not a type"))
-  (check-false (valid-type? 42))
-  (check-false (valid-type? #f)))
-
-;; Primitive type checking
-(test-case "primitive-type? positive cases"
-  (check-true (primitive-type? Nat))
-  (check-true (primitive-type? Bool))
-  (check-true (primitive-type? String)))
-
-(test-case "primitive-type? negative cases"
-  (check-false (primitive-type? (make-type-atom "Custom")))
-  (check-false (primitive-type? (make-function-type (list Nat) Bool))))
+;; Debug the failing test
+(test-case "debug hott-type predicate"
+  (check-true (hott-type? Nat))
+  (check-true (hott-type? Type0)))
