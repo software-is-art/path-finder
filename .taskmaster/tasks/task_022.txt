@@ -1,0 +1,107 @@
+# Task ID: 22
+# Title: MCP Server for Structural S-Expression Editing
+# Status: done
+# Dependencies: 1, 2, 21
+# Priority: high
+# Description: Develop an MCP (Multi-Connection Protocol) server that provides tools for structural S-expression editing. This server will enable parsing Racket/Lisp files into S-expression trees, performing structural modifications, and serializing them back with proper formatting.
+# Details:
+The server should expose the following functionalities, likely as MCP methods:
+1.  `read_sexp(filePath: string) -> SExpressionTree`: Parses a Racket/Lisp file at `filePath` into an internal S-expression tree representation. This should leverage the existing parser from Task 1.
+2.  `modify_sexp(tree: SExpressionTree, path: SPath, newSubtree: SExpression) -> SExpressionTree`: Modifies the S-expression tree at a given `path` (e.g., a list of indices specifying the route to the sub-expression) by replacing it with `newSubtree`.
+3.  `insert_sexp(tree: SExpressionTree, path: SPath, index: int, newSubtree: SExpression) -> SExpressionTree`: Inserts `newSubtree` into a list at `path` at the given `index`.
+4.  `delete_sexp(tree: SExpressionTree, path: SPath) -> SExpressionTree`: Deletes the sub-expression at the given `path`.
+5.  `wrap_sexp(tree: SExpressionTree, path: SPath, wrapperSymbol: string) -> SExpressionTree`: Wraps the sub-expression at `path` with a new list structure, e.g., `(wrapperSymbol originalSubExpression)`.
+6.  `format_sexp(tree: SExpressionTree) -> string`: Pretty-prints the S-expression tree into a well-formatted string, suitable for writing back to a file. This should ensure consistent indentation and readability.
+7.  `validate_sexp(tree: SExpressionTree) -> bool/errors`: Checks the structural validity of the S-expression tree (e.g., balanced parentheses, valid atom types). This is primarily about syntactic structure, not semantic correctness or type checking.
+
+The server should be designed to integrate with IDEs or other development tools that require programmatic manipulation of Lisp code. The internal S-expression tree representation should be compatible with or based on the AST defined in Task 2. This server aims to provide a robust foundation for advanced S-expression editing capabilities, helping to resolve issues like bracket matching for consumers like the type checker.
+
+# Test Strategy:
+1.  **Unit Tests for `read_sexp`**:
+    *   Test with valid Racket/Lisp files containing various S-expression structures (nested lists, atoms, strings, numbers, comments).
+    *   Test with empty files and files with syntax errors; ensure appropriate error handling.
+2.  **Unit Tests for Modification Functions (`modify_sexp`, `insert_sexp`, `delete_sexp`, `wrap_sexp`)**:
+    *   For each function, create various S-expression trees and test modifications at different valid and invalid paths.
+    *   Verify that the returned tree reflects the changes correctly.
+    *   Test edge cases: modifying root, inserting into empty lists, deleting from lists, wrapping atoms and lists.
+3.  **Unit Tests for `format_sexp`**:
+    *   Test with various complex S-expression trees.
+    *   Verify that the output string is correctly formatted (indentation, spacing, line breaks).
+    *   Ensure that formatting is idempotent (formatting an already formatted string produces the same result or a structurally equivalent one).
+4.  **Unit Tests for `validate_sexp`**:
+    *   Test with well-formed S-expression trees.
+    *   Test with malformed trees (e.g., issues not caught by initial parsing but relevant to structural integrity rules defined for this function).
+5.  **Integration Tests**:
+    *   Test a sequence of operations: read a file, perform several modifications, format the result, and validate it.
+    *   Compare the formatted output with an expected output file.
+    *   Test the MCP server interface: send requests for each function and verify the responses.
+
+# Subtasks:
+## 1. MCP Server Foundation and `read_sexp` Implementation [done]
+### Dependencies: None
+### Description: Initialize the MCP server framework. Implement the `read_sexp` functionality to parse Racket/Lisp files into an internal S-expression tree, leveraging the parser from Task 1 and the AST from Task 2. This subtask also involves defining or confirming the `SExpressionTree` and `SPath` data structures.
+### Details:
+1. Select and configure an MCP library/framework suitable for the project's language (e.g., Python, Java, Node.js).
+2. Implement the basic server structure: connection handling, request dispatching.
+3. Define the internal `SExpressionTree` representation, ensuring compatibility with the AST from Task 2. This includes nodes for atoms (symbols, numbers, strings, etc.) and lists/conses.
+4. Define the `SPath` representation (e.g., a list of integer indices or specific keys) for uniquely identifying sub-expressions within an `SExpressionTree`.
+5. Implement the `read_sexp(filePath: string) -> SExpressionTree` MCP method:
+    a. Input: `filePath` (string).
+    b. Action: Use the existing parser (from Task 1) to read the file content and generate an AST.
+    c. Convert/adapt this AST to the server's internal `SExpressionTree` representation.
+    d. Output: The resulting `SExpressionTree` object.
+
+## 2. Implement `format_sexp` and `validate_sexp` Utilities [done]
+### Dependencies: 22.1
+### Description: Develop the `format_sexp` function for pretty-printing S-expression trees into human-readable, consistently formatted strings, and the `validate_sexp` function for checking the structural integrity of S-expression trees.
+### Details:
+1. Implement `format_sexp(tree: SExpressionTree) -> string`:
+    a. Input: `SExpressionTree`.
+    b. Action: Traverse the tree and generate a string representation.
+    c. Ensure consistent indentation, line breaks for readability, and proper handling of different S-expression elements (atoms, lists, dotted pairs if applicable).
+    d. Output: Formatted string.
+2. Implement `validate_sexp(tree: SExpressionTree) -> bool/errors`:
+    a. Input: `SExpressionTree`.
+    b. Action: Traverse the tree to check for structural validity (e.g., all list elements are valid S-expressions, atoms have valid types according to the S-expression grammar). This is primarily syntactic, not semantic.
+    c. Output: Boolean `true` if valid, or an object/list containing error descriptions if invalid.
+
+## 3. Implement Core Destructive Modifications: `modify_sexp` and `delete_sexp` [done]
+### Dependencies: 22.1
+### Description: Implement the `modify_sexp` operation to replace a sub-expression at a given `SPath` and `delete_sexp` to remove a sub-expression at a given `SPath`. These operations modify the tree structure.
+### Details:
+1. Implement helper function(s) for navigating an `SExpressionTree` using an `SPath` to locate and access the parent and target sub-expression. Handle invalid or out-of-bounds paths gracefully (e.g., by raising an error or returning a specific status).
+2. Implement `modify_sexp(tree: SExpressionTree, path: SPath, newSubtree: SExpression) -> SExpressionTree`:
+    a. Inputs: Original `SExpressionTree`, `SPath` to the target node, `newSubtree` (an `SExpression`).
+    b. Action: Locate the sub-expression at `path`. Replace it with `newSubtree`. Consider if operations should be in-place or return a new tree (returning a new tree is generally safer).
+    c. Output: The modified `SExpressionTree`.
+3. Implement `delete_sexp(tree: SExpressionTree, path: SPath) -> SExpressionTree`:
+    a. Inputs: Original `SExpressionTree`, `SPath` to the target node.
+    b. Action: Locate the sub-expression at `path`. Remove it from its parent list. If the path points to an element that cannot be deleted (e.g., root, or an atom that's not part of a list), handle appropriately.
+    c. Output: The modified `SExpressionTree`.
+
+## 4. Implement Additive Modification Operations: `insert_sexp` and `wrap_sexp` [done]
+### Dependencies: 22.1, 22.3
+### Description: Implement the `insert_sexp` operation to add a new sub-expression into a list at a specific `SPath` and index, and `wrap_sexp` to wrap an existing sub-expression at an `SPath` with a new list structure.
+### Details:
+1. Leverage or extend path navigation logic from subtask 3.
+2. Implement `insert_sexp(tree: SExpressionTree, path: SPath, index: int, newSubtree: SExpression) -> SExpressionTree`:
+    a. Inputs: Original `SExpressionTree`, `SPath` to the parent list, `index` for insertion, `newSubtree` (an `SExpression`).
+    b. Action: Navigate to the list identified by `path`. Insert `newSubtree` at the specified `index`. Handle out-of-bounds indices (e.g., clamp to list bounds, or error). The `path` should point to a list.
+    c. Output: The modified `SExpressionTree`.
+3. Implement `wrap_sexp(tree: SExpressionTree, path: SPath, wrapperSymbol: string) -> SExpressionTree`:
+    a. Inputs: Original `SExpressionTree`, `SPath` to the target sub-expression, `wrapperSymbol` (string).
+    b. Action: Locate the sub-expression at `path`. Create a new list `(wrapperSymbol originalSubExpression)`. Replace the original sub-expression at `path` with this new list.
+    c. Output: The modified `SExpressionTree`.
+
+## 5. Expose All Operations as MCP Methods and Finalize Server [done]
+### Dependencies: 22.1, 22.2, 22.3, 22.4
+### Description: Integrate all implemented S-expression manipulation functions (`format_sexp`, `validate_sexp`, `modify_sexp`, `delete_sexp`, `insert_sexp`, `wrap_sexp`) as methods within the MCP server established in Subtask 1. Finalize server implementation including robust error handling and documentation for MCP methods.
+### Details:
+1. For each core function (`format_sexp`, `validate_sexp`, `modify_sexp`, `delete_sexp`, `insert_sexp`, `wrap_sexp`), create a corresponding MCP method handler in the server.
+2. Ensure MCP method handlers correctly parse incoming request parameters (e.g., `SExpressionTree` JSON, `SPath` array, `index` integer, `filePath` string).
+3. Call the respective core logic functions with these parameters.
+4. Serialize return values (e.g., `SExpressionTree` to JSON, string, boolean/error object) into appropriate MCP responses.
+5. Implement comprehensive error handling at the MCP layer: catch exceptions from core logic, handle invalid MCP requests/parameters, and return meaningful error responses over MCP.
+6. Add logging for MCP requests, responses, and significant server events.
+7. Prepare documentation for each exposed MCP method, detailing its purpose, parameters (name, type, description), return value (type, description), and potential errors.
+
