@@ -1,0 +1,43 @@
+# Task ID: 26
+# Title: Evaluate Rust backend migration for production PathFinder implementation
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: After completing dependent types, consider migrating from Racket to Rust host for: 1) Native performance 2) Multiple backends (interpreter, Cranelift JIT, LLVM AOT, WASM) 3) Better deployment (single binary) 4) Integration with compiler ecosystem. Goal: PathFinder IL → Rust implementation with same three-tier effect system. Could potentially dogfood by implementing the Rust backend in PathFinder itself.
+# Details:
+
+
+# Test Strategy:
+
+
+# Subtasks:
+## 1. Define Core PathFinder IL Data Structures in Rust [pending]
+### Dependencies: None
+### Description: Create the foundational Rust structs and enums to accurately represent the PathFinder Intermediate Language (IL). This includes defining types for expressions, statements, function definitions, and the components of the effect system. This is a prerequisite for any processing or execution of PathFinder code in Rust.
+### Details:
+In a new Rust library crate, define modules for the IL's Abstract Syntax Tree (AST). Use Rust's enum and struct features to model the language constructs. For example, `enum Expression { Literal(Value), Var(String), ... }`. Derive `Debug`, `Clone`, and potentially `serde::Serialize` for easier testing and debugging.
+
+## 2. Implement the Three-Tier Effect System Machinery [pending]
+### Dependencies: None
+### Description: Develop the core runtime logic for PathFinder's three-tier effect system. This involves creating the mechanisms for defining effects, handling them, and managing continuations. This module will be a self-contained library component used by all execution backends.
+### Details:
+Create data structures for effect handlers and the effect context stack. Implement the core function for invoking an effect, which should search the context stack for a matching handler. Implement the logic for capturing, saving, and resuming continuations (resumptions). This logic should be generic and not tied to a specific backend (interpreter vs. JIT) at this stage.
+
+## 3. Build a Tree-Walk Interpreter Backend [pending]
+### Dependencies: None
+### Description: Implement an interpreter that directly executes the PathFinder IL AST. This serves as a reference implementation to validate the correctness of the IL data structures and the effect system logic in an end-to-end execution flow.
+### Details:
+Create an `Interpreter` struct with an `eval` method that recursively walks the IL AST. Maintain an environment for variable bindings. When an effectful operation is encountered in the AST, the interpreter should call into the effect system machinery developed in the previous subtask. The result of an `eval` call should be a final value or an unhandled effect.
+
+## 4. Implement a JIT Backend using Cranelift [pending]
+### Dependencies: None
+### Description: Develop a Just-In-Time (JIT) compilation backend using the Cranelift code generation library. This backend will translate PathFinder IL into native machine code at runtime to achieve significant performance improvements over the interpreter.
+### Details:
+Create a `JitCompiler` module that traverses the PathFinder IL AST and emits Cranelift IR. Use `cranelift-jit` to manage memory and compile the IR into executable code. Implement 'trampolines' or foreign function calls from the JIT-ed code back into the Rust runtime to handle the effect system logic (e.g., calling the effect handler search function). Map PathFinder functions to JIT-ed functions and manage their pointers.
+
+## 5. Develop a Unified CLI and Single-Binary Build Process [pending]
+### Dependencies: None
+### Description: Create a user-facing command-line interface (CLI) to drive the PathFinder execution engine. The CLI should allow users to specify an input file and select the desired backend (interpreter or JIT). The entire project should be configurable to build into a single, distributable binary.
+### Details:
+Create a new binary crate that depends on the library crate containing the IL and backends. Use a crate like `clap` to define and parse command-line arguments, such as `--backend [interpreter|jit]` and the input file path. Implement logic to read a file, parse it into the IL AST representation (initially, this can be a placeholder parser that reads a debug format like JSON), and dispatch to the selected backend. Configure `Cargo.toml` to build a release binary.
+

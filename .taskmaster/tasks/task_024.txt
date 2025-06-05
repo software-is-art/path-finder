@@ -1,0 +1,106 @@
+# Task ID: 24
+# Title: Implement Practical Syntactic Sugar and Desugaring
+# Status: pending
+# Dependencies: 1, 2, 17
+# Priority: high
+# Description: Implement syntactic sugar for common programming patterns such as list literals, optional chaining (maybe-monad syntax like `x?.field`), and threading macros. These constructs will desugar into core HoTT-based language expressions, enhancing developer experience and code readability while preserving mathematical rigor.
+# Details:
+Implementations should extend the parser (from Task 1) to recognize new syntactic forms and then transform these forms into equivalent core Abstract Syntax Tree (AST) structures (from Task 2) before type checking (Task 4) and evaluation (Task 2).
+
+**1. List Literals:**
+   - Syntax: `[elem1 elem2 ... elemN]` (e.g., `[1 2 3]`, `[]`).
+   - Parser Extension: Lexer to recognize `[` and `]`. Parser to construct an internal representation for list literals.
+   - Desugaring: Transform into a sequence of `List.cons` calls and `List.nil` from the standard library (Task 17). 
+     - Example: `[1 2 3]` desugars to `(List.cons 1 (List.cons 2 (List.cons 3 List.nil)))`.
+     - Example: `[]` desugars to `List.nil`.
+
+**2. Maybe-Monad Syntax (Optional Chaining for `Option` types):**
+   - Syntax: `expr?.field` for field access, and `expr?.(function-call arg ...)` for safe method/function calls on an optional value.
+   - Prerequisites: `Option` type and its operations (`Option.map`, `Option.bind`, `Option.pure`, `None`) from Task 17. Product types (structs/records) from Task 5 for field access, and a mechanism like `(get-field instance 'fieldName')`.
+   - Desugaring for field access (`expr?.field`):
+     - Transforms to an expression that checks if `expr` is `Some`. If so, accesses `field` from the wrapped value and returns `(Some fieldValue)`; otherwise, returns `None`.
+     - Example: `myOption?.data` could desugar to `(Option.map myOption (lambda (value) (get-field value 'data')))`. The result type would be `(Option FieldType)`.
+   - Desugaring for function call (`expr?.(f arg)`):
+     - Transforms to an expression that checks if `expr` is `Some`. If so, applies the function to the wrapped value and arguments; otherwise, returns `None`.
+     - Example: `optVal?.(processItem "arg2")` could desugar to `(Option.bind optVal (lambda (v) (processItem v "arg2")))` if `processItem` returns an `Option`, or `(Option.map optVal (lambda (v) (processItem v "arg2")))` if `processItem` returns a plain value to be wrapped in `Some`.
+
+**3. Threading Macro (e.g., Thread-First `->`):**
+   - Syntax: `(-> initial-expr form1 form2 ...)`
+   - Purpose: Reduces nesting for sequential function applications.
+   - Desugaring: The `initial-expr` is passed as the first argument to `form1`. The result of that is passed as the first argument to `form2`, and so on.
+     - If a `form` is a symbol `s`, it becomes `(s threaded-value)`.
+     - If a `form` is a list `(op arg1 ...)` it becomes `(op threaded-value arg1 ...)`.
+   - Example: `(-> "hello" (string-append " world") string-upcase)` desugars to `(string-upcase (string-append "hello" " world"))` (assuming `string-append` and `string-upcase` are available, potentially from an extended standard library).
+   - Parser Extension: Recognize `->` as a special form/macro triggering this transformation.
+
+**General Considerations:**
+- All desugared expressions must be valid core language ASTs.
+- The desugaring process should happen after parsing and before type checking.
+- Error reporting for malformed sugar syntax should be clear.
+
+# Test Strategy:
+Each syntactic sugar feature requires thorough testing:
+
+**1. List Literals:**
+   - Parse and desugar `[]`. Verify it becomes `List.nil`. Check type and evaluation.
+   - Parse and desugar `[1 2 3]`. Verify desugaring to `(List.cons 1 (List.cons 2 (List.cons 3 List.nil)))`. Check type `(List Nat)` and evaluate to the correct list structure.
+   - Test with lists of other types (e.g., `Bool`, `String` if available) and empty lists of specific types if supported.
+   - Test nested list literals: `[[1] [2 3]]`.
+   - Test parsing errors for malformed list literals, e.g., `[1 2`. 
+
+**2. Maybe-Monad Syntax (`?.`):**
+   - Setup: Define a product type (e.g., `(deftype User ((id Nat) (name String)))`) and an `Option User` variable.
+   - Field Access:
+     - Test `optionUser?.id` when `optionUser` is `(Some (User 1 "Alice"))`. Expected: `(Some 1)`.
+     - Test `optionUser?.id` when `optionUser` is `None`. Expected: `None`.
+     - Verify type of the result is `(Option Nat)`.
+   - Function Call:
+     - Define a function `(define (format-user u) (string-append "ID: " (nat-to-string (get-field u 'id))))` which returns a `String`.
+     - Test `optionUser?.(format-user)` (if `format-user` is adapted or `Option.map` is used for non-Option returning functions). Expected: `(Some "ID: 1")` or `None`.
+     - Test with functions that themselves return `Option` using `Option.bind` desugaring.
+     - Verify type correctness of desugared expressions.
+   - Test parsing errors for malformed `?.` syntax.
+
+**3. Threading Macro (`->`):**
+   - Test simple case: `(-> 10 (add 5) (multiply 2))` (assuming `add` and `multiply` exist and take first arg as input). Expected desugaring: `(multiply (add 10 5) 2)`. Evaluate to `30`.
+   - Test with symbol forms: `(-> "data" process-step1 process-step2)` where `process-step1` and `process-step2` are functions. Expected: `(process-step2 (process-step1 "data"))`.
+   - Test with more complex forms and multiple arguments in steps: `(-> initial-value (funcA "param1") (funcB "param2" "param3"))`.
+   - Verify type checking of the desugared forms.
+   - Test parsing errors for malformed `->` expressions.
+
+**General Tests:**
+- Ensure that the introduction of syntactic sugar does not break existing parsing or evaluation of core language forms.
+- Verify that error messages from the type checker (Task 4) for type errors within desugared code are clear and map back to the original sugared syntax if possible (stretch goal).
+
+# Subtasks:
+## 1. Extend Parser to Recognize New Syntactic Sugar Forms [pending]
+### Dependencies: None
+### Description: Modify the lexer and parser to recognize the syntax for list literals (`[...]`), optional chaining (`?.`), and the thread-first macro (`->`). The parser should generate specific, temporary AST nodes for these constructs that will be processed by a subsequent desugaring pass.
+### Details:
+Lexer: Add new tokens for `LBRACKET` (`[`), `RBRACKET` (`]`), and `OPT_CHAIN` (`?.`).
+Parser: Implement rules to parse `[expr1 expr2 ...]` into an `AST.ListLiteral` node. Modify expression parsing to handle `expr?.field` and `expr?.(call...)`, creating `AST.OptionalAccess` and `AST.OptionalCall` nodes. Recognize `(-> ...)` as a special form and parse it into an `AST.ThreadMacro` node.
+
+## 2. Implement Desugaring of List Literals [pending]
+### Dependencies: None
+### Description: Create the initial desugaring transformation pass that walks the AST and replaces `AST.ListLiteral` nodes with their equivalent core language expressions built from `List.cons` and `List.nil`.
+### Details:
+Implement a function `desugar(ast)` that traverses the AST. When an `AST.ListLiteral` node is encountered, transform it. The transformation for `[e1 e2 ... en]` is a right-fold, resulting in `(List.cons e1 (List.cons e2 ... (List.cons en List.nil)))`. An empty list `[]` transforms directly to the `List.nil` identifier. The elements `e1`, `e2`, etc., must also be recursively desugared.
+
+## 3. Implement Desugaring for Optional Field Access (`expr?.field`) [pending]
+### Dependencies: None
+### Description: Extend the desugaring pass to handle `AST.OptionalAccess` nodes. This syntax provides safe access to fields of a value wrapped in an `Option` type by transforming it into an `Option.map` call.
+### Details:
+In the `desugar` function, add a case for `AST.OptionalAccess(expr, 'field')`. The node should be transformed into the AST representation of `(Option.map (desugar expr) (lambda (v) (get-field v 'field')))`. This relies on `Option.map` from the standard library (Task 17) and a core `get-field` primitive (Task 5).
+
+## 4. Implement Desugaring for Optional Function Calls (`expr?.(call)`) [pending]
+### Dependencies: None
+### Description: Extend the desugaring pass to handle `AST.OptionalCall` nodes. This syntax provides a way to safely call a function with a value wrapped in an `Option` type, transforming into an `Option.bind` call.
+### Details:
+In the `desugar` function, add a case for `AST.OptionalCall(expr, func, args)`. The node should be transformed into the AST for `(Option.bind (desugar expr) (lambda (v) (func v ...args)))`. The unwrapped value `v` is inserted as the first argument to the function call inside the lambda. This uses `Option.bind` to handle cases where the called function itself returns an `Option`.
+
+## 5. Implement Desugaring for the Thread-First Macro (`->`) [pending]
+### Dependencies: None
+### Description: Finalize the desugaring pass by implementing the transformation for `AST.ThreadMacro` nodes. This macro simplifies the syntax of chained function calls by threading a value as the first argument to subsequent forms.
+### Details:
+In the `desugar` function, add a case for `AST.ThreadMacro(initialExpr, forms)`. Implement a left-fold over the `forms`. The accumulator starts as `desugar(initialExpr)`. For each `form`, if it's a symbol `s`, the new accumulator is `(s accumulator)`; if it's a list `(op arg1 ...)` the new accumulator is `(op accumulator arg1 ...)`.
+

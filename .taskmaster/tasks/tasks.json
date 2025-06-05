@@ -214,7 +214,7 @@
       "dependencies": [
         3
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -222,7 +222,7 @@
           "description": "Develop the core logic to determine the types of basic literals (e.g., integers, booleans) and to look up types of variables from a type environment. This forms the foundation for checking more complex expressions.",
           "dependencies": [],
           "details": "Create a `TypeEnvironment` class/structure to store variable-to-type mappings (scoped, if necessary, for later features like let-bindings or nested functions). Implement a `check(ast_node, environment)` or `infer(ast_node, environment)` method. For literal AST nodes (e.g., `NumberNode`, `BooleanNode`), this method should return their corresponding `Type` objects (e.g., `NumberType`, `BooleanType` from Task 3). For `VariableNode`, it should look up the variable's name in the `TypeEnvironment`. If not found, this is an unbound variable situation (actual error reporting will be refined in a later subtask, but the condition should be detectable).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test with AST nodes for various literals (e.g., `1`, `true`). Test variable lookups in environments with and without the variable defined. Ensure correct `Type` objects are returned."
         },
         {
@@ -233,7 +233,7 @@
             1
           ],
           "details": "For a `DefineNode(name, value_expr)`: 1. Recursively call the type checker (e.g., `infer(value_expr, environment)`) on the `value_expr` to determine its type. 2. If `value_expr` type checking fails, propagate the error. 3. Otherwise, update the current `TypeEnvironment` by adding a mapping from `name` (a string) to the inferred type. The `define` expression itself might be considered to have a special `Void` type or the type of the variable being defined; clarify this or focus on the environment side-effect. Ensure the updated environment is used for subsequent expressions at the same scope.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test `(define x 10)` and verify that `x` is subsequently typed as `NumberType`. Test `(define y true)` for `BooleanType`. Test `(define z x)` after `x` is defined, ensuring `z` gets `x`'s type. Test cases where `value` expression has a type error."
         },
         {
@@ -244,7 +244,7 @@
             1
           ],
           "details": "For a `LambdaNode(params, body_expr)`: 1. Create a new, extended `TypeEnvironment` that inherits from the current environment. 2. For each parameter in `params`: If type annotations are present (e.g., `(x : Int)`), add the parameter name and its annotated type to this new environment. If annotations are absent, for this initial implementation, either require annotations or assume a default 'Unknown/Any' type, or prepare for more complex inference if specified. 3. Recursively call the type checker (e.g., `infer(body_expr, new_environment)`) on `body_expr` to determine its type. This is the function's return type. 4. The type of the `lambda` expression itself is a `FunctionType` (from Task 3) composed of the list of parameter types and the inferred return type.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test `(lambda ((x : Int)) x)` should result in a `FunctionType(param_types=[IntType], return_type=IntType)`. Test `(lambda ((a : Bool) (b : Int)) b)` resulting in `FunctionType(param_types=[BoolType, IntType], return_type=IntType)`. Test cases where the body has a type error based on its own structure or use of parameters."
         },
         {
@@ -256,7 +256,7 @@
             3
           ],
           "details": "For an `ApplicationNode(function_expr, arg_exprs)`: 1. Recursively call the type checker on `function_expr` to get its type. Verify this is a `FunctionType`. If not, it's a type error ('not a function'). 2. Compare the number of `arg_exprs` with the arity (number of parameters) of the `FunctionType`. If they don't match, it's an arity mismatch error. 3. For each `arg_expr` and its corresponding parameter type from the `FunctionType`: a. Recursively call the type checker on `arg_expr` to get its type. b. Check if the argument's actual type is assignable to/compatible with the expected parameter type. If not, it's a type mismatch error. 4. If all checks pass, the type of the `ApplicationNode` expression is the return type specified in the `FunctionType` of `function_expr`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Given `(define myfun (lambda ((a : Int) (b : Bool)) a))`: Test `(myfun 1 true)` should type check to `IntType`. Test `(myfun 1 2)` (argument type mismatch). Test `(myfun 1)` (arity mismatch). Test `(1 2 3)` ('not a function' error for `1`)."
         },
         {
@@ -270,7 +270,7 @@
             4
           ],
           "details": "1. Define a `TypeError` class or structure to encapsulate error details: message, AST node location (for line/column numbers if available), expected type, actual type, etc. 2. Modify all type checking functions (from subtasks 1-4) to generate and return/collect these `TypeError` objects when an issue is detected, instead of throwing exceptions or immediately halting (to allow for collecting multiple errors). 3. Create a main driver function for the type checker that traverses the entire program AST. This driver should invoke the appropriate checking logic for each node type and accumulate any `TypeError` objects. 4. Format error messages clearly, e.g., \"Type Error: Expected 'Int' but found 'Bool' for parameter 'y' in function call 'f'. (line X, col Y)\". Ensure messages distinguish between different kinds of errors.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Create a suite of small programs, each designed to trigger specific type errors: unbound variable, type mismatch in definition, type mismatch in function argument, calling a non-function, incorrect arity in function call. Verify that the type checker identifies all errors and that the reported messages are accurate, informative, and (if possible) point to the source location."
         }
       ]
@@ -285,7 +285,7 @@
       "dependencies": [
         4
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -293,7 +293,7 @@
           "description": "Modify the parser to recognize and parse the `(deftype Name ...)` syntax for both product types `(deftype Name ((field1 type1) (field2 type2) ...))` and sum types `(deftype Name (Variant1 typeA ...) (Variant2 typeB typeC ...) ...)`. The parser should generate distinct Abstract Syntax Tree (AST) nodes for these definitions.",
           "dependencies": [],
           "details": "Implement parsing rules for:\n1. Product types: `(deftype <TypeName> (<fieldName> <fieldType>)+)`. Example: `(deftype Point ((x Nat) (y Nat)))`. The AST node should capture the type name, and an ordered list of (field name, field type name) pairs.\n2. Sum types: `(deftype <TypeName> (<VariantName> <fieldType>*)*)`. Example: `(deftype Shape (Circle Nat) (Rectangle Nat Nat))`. The AST node should capture the type name, and a list of (variant name, list of argument type names) pairs.\nEnsure robust error handling for malformed definitions.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test the parser with various valid `deftype` expressions for both product and sum types. Test edge cases like empty field lists (if disallowed), empty variant lists, types with no arguments for variants. Verify correct AST node structure and content. Test with invalid syntax to ensure proper error reporting."
         },
         {
@@ -304,7 +304,7 @@
             1
           ],
           "details": "When a `deftype` AST node is encountered during type checking:\n1. For product types: Resolve all field types against the current type environment. Store the new type name along with its definition (e.g., an ordered list of (field name, resolved field type)).\n2. For sum types: Resolve all argument types for each variant against the current type environment. Store the new type name along with its definition (e.g., a map of variant names to a list of resolved argument types).\n3. Check for type name collisions within the current scope. Disallow redefinition of existing types or primitive types.\n4. The registered types should be available for subsequent type checking.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test the type checker by processing various `deftype` AST nodes. Verify that types are correctly registered in the type environment with their accurate structure. Test scenarios with valid type references, undefined type references in field/variant definitions, and type name conflicts."
         },
         {
@@ -315,7 +315,7 @@
             2
           ],
           "details": "1. For product types: If an application form `(F arg1 ... argN)` is encountered and `F` matches a registered product type name (e.g., `Point`), treat this as a CIF call.\n   - Verify the number of arguments matches the number of fields in the `Point` type definition.\n   - Type-check each argument `argI` against the corresponding field type `fieldTypeI`.\n   - The type of the entire expression `(Point arg1 ... argN)` is `Point`.\n2. For sum types: If an application form `(V arg1 ... argM)` is encountered and `V` matches a registered variant name (e.g., `Circle` of type `Shape`), treat this as a CIF call.\n   - Verify `V` is a known variant of some sum type `S`.\n   - Verify the number of arguments matches the definition of variant `V`.\n   - Type-check each argument `argI` against the corresponding argument type for variant `V`.\n   - The type of the entire expression `(Circle arg1 ... argM)` is the parent sum type `S` (e.g., `Shape`).\nCIFs are implicit; no explicit function definition is parsed for them.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test the type checker with various CIF calls. Include tests for: \n- Correct product type instantiations (e.g., `(Point 1 2)`).\n- Correct sum type variant instantiations (e.g., `(Circle 5)`).\n- Incorrect calls: wrong number of arguments, arguments of incorrect types for both product and sum CIFs.\n- Calls to undefined type names or variant names."
         },
         {
@@ -326,7 +326,7 @@
             3
           ],
           "details": "1. When the evaluator encounters a CIF call for a product type (identified by the type checker, e.g., an AST node tagged as 'ProductCIFCall' with type name and arguments):\n   - Evaluate each argument expression to get its runtime value.\n   - Construct an internal data structure for the product instance. This structure should store the evaluated argument values, associated with their field names (e.g., a map like `{\"x\": <value_of_arg1>, \"y\": <value_of_arg2>}`) or in a fixed order if field names are not stored at runtime for pure products.\n   - The runtime instance should also be tagged with its type name (e.g., `Point`).\n   - Example: `(Point 1 2)` evaluates to a runtime value representing `{ type: 'Point', fields: { x: 1, y: 2 } }` or similar.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test the evaluator for product type instantiation. \n- Evaluate simple product CIF calls like `(Point 1 2)` and verify the structure and content of the resulting runtime object.\n- Test with different data types for fields (e.g., numbers, booleans, other custom types if supported).\n- Ensure the runtime object is correctly tagged with its type."
         },
         {
@@ -337,7 +337,7 @@
             3
           ],
           "details": "1. When the evaluator encounters a CIF call for a sum type variant (identified by the type checker, e.g., an AST node tagged as 'SumCIFCall' with sum type name, variant name, and arguments):\n   - Evaluate each argument expression to get its runtime value.\n   - Construct an internal data structure for the sum type instance. This structure must include:\n     a. The specific variant tag/name (e.g., `\"Circle\"`).\n     b. The evaluated argument values for that variant (e.g., `[<value_of_arg1>]`).\n     c. The overall sum type name (e.g., `\"Shape\"`).\n   - Example: `(Circle 5)` for `(deftype Shape (Circle Nat) ...)` evaluates to a runtime value like `{ type: 'Shape', variant: 'Circle', values: [5] }`.\n   - Example: `(Rectangle 10 20)` for `(deftype Shape ... (Rectangle Nat Nat))` evaluates to `{ type: 'Shape', variant: 'Rectangle', values: [10, 20] }`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test the evaluator for sum type instantiation.\n- Evaluate various sum type variant CIF calls (e.g., `(Circle 5)`, `(Rectangle 10 20)`).\n- Verify the structure and content of the resulting tagged runtime object (correct sum type, variant tag, and values).\n- Test variants with no arguments and multiple arguments.\n- Ensure the runtime object is correctly tagged."
         }
       ]
@@ -352,7 +352,7 @@
       "dependencies": [
         5
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -360,7 +360,7 @@
           "description": "Set up the fundamental REPL structure that continuously prompts the user for input, reads a line of text, and handles basic exit commands (e.g., 'exit', 'quit'). This forms the basic interaction shell.",
           "dependencies": [],
           "details": "Implement an infinite loop that: 1. Prints a prompt (e.g., '> '). 2. Reads a line of text from standard input. 3. Checks if the input is an exit command (e.g., 'exit', ':q'). If so, terminate the REPL. Otherwise, proceed to the next step (parsing, to be added in a subsequent subtask). Use appropriate I/O functions for the target language/environment.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Manually run the REPL. Verify that it displays a prompt. Enter text and see it acknowledged (even if not processed yet). Enter exit commands and verify the REPL terminates."
         },
         {
@@ -371,7 +371,7 @@
             1
           ],
           "details": "After reading input in the REPL loop (from subtask 1), pass the input string to the `parse()` function from the parser module. Implement try-catch or error-checking around the parse call. If a parse error occurs, print a message like 'Parse Error: [error details]' to standard error and loop back for new input. If successful, store the generated AST.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Enter valid S-expressions; verify no error is printed and the REPL awaits next input (or moves to a placeholder for next stage). Enter malformed S-expressions (e.g., `(foo`, `(bar . )`, `())`) and verify specific parse error messages are displayed."
         },
         {
@@ -382,7 +382,7 @@
             2
           ],
           "details": "After a successful parse (from subtask 2), call the `typeCheck(ast, initialEnvironment)` function from the type checker module. `initialEnvironment` will be a new, empty environment for each call in this subtask. Implement try-catch or error-checking for type errors. If a type error occurs, print 'Type Error: [error details]' and loop back. If successful, store the (typed) AST.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Enter syntactically correct but type-incorrect expressions (e.g., `(+ 1 #t)` if booleans aren't summable with numbers). Verify specific type error messages. Enter type-correct expressions and verify no error is printed."
         },
         {
@@ -393,7 +393,7 @@
             3
           ],
           "details": "After successful type checking (from subtask 3), call the `evaluate(ast, initialEnvironment)` function from the evaluator module. `initialEnvironment` will be a new, empty environment. Implement try-catch or error-checking for runtime errors. If evaluation is successful, print the resulting value to standard output. If a runtime error occurs (e.g., division by zero, unbound variable before persistence), print 'Runtime Error: [error details]'. Always loop back for new input.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Enter expressions that evaluate successfully (e.g., `(+ 1 2)`) and verify the correct result is printed. Enter expressions causing runtime errors (e.g., `(/ 1 0)`) and verify specific runtime error messages."
         },
         {
@@ -404,7 +404,7 @@
             4
           ],
           "details": "1. Initialize a global/shared environment object once when the REPL starts. 2. Modify the calls to `typeCheck` (subtask 3) and `evaluate` (subtask 4) to pass this persistent environment instance instead of a fresh one. 3. Ensure that language constructs that create definitions (e.g., `define`, `let` if it modifies the top-level) update this shared environment. The type checker and evaluator might need internal adjustments to correctly handle and update the passed-in environment.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "1. Define a variable: `(define x 10)`. Verify no error and prompt returns. 2. Use the variable: `(+ x 5)`. Verify result is `15`. 3. Define a function: `(define (add_one y) (+ y 1))`. 4. Call the function: `(add_one 20)`. Verify result is `21`. Test redefinition if supported."
         }
       ]
@@ -480,24 +480,24 @@
     {
       "id": 8,
       "title": "`ConstructionFailure` Effect and Basic CIF Runtime Constraints",
-      "description": "Introduce the predefined `ConstructionFailure` effect. Modify CIFs for types defined with `(:where ...)` clauses to perform this effect if runtime constraint checks fail.",
-      "details": "Predefine the `ConstructionFailure` effect (e.g., `(defeffect ConstructionFailure (fail (message String)) : Nothing)`). Extend `deftype` to parse simple `(:where predicate-expr)` clauses. When a CIF for such a type is called, evaluate the `predicate-expr` after constructing the underlying value. If the predicate is false, `perform (ConstructionFailure.fail \"Constraint violated\")`. Users should be able to catch this with `(try (MyType ...) (:catch (e : ConstructionFailure) fallback))`. The `:catch` syntax is a specialized handler for exceptions.",
-      "testStrategy": "Define a type with a `(:where ...)` constraint (e.g., `(deftype PositiveNat Nat (:where (> self 0)))`). Test instantiation with valid values (should succeed) and invalid values (should perform `ConstructionFailure`). Verify that `try/catch` can intercept `ConstructionFailure` and execute fallback logic.",
-      "priority": "medium",
+      "description": "Introduce the predefined `ConstructionFailure` effect as a proper algebraic effect within our 3-tier system. Modify Constructor Invocation Functions (CIFs) for types defined with `(:where ...)` clauses to `perform` this effect if runtime constraint checks fail. This allows construction failures to be managed by context-aware algebraic effect handlers rather than traditional exception handling.",
+      "status": "pending",
       "dependencies": [
         5,
         7
       ],
-      "status": "pending",
+      "priority": "medium",
+      "details": "Predefine the `ConstructionFailure` effect (e.g., `(defeffect ConstructionFailure (fail (message String)) : Nothing)`). This will be a Tier 2/3 effect. Extend `deftype` to parse `(:where predicate-expr)` clauses. When a CIF for such a type is called, it will evaluate the `predicate-expr` after constructing the underlying value. If the predicate is false, the CIF will `perform (ConstructionFailure.fail \"Constraint violated\")`. Users can then manage this effect using the standard algebraic effect handler mechanism (e.g., `with-handler`). This allows for flexible, context-dependent failure management, such as providing a default value, logging the error, or aborting the computation.",
+      "testStrategy": "Define a type with a `(:where ...)` constraint (e.g., `(deftype PositiveNat Nat (:where (> self 0)))`). Test instantiation with valid values (should succeed) and invalid values (should perform `ConstructionFailure`). Verify that a suitable effect handler (e.g., one defined with `defhandler`) can intercept the `ConstructionFailure` effect and execute custom logic, such as returning a default value or re-raising a different effect.",
       "subtasks": [
         {
           "id": 1,
           "title": "Define Predefined `ConstructionFailure` Effect",
           "description": "Introduce the `ConstructionFailure` effect into the system's core library or prelude. This effect signals failures during type construction when runtime constraints are violated.",
           "dependencies": [],
-          "details": "Implement `(defeffect ConstructionFailure (fail (message String)) : Nothing)` as specified. Ensure it's available globally. The `fail` operation should accept a `String` message. The effect type should indicate no return value (e.g., `: Nothing` or equivalent mechanism if the language uses a different syntax for effect signatures).",
+          "details": "Implement `(defeffect ConstructionFailure (fail (message String)) : Nothing)` as specified. Ensure it's available globally. This should be classified as a Tier 2 (compile-time checkable) and Tier 3 (runtime) effect. The `fail` operation should accept a `String` message. The effect type should indicate no return value (e.g., `: Nothing`), signifying that it does not resume by default.",
           "status": "pending",
-          "testStrategy": "Verify `ConstructionFailure` is a recognized effect type. Test that `(perform (ConstructionFailure.fail \"test message\"))` can be invoked (it might initially be unhandled). Check that the `fail` operation correctly packages the message as its payload."
+          "testStrategy": "Verify `ConstructionFailure` is a recognized effect type and is correctly integrated into the Tier 2/3 effect system. Test that `(perform (ConstructionFailure.fail \"test message\"))` can be invoked (it will be unhandled initially). Check that the `fail` operation correctly packages the message as its payload."
         },
         {
           "id": 2,
@@ -506,7 +506,7 @@
           "dependencies": [
             1
           ],
-          "details": "Update the `deftype` parser. When a `(:where predicate-expr)` clause is encountered: 1. Parse `predicate-expr`. 2. Store this predicate (e.g., as a lambda, an abstract syntax tree, or a compiled function) in the type's metadata. 3. Define and document a convention for how the value being constructed will be referenced within `predicate-expr` (e.g., a special variable like `%`, `this`, or as the first argument to a lambda).",
+          "details": "Update the `deftype` parser. When a `(:where predicate-expr)` clause is encountered: 1. Parse `predicate-expr`. 2. Store this predicate (e.g., as a lambda, an abstract syntax tree, or a compiled function) in the type's metadata. 3. Define and document a convention for how the value being constructed will be referenced within `predicate-expr` (e.g., a special variable like `self` or `this`).",
           "status": "pending",
           "testStrategy": "Define various types using `deftype` with and without `:where` clauses. Inspect the internal representation (e.g., type metadata object) to confirm correct parsing and storage of the predicate. Test with syntactically valid and invalid predicates to ensure robust parsing."
         },
@@ -535,14 +535,14 @@
         },
         {
           "id": 5,
-          "title": "Implement `try/:catch` Syntax for `ConstructionFailure` Effect",
-          "description": "Implement the `(try expression (:catch (e : ConstructionFailure) handler-expression))` syntax. This allows user code to catch the `ConstructionFailure` effect and execute custom handling logic.",
+          "title": "Enable Handling of `ConstructionFailure` via Algebraic Effect Handlers",
+          "description": "Ensure the existing algebraic effect handling mechanism can be used to manage the `ConstructionFailure` effect. This allows user code to define handlers that intercept construction failures and execute custom logic.",
           "dependencies": [
             4
           ],
-          "details": "1. Extend the language parser to recognize the `try ... (:catch (variable : EffectType) handler-expression)` syntax, specifically for `EffectType` being `ConstructionFailure`. 2. Implement the runtime semantics: When `expression` is evaluated, if it (or any function it calls) performs an effect of type `ConstructionFailure`, the evaluation of `expression` is aborted. 3. The `handler-expression` is then evaluated. The `variable` (e.g., `e`) should be bound to the payload of the `ConstructionFailure` effect (i.e., the instance returned by `(ConstructionFailure.fail message)`, which should contain the message). 4. The result of the `try` expression in case of a caught effect is the result of the `handler-expression`. If no matching effect is performed, the result is that of `expression`. Ensure this handler is specific to `ConstructionFailure` as per the specialized nature of `:catch` for exceptions.",
+          "details": "Leverage the language's existing effect handler syntax (e.g., `with-handler` and `defhandler`). When a `ConstructionFailure` is performed within the dynamic scope of a handler: 1. Control is transferred to the appropriate clause in the handler. 2. The handler receives the effect payload (the message) and the continuation. 3. The handler can then choose to: a) Abort the computation and return a fallback value. b) Resume the computation with a default value if the effect signature allowed it (though `ConstructionFailure` shouldn't). c) Perform another effect. This subtask ensures the general handler mechanism works correctly for this specific, newly introduced effect.",
           "status": "pending",
-          "testStrategy": "1. Test `(try (MyTypeWithFailingConstraint ...) (:catch (e : ConstructionFailure) \"fallback\"))` returns \"fallback\". 2. Verify `e` in the catch block is correctly bound to the effect payload (e.g., an object/struct containing the message string). 3. Test that `(try (MyTypeWithPassingConstraint ...) (:catch (e : ConstructionFailure) \"fallback\"))` returns the successfully constructed type instance and does not execute the handler. 4. Test that other unhandled effects (if any exist in the language) within `try` still propagate if they are not `ConstructionFailure`. 5. Test nested `try/catch` blocks."
+          "testStrategy": "1. Define a handler that catches `ConstructionFailure` and returns a default value (e.g., `0` or `nil`). 2. Wrap a failing constructor call with this handler, e.g., `(with-handler MyFailureHandler (PositiveNat -1))`. Verify the expression evaluates to the default value. 3. Verify that the handler is *not* invoked when construction succeeds, e.g., `(with-handler MyFailureHandler (PositiveNat 1))` should return a valid `PositiveNat` instance. 4. Test that the handler receives the correct error message from the effect's payload. 5. Test nested handlers to ensure correct dynamic scoping."
         }
       ]
     },
@@ -622,7 +622,7 @@
       "dependencies": [
         4
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -630,7 +630,7 @@
           "description": "Extend the Abstract Syntax Tree (AST) and internal type representation to include `PiType(var_name, var_type, body_type)` and `SigmaType(var_name, var_type, body_type)`. This forms the foundational data structures for dependent types.",
           "dependencies": [],
           "details": "Define `PiType` structure: `var_name` (String/Identifier), `var_type` (Type Expression), `body_type` (Type Expression which may refer to `var_name`). Define `SigmaType` structure: `var_name` (String/Identifier), `var_type` (Type Expression), `body_type` (Type Expression which may refer to `var_name`). Ensure these new type structures integrate with existing type representations (e.g., as variants in an enum or subclasses). Consider how `var_name` will be bound within `body_type` (e.g., de Bruijn indices or explicit name binding).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests to verify the creation, structure, and properties (like free/bound variables) of `PiType` and `SigmaType` instances. Test serialization/deserialization if applicable."
         },
         {
@@ -641,7 +641,7 @@
             1
           ],
           "details": "Define or confirm the concrete syntax for Π-types and Σ-types. Modify the parser grammar (e.g., LALR, PEG, or recursive descent) to incorporate these new syntactic forms. Ensure the parser constructs the correct `PiType` and `SigmaType` AST nodes defined in Subtask 1, capturing `var_name`, `var_type`, and `body_type` appropriately.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Parser tests with various valid syntax examples for Π-types and Σ-types, including nested dependent types. Test invalid syntax to ensure proper error reporting. Verify correct AST node generation."
         },
         {
@@ -652,7 +652,7 @@
             1
           ],
           "details": "Implement `substitute(type_expr, var_name, value_expr)`: Replaces free occurrences of `var_name` in `type_expr` with `value_expr`. Must correctly handle variable capture (e.g., via alpha-conversion or de Bruijn indices). Implement `normalize(type_expr)`: Reduces a type expression to its normal form. This may involve evaluating parts of expressions that are known at compile-time (e.g., constants, simple arithmetic if allowed in types, or reducing beta-redexes if functions are allowed in types). Ensure this engine can operate on all type structures, including the new `PiType` and `SigmaType` (e.g., substitution under binders).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests for `substitute` with various scenarios: simple substitution, nested types, substitution under binders, and variable capture avoidance. Unit tests for `normalize` with expressions that should reduce to a canonical form and those already in normal form. Test with type expressions involving `PiType` and `SigmaType`."
         },
         {
@@ -665,7 +665,7 @@
             3
           ],
           "details": "Formation: For `(Pi (x : A) Bx)`, check that `A` is a valid type. Then, in a context extended with `x : A`, check that `Bx` is a valid type. Introduction (Lambda): For `lambda (x : A) . body`, type check `body` in a context extended with `x : A`. If `body : Bx`, the lambda has type `(Pi (x : A) Bx)`. Elimination (Application): For `f arg`, if `f : (Pi (x : A) Bx)` and `arg : A'`, check type equivalence of `A` and `A'`. The result type is `Bx` with `arg` substituted for `x`, followed by normalization: `normalize(substitute(Bx, x, arg))`. Update the typing environment/context management to handle the dependent variable `x` correctly.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Type checker tests for: valid dependent function definitions and type inference; valid dependent function applications and correct result type computation (using substitution); type errors for ill-formed Π-types, incorrect lambda bodies, and mismatched function arguments. Test scoping of the dependent variable."
         },
         {
@@ -678,7 +678,7 @@
             3
           ],
           "details": "Formation: For `(Sigma (x : A) Bx)`, check that `A` is a valid type. Then, in a context extended with `x : A`, check that `Bx` is a valid type. Introduction (Pair): For a pair `(a, b)`, type check `a` to get type `A`. Then, type check `b`. Its type must be equivalent to `Bx` with `a` substituted for `x`, followed by normalization: `normalize(substitute(Bx, x, a))`. The pair `(a,b)` then has type `(Sigma (x : A) Bx)`. Elimination (Projections): If `p : (Sigma (x : A) Bx)`, then `proj1(p) : A`. And `proj2(p) : normalize(substitute(Bx, x, proj1(p)))`. Implement syntax and type checking for pair construction and projections.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Type checker tests for: valid dependent pair constructions and type inference; valid projections from dependent pairs and correct type computation for projections; type errors for ill-formed Σ-types, malformed pairs (e.g., second element's type doesn't match based on the first element's value). Test type equivalence involving substituted types."
         }
       ]
@@ -693,7 +693,7 @@
       "dependencies": [
         10
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -701,7 +701,7 @@
           "description": "Introduce the `Id` type constructor `(Id A x y)` into the system's syntax and Abstract Syntax Tree (AST). This allows the system to recognize and represent identity types.",
           "dependencies": [],
           "details": "Modify the lexer and parser to recognize the `Id` keyword and its three arguments: `A` (the type), `x` (the left-hand term), and `y` (the right-hand term).\nDefine a new AST node type (e.g., `IdTypeNode`) to represent `(Id A x y)`. This node should store references or sub-nodes for `A`, `x`, and `y`.\nEnsure the parser correctly constructs this AST node from input expressions like `(Id Nat zero zero)`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Write unit tests for the parser to verify that expressions of the form `(Id A x y)` are correctly parsed into the new `IdTypeNode` AST representation. Include tests for correct argument parsing and error handling for malformed `Id` expressions."
         },
         {
@@ -712,7 +712,7 @@
             1
           ],
           "details": "In the type checker module, add a new rule or extend an existing one to handle `IdTypeNode`.\n1. Type check the `A` component. It must resolve to a type (e.g., `Type` or `Type_i` in a system with universes).\n2. Type check the `x` component. Let its inferred type be `A_x`.\n3. Type check the `y` component. Let its inferred type be `A_y`.\n4. Verify that `A_x` and `A_y` are judgmentally equal to `A` (the type specified in the `Id` expression).\n5. If all checks pass, the expression `(Id A x y)` itself is a type. It typically resides in the same universe as `A`, or a base universe like `Prop` if such a distinction exists (e.g., `Type` or `Prop`).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Write unit tests for the type checker focusing on `Id` types.\n- Test valid cases: `(Id Nat zero zero)` should be recognized as a type (e.g., `Type`).\n- Test invalid cases: `(Id Nat (lambda (x:Nat) x) zero)` where the second argument is not of type `Nat` but `Nat -> Nat`.\n- Test invalid cases: `(Id zero zero zero)` where the first argument `zero` is not a type."
         },
         {
@@ -723,7 +723,7 @@
             1
           ],
           "details": "Modify the lexer and parser to recognize the `refl` keyword and its single argument `x`.\nDefine a new AST node type (e.g., `ReflNode`) to represent `(refl x)`. This node should store a reference or sub-node for the term `x`.\nEnsure the parser correctly constructs this AST node from input expressions like `(refl zero)`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Write unit tests for the parser to verify that expressions of the form `(refl x)` are correctly parsed into the new `ReflNode` AST representation. Test with various term structures for `x`."
         },
         {
@@ -735,7 +735,7 @@
             3
           ],
           "details": "In the type checker module, add a new rule or extend an existing one to handle `ReflNode`.\n1. Type check the term `t` (from `(refl t)`). Let its inferred type be `A_inferred`.\n2. The type of the expression `(refl t)` is `(Id A_inferred t t)`.\n3. This involves constructing an `IdTypeNode` (or its internal representation) with `A = A_inferred`, left term = `t` (deep copy or reference), and right term = `t` (deep copy or reference).\nEnsure the type checker correctly forms this `Id` type as the result.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Write unit tests for the type checker focusing on `refl` terms.\n- Test valid cases: `(refl zero)` should type check to `(Id Nat zero zero)` (assuming `zero : Nat`).\n- Test valid cases: `(refl true)` should type check to `(Id Bool true true)` (assuming `true : Bool`).\n- Verify that the components of the resulting `Id` type (`A`, `t`, `t`) are correctly set."
         },
         {
@@ -746,7 +746,7 @@
             4
           ],
           "details": "Verify that `refl` terms can be assigned to variables or used in contexts expecting an `Id` type with matching parameters.\nExample: `(define p : (Id Nat 5 5) (refl 5))` should type check.\nTest error reporting for type mismatches, e.g., trying to assign `(refl 5)` to `(Id Nat 5 6)` or `(Id Bool 5 5)`.\nConsider how `Id` types and `refl` interact with other language features like function definitions, let-bindings, and (if applicable) pattern matching or dependent elimination rules for `Id` (though elimination is not part of this task).\nCreate a set of small programs or definitions that use `Id` and `refl` to ensure they work correctly within the broader system.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Develop end-to-end test files that include definitions and expressions using `Id` and `refl`.\n- Example 1: `(define reflexivity-of-zero : (Id Nat zero zero) (refl zero))`\n- Example 2: `(define generic-refl : (-> (A : Type) (x : A) (Id A x x)) (lambda (A_arg : Type) (lambda (x_arg : A_arg) (refl x_arg))))`\n- Test type inference where applicable.\n- Test error messages for incorrect usage in a larger context."
         }
       ]
@@ -831,7 +831,7 @@
       "dependencies": [
         10
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -839,7 +839,7 @@
           "description": "Introduce an Abstract Syntax Tree (AST) node for universe types, denoted as `Type_i` (e.g., `Ast.Universe(level: int)`). Implement the fundamental typing rule where `Type_i` is itself of type `Type_{i+1}`. This involves representing universe levels and their hierarchical relationship.",
           "dependencies": [],
           "details": "Create a new AST variant, `UniverseNode(level: int)`, to represent `Type_i`. In the type system, this node itself represents a type. The core logic to be implemented is that `typeof(UniverseNode(i))` is `UniverseNode(i+1)`. This might require special handling in the type inference or type checking mechanism for these universe type constructors. Assume levels are non-negative integers. Consider how `Type_{i+1}` is represented, especially if `i` could reach a maximum representable level (though an unbounded conceptual model is fine for initial implementation).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests: 1. Construct `Type 0` (e.g., `UniverseNode(0)`). Verify its inferred type is `Type 1` (e.g., `UniverseNode(1)`). 2. Construct `Type 1`, verify its type is `Type 2`. 3. Test the internal representation and equality of `UniverseNode` instances."
         },
         {
@@ -850,7 +850,7 @@
             1
           ],
           "details": "Ensure that `Type_i` (represented by `UniverseNode`) can appear in any context where a type is expected (e.g., type annotations, function signatures). The type checker's `infer_type(expression)` function should correctly return `UniverseNode(level+1)` when `expression` is `UniverseNode(level)`. The `check_type(expression, expected_type)` function must validate this relationship. This typically involves adding new cases to pattern matches over type structures within the type checker.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests: 1. Type check an expression `Type 0` and assert its inferred type is `Type 1`. 2. Type check `Type 5` and assert its inferred type is `Type 6`. 3. Test type equality comparisons involving `Type_i` (e.g., `Type 0 == Type 0` is true, `Type 0 == Type 1` is false). 4. Test type checking an ill-typed universe, e.g. `Type 0 : Type 0` should fail."
         },
         {
@@ -861,7 +861,7 @@
             2
           ],
           "details": "When a user defines a new type (e.g., `data MyType = ...`), it should be assigned to `Type 0` by default, meaning `MyType : Type 0`. The type checker must be aware of this when `MyType` is used as a type. For example, in `let x : MyType = ...`, the type checker verifies that `MyType` is indeed a type (i.e., it resides in some `Type_i`). This subtask primarily concerns types that are not themselves parameterized by other types that might affect their universe level. If primitive types exist, they should also be assigned to `Type 0` (e.g. `Int : Type 0`).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests: 1. Define a simple data type `Foo` and check that `typeof(Foo)` is `Type 0`. 2. If primitive types like `Integer` exist, check that `typeof(Integer)` is `Type 0`. 3. Test that using `Foo` as a type in a variable declaration (e.g., `let x : Foo = ...`) is valid and type checks correctly. 4. Test that a type definition itself is correctly recorded as being in `Type 0`."
         },
         {
@@ -872,7 +872,7 @@
             3
           ],
           "details": "Modify the AST node for function types or the type checking logic for them. When type checking a function type constructor `T1 -> T2`: 1. Infer the types of `T1` and `T2`. These must be universe types, say `Type_i` and `Type_j` respectively (meaning `T1 : Type_i` and `T2 : Type_j`). 2. The type of the function type `(T1 -> T2)` is then `Type_{max(i,j)}`. This rule must be enforced. This applies when forming function types, e.g., `(Int -> Bool) : Type 0` because `Int : Type 0` and `Bool : Type 0`, so `max(0,0)=0`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests: 1. Given `A : Type 0`, `B : Type 0`, check `(A -> B) : Type 0`. 2. Given `A : Type 0`, `B : Type 1` (where `Type 1` itself is a type, e.g. `Type : Type 1`), check `(A -> B) : Type 1`. 3. Given `A : Type 1`, `B : Type 0`, check `(A -> B) : Type 1`. 4. Test nested function types, e.g., `(A -> (B -> C))`. 5. Test type checking failure if a component type (e.g., `A` or `B`) is not a valid type (i.e., not in any `Type_k`)."
         },
         {
@@ -883,7 +883,7 @@
             4
           ],
           "details": "For dependent function types `(x:A) -> B(x)`: if `A : Type_i` and for any term `a:A`, the type `B(a) : Type_j`, then the type `((x:A) -> B(x))` resides in `Type_{max(i,j)}`. This requires the type checker to handle type dependencies. For Σ-types `(x:A) * B(x)`: if `A : Type_i` and `B(a) : Type_j` for `a:A`, then `((x:A) * B(x)) : Type_{max(i,j)}`. For Id-types `Id A x y`: if `A : Type_i` (and `x,y:A`), then `(Id A x y) : Type_i`. These rules ensure all major type formers are consistently placed within the universe hierarchy. The focus should be on implementing the rule for dependent Π-types first, then others as applicable.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests: 1. For dependent Π-types: Define `A : Type 0`, and a type family `P : A -> Type 0`. Check `((x:A) -> P x) : Type 0`. 2. Define `A : Type 1`, `P : A -> Type 0`. Check `((x:A) -> P x) : Type 1`. 3. If Σ-types are implemented: `A : Type 0`, `B : A -> Type 0`. Check `((x:A) * B x) : Type 0`. 4. If Id-types are implemented: `A : Type 0`, `x:A`, `y:A`. Check `(Id A x y) : Type 0`. 5. Test cases that should fail due to universe inconsistencies in these dependent type formers."
         }
       ]
@@ -1029,7 +1029,7 @@
       "description": "Implement a pattern matching system for destructuring product types (field access) and matching sum type variants, including syntax parsing, match expression evaluation, and type checker integration for exhaustiveness and type safety.",
       "details": "Develop a comprehensive pattern matching facility. This involves:\n1.  **Syntax Definition and Parsing**:\n    *   Define the S-expression syntax for `match` expressions, e.g., `(match <scrutinee-expr> (<pattern1> <body1>) ... (<patternN> <bodyN>))_`.\n    *   Define pattern syntax for: literals (e.g., `10`, `#t`, `\"hello\"`), variables (e.g., `x`), wildcard (`_`), product type destructuring (e.g., `(Point x y)`), and sum type variant matching (e.g., `(Some val)`, `(Left err)`).\n    *   Extend the existing S-expression parser (from Task 1) to produce AST nodes for `MatchExpression` and various `Pattern` types (e.g., `LiteralPattern`, `VariablePattern`, `WildcardPattern`, `ConstructorPattern`).\n2.  **Match Expression Evaluation**:\n    *   Implement the evaluation logic for `match` expressions.\n    *   The scrutinee expression is evaluated first.\n    *   Patterns are tried in the order they appear.\n    *   For the first matching pattern: \n        *   Bind any variables introduced by the pattern to the corresponding parts of the scrutinee's value.\n        *   Evaluate the associated body expression in an environment extended with these new bindings.\n    *   If no pattern matches, a runtime error should be raised (unless compile-time exhaustiveness checks prevent this scenario).\n3.  **Type Checker Integration**:\n    *   Extend the type checker (Task 4) to analyze `match` expressions.\n    *   **Type of Scrutinee**: The type of the scrutinee expression must be determined.\n    *   **Pattern Typing**: Each pattern must be type-compatible with the scrutinee's type. For constructor patterns, the constructor must belong to the scrutinee's type (if it's a sum type) or be the type itself (for product types).\n    *   **Variable Binding Types**: Infer types for variables bound within patterns. E.g., if matching `(Point x y)` against a `Point` type where `x` and `y` are `Nat`, then `x` and `y` are typed as `Nat` in the body.\n    *   **Body Typing**: Each body expression is type-checked in its extended environment. All bodies in a single `match` expression must have a common, compatible type, which becomes the type of the `match` expression itself.\n    *   **Exhaustiveness Checking**: The type checker must verify that the set of patterns for a given scrutinee type is exhaustive. \n        *   For sum types (defined via `deftype` from Task 5), all variants must be covered, or a wildcard pattern must be present.\n        *   For `Bool`, patterns for `#t` and `#f` (or a wildcard) are needed.\n        *   Report a compile-time error if a `match` expression is found to be non-exhaustive.\n    *   **Unreachability**: Optionally, warn about or disallow unreachable patterns (e.g., a pattern following a wildcard).\n4.  **Interaction with `deftype` (Task 5)**:\n    *   The pattern matching system must use the definitions of product and sum types created by `deftype`. This includes knowing the fields of product types and the variants of sum types to perform destructuring and exhaustiveness checks correctly.",
       "testStrategy": "1.  **Parser Tests**:\n    *   Verify correct parsing of `match` expressions with various patterns: literals, variables, wildcards, product constructors, sum variant constructors, nested patterns.\n    *   Test syntax errors for malformed `match` expressions or patterns.\n2.  **Evaluation Tests**:\n    *   Test successful matching and value destructuring for product types.\n    *   Test successful matching for different sum type variants.\n    *   Verify correct variable bindings from patterns are available in the body.\n    *   Confirm that the correct body is evaluated based on the first matching pattern.\n    *   Test wildcard pattern behavior.\n    *   Test runtime error for non-exhaustive matches if not caught by the type checker (e.g., if checking is disabled or for dynamic scenarios).\n3.  **Type Checking Tests**:\n    *   **Pattern Compatibility**: Test that patterns incompatible with the scrutinee's type are rejected (e.g., matching a `Nat` with a `Point` pattern).\n    *   **Variable Type Inference**: Verify types of variables bound in patterns are correctly inferred and used for type checking bodies.\n    *   **Body Type Consistency**: Ensure all bodies in a `match` expression conform to a common type. Test cases where body types differ and should result in an error.\n    *   **Exhaustiveness Checking**: \n        *   Sum types: Test with full coverage of variants, partial coverage (error), and coverage with a wildcard.\n        *   `Bool`: Test with `#t`, `#f` patterns; `#t` only (error); `#t`, `_` (ok).\n        *   Product types: Test destructuring patterns.\n    *   **Type Safety**: Ensure that using a bound variable with an incorrect type within a clause body results in a type error.\n4.  **Integration Tests with `deftype`**:\n    *   Define several product and sum types using `deftype`.\n    *   Write complex `match` expressions using these types, involving nested patterns and multiple clauses.\n    *   Verify correct evaluation, full type checking (including exhaustiveness), and error reporting.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         4,
         5
@@ -1042,7 +1042,7 @@
           "description": "Define the Abstract Syntax Tree (AST) nodes for `MatchExpression` and various `Pattern` types (Literal, Variable, Wildcard, Constructor). Extend the existing S-expression parser (from Task 1) to parse the `(match ...)` syntax and pattern syntax into these AST nodes.",
           "dependencies": [],
           "details": "Define `MatchExpression` AST node: `(scrutinee: Expr, cases: List[(Pattern, Expr)])`. Define `Pattern` AST hierarchy: `LiteralPattern(value: LiteralValue)`, `VariablePattern(name: String)`, `WildcardPattern()`, `ConstructorPattern(constructorName: String, subPatterns: List[Pattern])`. The parser should handle S-expression syntax like `(match <scrutinee-expr> (<pattern1> <body1>) ... (<patternN> <bodyN>))` and patterns such as `10`, `#t`, `\"hello\"`, `x`, `_`, `(Point x y)`, `(Some val)`. Ensure the parser correctly integrates with existing AST structures and error reporting.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test the parser with various valid and invalid `match` expressions and pattern syntaxes. Verify correct AST node generation and appropriate error messages for syntax errors."
         },
         {
@@ -1053,7 +1053,7 @@
             1
           ],
           "details": "Implement `eval_match(match_expr, env)`: 1. Evaluate `match_expr.scrutinee` in `env` to get `scrutinee_value`. 2. Iterate through `match_expr.cases`. For each `(pattern, body)`: a. Implement `match_pattern(pattern, scrutinee_value)` which returns `Option[Map[String, Value]]` representing new bindings. Initially, support `LiteralPattern` (compare value), `VariablePattern` (binds scrutinee_value to variable name), `WildcardPattern` (always matches, no bindings). b. If match succeeds, create `extended_env` from `env` plus new bindings. Evaluate `body` in `extended_env` and return result. 3. If loop finishes with no match, raise a runtime error (e.g., \"Non-exhaustive match error\"). `ConstructorPattern` matching logic will be fully developed in a later subtask (ID 5), but basic name matching could be stubbed if necessary.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test evaluation with `match` expressions involving literals, variables, and wildcards. Verify correct body execution, variable binding within the body's scope, and proper return values. Test non-matching scenarios to ensure runtime errors are raised."
         },
         {
@@ -1064,7 +1064,7 @@
             1
           ],
           "details": "Implement `typecheck_match(match_expr, type_env)`: 1. Typecheck `match_expr.scrutinee` to get `scrutinee_type`. 2. For each `(pattern, body)`: a. Implement `typecheck_pattern(pattern, scrutinee_type, type_env)` for basic patterns: `LiteralPattern` (literal's type must be compatible with `scrutinee_type`), `VariablePattern` (variable is typed as `scrutinee_type`; add to `extended_type_env`), `WildcardPattern` (compatible with any type, no new bindings). b. Typecheck `body` in the `extended_type_env` (derived from `type_env` plus pattern bindings) to get `body_type`. 3. Collect all `body_type`s. Compute their least common supertype (LUB). This LUB is the type of the `match` expression. If no LUB exists (incompatible body types), report a type error. `ConstructorPattern` type checking will be fully developed in a later subtask (ID 5).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test type checking for `match` expressions with simple patterns. Verify correct type inference for the overall expression and for variables bound by patterns. Test type mismatches (e.g., literal pattern vs. scrutinee type, incompatible body types) to ensure errors are reported."
         },
         {
@@ -1075,7 +1075,7 @@
             3
           ],
           "details": "Extend `typecheck_match` or add a separate pass: 1. **Exhaustiveness Checking**: `check_exhaustiveness(patterns, scrutinee_type, type_definitions_from_Task5)`: a. If `scrutinee_type` is `Bool`, check if patterns cover `#t` and `#f`, or if a wildcard `_` is present. b. If `scrutinee_type` is a sum type, retrieve its variants from `type_definitions_from_Task5`. Check if all variants are covered by `ConstructorPattern`s or if a wildcard `_` is present. c. If not exhaustive, report a compile-time error. 2. **Unreachability Checking (Optional)**: `check_unreachability(patterns)`: Analyze patterns in sequence. If a pattern `P_i` is found to be unreachable because preceding patterns `P_1 ... P_{i-1}` cover all cases `P_i` could match, issue a warning or compile-time error. For example, any pattern after `_` or `x` (variable pattern of the same type) is unreachable.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test exhaustiveness checking with various sum types (from `deftype`) and boolean scrutinees. Verify that non-exhaustive matches are caught at compile time. Test cases with and without wildcard patterns. If implementing unreachability, test scenarios with redundant or clearly unreachable patterns."
         },
         {
@@ -1087,7 +1087,7 @@
             4
           ],
           "details": "1. **Refine Evaluation (`match_pattern` for `ConstructorPattern`)**: a. For product types: Check constructor name matches type name, arity matches field count. Recursively match sub-patterns against field values. b. For sum types: Check constructor name matches variant tag, arity matches variant payload. Recursively match sub-patterns against payload values. Aggregate bindings from sub-matches. 2. **Refine Type Checking (`typecheck_pattern` for `ConstructorPattern`)**: a. Use `type_definitions_from_Task5` to get info about product type fields or sum type variants. b. For product types: Verify constructor name is the type name, arity matches. For each sub-pattern and corresponding field type, recursively call `typecheck_pattern` and add inferred bindings to `extended_type_env`. c. For sum types: Verify constructor name is a valid variant of `scrutinee_type`, arity matches. For each sub-pattern and corresponding variant parameter type, recursively call `typecheck_pattern` and add inferred bindings. This ensures variables bound within constructor patterns (e.g., `x`, `y` in `(Point x y)`) receive their correct types for use in the body.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test with various product and sum types defined via `deftype`. Verify correct destructuring of values and variable binding during evaluation. Verify correct type inference for variables bound within constructor patterns. Test error conditions like arity mismatches, incorrect constructor names, and type errors within sub-patterns."
         }
       ]
@@ -1095,15 +1095,15 @@
     {
       "id": 17,
       "title": "Implement Core Standard Library (Nat, Bool, Option, List)",
-      "description": "Define fundamental types Nat, Bool, Option, and List using `deftype`, implement their Canonical Instantiation Functions (CIFs), and provide a set of basic operations and functions for each. This establishes essential building blocks for practical programming in PathFinder LISP.",
-      "details": "This task involves defining the core data types for the PathFinder LISP standard library. These types will be foundational for most programs written in the language.\n\n**General Requirements:**\n- All specified types (Nat, Bool, Option T, List T) must be defined using the `deftype` mechanism (from Task 5).\n- Canonical Instantiation Functions (CIFs) for each type and its variants (e.g., `Some` for `Option`, `Cons` for `List`) should be available as per the `deftype` specification.\n- Operations and functions for these types should be implemented as PathFinder LISP functions and must be type-checked by the system's type checker (from Task 4).\n- These `deftype` definitions for `Nat` and `Bool` will serve as the canonical representations in the standard library, potentially building upon or replacing any primitive notions from Task 3 to ensure they integrate seamlessly with user-defined types and the `deftype` system.\n- The `deftype` mechanism must support parameterized types (e.g., `Option T`, `List T`) and recursive type definitions (e.g., `List T`, Peano `Nat`). This might be a requirement for Task 5 or an aspect to be confirmed during this task's implementation.\n\n**Type Definitions and Operations:**\n\n1.  **Nat (Natural Numbers):**\n    *   Definition: `(deftype Nat (Zero) (Succ Nat))` (Peano representation).\n    *   CIFs: `Zero`, `Succ`.\n    *   Operations:\n        *   `isZero?: Nat -> Bool`\n        *   `add: Nat Nat -> Nat`\n        *   `subtract: Nat Nat -> Option Nat` (Subtraction is partial)\n        *   `equals?: Nat Nat -> Bool`\n        *   `lessThan?: Nat Nat -> Bool`\n\n2.  **Bool (Booleans):**\n    *   Definition: `(deftype Bool (PFalse) (PTrue))` (Using PFalse/PTrue to avoid conflict with potential #f/#t literals if they are different entities, or simply `False`/`True` if the naming convention allows).\n    *   CIFs: `PFalse`, `PTrue` (or `False`, `True`).\n    *   Operations:\n        *   `and: Bool Bool -> Bool`\n        *   `or: Bool Bool -> Bool`\n        *   `not: Bool -> Bool`\n\n3.  **Option T (Optional Values):**\n    *   Definition: `(deftype (Option T) (None) (Some T))` (Parameterized sum type).\n    *   CIFs: `None`, `Some`.\n    *   Operations:\n        *   `isSome?: (Option T) -> Bool`\n        *   `isNone?: (Option T) -> Bool`\n        *   `getOrElse: (Option T) T -> T` (Requires default value of type T)\n        *   `mapOption: (Option T) (T -> U) -> (Option U)`\n\n4.  **List T (Lists):**\n    *   Definition: `(deftype (List T) (Nil) (Cons T (List T)))` (Parameterized, recursive sum type).\n    *   CIFs: `Nil`, `Cons`.\n    *   Operations:\n        *   `isEmpty?: (List T) -> Bool`\n        *   `head: (List T) -> (Option T)`\n        *   `tail: (List T) -> (Option (List T))`\n        *   `append: (List T) (List T) -> (List T)`\n        *   `length: (List T) -> Nat`\n        *   `mapList: (List T) (T -> U) -> (List U)`\n        *   `filterList: (List T) (T -> Bool) -> (List T)`\n        *   `foldLeft: (List T) U ((U T) -> U) -> U` (Initial accumulator of type U, function takes accumulator and list element, returns new accumulator)\n        *   `reverse: (List T) -> (List T)`\n\n**Implementation Considerations:**\n-   The definitions should be placed in a standard library module that can be automatically loaded or easily imported.\n-   Ensure error handling for partial functions (e.g., `head` on an empty list should return `None`).\n-   Performance considerations for list operations, especially for larger lists (though initial implementations can be straightforward recursive versions).",
-      "testStrategy": "Testing will involve unit tests for each type and its operations, focusing on CIFs, functional correctness, type checking, and edge cases.\n\n**1. Nat Tests:**\n    - Verify `(Zero)` and `(Succ ...)` create `Nat` values.\n    - Test `isZero?` on `Zero` and non-zero numbers.\n    - Test `add` with various combinations (e.g., `(add Zero Zero)`, `(add Zero N)`, `(add N Zero)`, `(add N M)`).\n    - Test `subtract` (e.g., `(subtract N M)` where N > M, N = M, N < M returning `None`).\n    - Test `equals?` and `lessThan?` with various pairs.\n    - Type checking: `(add Zero PTrue)` should be a type error.\n\n**2. Bool Tests:**\n    - Verify `(PFalse)` and `(PTrue)` create `Bool` values.\n    - Test `and`, `or`, `not` with all input combinations.\n    - Type checking: `(and PTrue Zero)` should be a type error.\n\n**3. Option T Tests:**\n    - Verify `(None)` and `(Some val)` (e.g., `(Some 10)`, `(Some PTrue)`) create `Option Nat` and `Option Bool` respectively.\n    - Test `isSome?` and `isNone?` on `(None)` and `(Some val)`.\n    - Test `getOrElse` for both `None` and `Some` cases.\n    - Test `mapOption` with functions transforming the value, and with `None`.\n    - Type checking: `(getOrElse (Some 10) PFalse)` should be a type error if types don't match. `mapOption`'s function argument and return types must be checked.\n\n**4. List T Tests:**\n    - Verify `(Nil)` and `(Cons val list)` create `List` values (e.g., `(List Nat)`).\n    - Test `isEmpty?` on `(Nil)` and non-empty lists.\n    - Test `head` and `tail` on empty and non-empty lists (expecting `Option` results).\n    - Test `append` with empty lists and non-empty lists.\n    - Test `length` for various list sizes.\n    - Test `mapList`, `filterList`, `foldLeft`, `reverse` with various inputs: empty lists, single-element lists, multiple-element lists, and functions with different behaviors.\n    - Type checking: `(Cons 1 (Cons PTrue (Nil)))` should be a type error for a homogeneous list `(List Nat)`. Ensure higher-order functions' arguments are correctly type-checked.\n\n**5. Integration Tests:**\n    - Write small programs combining these types, e.g., a function that processes a `(List (Option Nat))`.\n    - Ensure CIFs are correctly evaluated by the evaluation engine.\n    - Verify that all defined functions and operations are correctly type-checked by the type system (Task 4) when used in various expressions.",
-      "status": "pending",
+      "description": "Implement the core standard library types: `Nat`, `Bool`, `List`, and `NonEmptyList`. This task focuses on establishing essential, safe, and robust building blocks for practical programming in PathFinder LISP, aligned with a HoTT/dependent types philosophy. Key aspects include defining types with `deftype`, using the effect system for partial functions (explicitly eliminating the need for `Option` types), and leveraging the proof-carrying `NonEmptyList` type for safe head/tail access.",
+      "status": "in-progress",
       "dependencies": [
         4,
         5
       ],
       "priority": "high",
+      "details": "This task involves defining the core data types for the PathFinder LISP standard library, with an emphasis on totality and safety.\n\n**General Requirements:**\n- All specified types (Nat, Bool, List T, NonEmptyList T) must be defined using the `deftype` mechanism (from Task 5).\n- Canonical Instantiation Functions (CIFs) for each type and its variants (e.g., `NECons` for `NonEmptyList`, `Cons` for `List`) should be available as per the `deftype` specification.\n- Operations and functions for these types should be implemented as PathFinder LISP functions and must be type-checked by the system's type checker (from Task 4).\n- Partial functions like `subtract` must use the language's effect system for error handling instead of returning an option type.\n- The `deftype` mechanism must support parameterized types (e.g., `List T`) and recursive type definitions (e.g., `List T`, Peano `Nat`).\n\n**Type Definitions and Operations:**\n\n1.  **Nat (Natural Numbers):**\n    *   Definition: `(deftype Nat (Zero) (Succ Nat))` (Peano representation).\n    *   CIFs: `Zero`, `Succ`.\n    *   Operations:\n        *   `isZero?: Nat -> Bool`\n        *   `add: Nat Nat -> Nat`\n        *   `subtract: Nat Nat -> Nat` (This is a partial function. If subtraction results in a negative number, it should trigger a 'DomainError' effect rather than returning a value.)\n        *   `equals?: Nat Nat -> Bool`\n        *   `lessThan?: Nat Nat -> Bool`\n\n2.  **Bool (Booleans):**\n    *   Definition: `(deftype Bool (PFalse) (PTrue))`.\n    *   CIFs: `PFalse`, `PTrue`.\n    *   Operations:\n        *   `and: Bool Bool -> Bool`\n        *   `or: Bool Bool -> Bool`\n        *   `not: Bool -> Bool`\n\n3.  **List T (Lists):**\n    *   Definition: `(deftype (List T) (Nil) (Cons T (List T)))` (Parameterized, recursive sum type).\n    *   CIFs: `Nil`, `Cons`.\n    *   Operations:\n        *   `isEmpty?: (List T) -> Bool`\n        *   `append: (List T) (List T) -> (List T)`\n        *   `length: (List T) -> Nat`\n        *   `mapList: (List T) (T -> U) -> (List U)`\n        *   `filterList: (List T) (T -> Bool) -> (List T)`\n        *   `foldLeft: (List T) U ((U T) -> U) -> U`\n        *   `reverse: (List T) -> (List T)`\n\n4.  **NonEmptyList T (Proof-Carrying Lists):**\n    *   Definition: `(deftype (NonEmptyList T) (NECons T (List T)))` (A non-empty head followed by a standard list).\n    *   CIFs: `NECons`.\n    *   Operations (These are total functions on `NonEmptyList`):\n        *   `head: (NonEmptyList T) -> T`\n        *   `tail: (NonEmptyList T) -> (List T)`\n\n**Implementation Considerations:**\n-   The definitions should be placed in a standard library module that can be automatically loaded or easily imported.\n-   Ensure the effect handling for `subtract` is correctly implemented and can be caught by an appropriate handler.\n-   Programs should be encouraged to pattern match on `List T` to distinguish between the `Nil` case and the `(Cons h t)` case, which can then be used to construct a `(NonEmptyList T)` for safe use with `head` and `tail`.",
+      "testStrategy": "Testing will involve unit tests for each type and its operations, focusing on CIFs, functional correctness, type checking, and edge cases.\n\n**1. Nat Tests:**\n    - Verify `(Zero)` and `(Succ ...)` create `Nat` values.\n    - Test `isZero?` on `Zero` and non-zero numbers.\n    - Test `add` with various combinations.\n    - Test `subtract`: verify correct results for N >= M. For N < M, verify that the appropriate 'DomainError' effect is triggered.\n    - Test `equals?` and `lessThan?` with various pairs.\n    - Type checking: `(add Zero PTrue)` should be a type error.\n\n**2. Bool Tests:**\n    - Verify `(PFalse)` and `(PTrue)` create `Bool` values.\n    - Test `and`, `or`, `not` with all input combinations.\n    - Type checking: `(and PTrue Zero)` should be a type error.\n\n**3. List T Tests:**\n    - Verify `(Nil)` and `(Cons val list)` create `List` values (e.g., `(List Nat)`).\n    - Test `isEmpty?` on `(Nil)` and non-empty lists.\n    - Test `append` with empty lists and non-empty lists.\n    - Test `length` for various list sizes.\n    - Test `mapList`, `filterList`, `foldLeft`, `reverse` with various inputs: empty lists, single-element lists, multiple-element lists.\n    - Type checking: `(Cons 1 (Cons PTrue (Nil)))` should be a type error for a homogeneous list `(List Nat)`. Ensure higher-order functions' arguments are correctly type-checked.\n\n**4. NonEmptyList T Tests:**\n    - Verify `(NECons h t)` creates a `NonEmptyList T` value.\n    - Test `head` on various non-empty lists to ensure it returns the first element.\n    - Test `tail` on various non-empty lists to ensure it returns the rest of the list.\n    - Type checking: `(head (Nil))` should be a type error, as `head` requires a `(NonEmptyList T)`.\n\n**5. Integration Tests:**\n    - Write small programs that pattern match on a `(List T)`, and upon finding a `(Cons h t)`, construct a `(NonEmptyList T)` to safely call `head` and `tail`.\n    - Write programs that use `subtract` within an effect handler to catch and manage domain errors.\n    - Verify that all defined functions and operations are correctly type-checked by the type system (Task 4).",
       "subtasks": [
         {
           "id": 1,
@@ -1111,7 +1111,7 @@
           "description": "Defines the `Bool` type using `deftype` with `PFalse` and `PTrue` variants. Implements its Canonical Instantiation Functions (CIFs) and the fundamental boolean operations: `and`, `or`, `not`. This subtask establishes the foundational boolean logic for the standard library.",
           "dependencies": [],
           "details": "1. Define `Bool` using `(deftype Bool (PFalse) (PTrue))`.\n2. Ensure `deftype` (from Task 5) generates `PFalse` and `PTrue` as CIFs.\n3. Implement PathFinder LISP functions for:\n   - `and: Bool Bool -> Bool`\n   - `or: Bool Bool -> Bool`\n   - `not: Bool -> Bool`\n4. Ensure all functions are type-checked by the system's type checker (from Task 4).\n5. Place these definitions in the standard library module for automatic loading or easy import.",
-          "status": "pending",
+          "status": "in-progress",
           "testStrategy": "Unit test `PFalse` and `PTrue` CIFs. Test `and`, `or`, `not` operations with all possible boolean input combinations (e.g., `(and PTrue PFalse)`, `(or PFalse PFalse)`, `(not PTrue)`) to verify correctness."
         },
         {
@@ -1126,180 +1126,178 @@
           "testStrategy": "Unit test `Zero` and `Succ` CIFs (e.g., `(Zero)` creates a Nat, `(Succ (Zero))` creates a Nat). Test `isZero?` on `Zero` and non-Zero `Nat`s (e.g., `(Succ Zero)`). Test `equals?` with identical and different `Nat`s. Test `lessThan?` with various pairs of `Nat`s (e.g., `(lessThan? Zero (Succ Zero))`, `(lessThan? (Succ Zero) Zero)`)."
         },
         {
-          "id": 3,
-          "title": "Define Parameterized `Option T` Type and Implement Core Operations",
-          "description": "Defines the parameterized `Option T` type using `deftype` with `None` and `Some T` variants: `(deftype (Option T) (None) (Some T))`. Implements its CIFs (`None`, `Some`) and core operations: `isSome?`, `isNone?`, `getOrElse`, `mapOption`. This subtask relies on `deftype` supporting parameterized types.",
+          "id": 5,
+          "title": "Define Parameterized `List T` Type and Implement Safe Core Operations",
+          "description": "Defines the parameterized, recursive `List T` type using `deftype`: `(deftype (List T) (Nil) (Cons T (List T)))`. Implements its CIFs (`Nil`, `Cons`) and a comprehensive set of list operations that are total for all lists. This subtask relies on `deftype` supporting both parameterized and recursive types.",
           "dependencies": [
-            1
+            1,
+            2
           ],
-          "details": "1. Define `Option T` using `(deftype (Option T) (None) (Some T))`. Confirm `deftype` (Task 5) supports parameterized types.\n2. Ensure `None` (CIF for the `None` variant, type `(Option T)` for any `T`) and `Some` (CIF for the `Some` variant, type `T -> (Option T)`) are available.\n3. Implement PathFinder LISP functions for:\n   - `isSome?: (Option T) -> Bool`\n   - `isNone?: (Option T) -> Bool`\n   - `getOrElse: (Option T) T -> T` (takes a default value of type T)\n   - `mapOption: (Option T) (T -> U) -> (Option U)` (a higher-order function)\n4. `isSome?` and `isNone?` will use the `Bool` type from subtask 1.\n5. Ensure all functions are type-checked, including correct handling of generic types `T` and `U`. Place in standard library module.",
+          "details": "1. Define `List T` using `(deftype (List T) (Nil) (Cons T (List T)))`. Confirm `deftype` (Task 5) supports parameterized and recursive types.\n2. Ensure `Nil` (CIF for `Nil` variant, type `(List T)` for any `T`) and `Cons` (CIF for `Cons` variant, type `T (List T) -> (List T)`) are available.\n3. Implement PathFinder LISP functions for:\n   - `isEmpty?: (List T) -> Bool` (uses `Bool` from subtask 1)\n   - `append: (List T) (List T) -> (List T)`\n   - `length: (List T) -> Nat` (uses `Nat` from subtask 2)\n   - `mapList: (List T) (T -> U) -> (List U)`\n   - `filterList: (List T) (T -> Bool) -> (List T)` (predicate function uses `Bool` from subtask 1)\n   - `foldLeft: (List T) U ((U T) -> U) -> U`\n   - `reverse: (List T) -> (List T)` (can be implemented efficiently using `foldLeft`)\n4. Ensure all functions are type-checked, including generic types `T` and `U`. Place in standard library module.",
           "status": "pending",
-          "testStrategy": "Unit test `None` and `Some` CIFs (e.g., `(None)` as `(Option Nat)`, `(Some (Zero))` as `(Option Nat)`). Test `isSome?`/`isNone?` on both `None` and `(Some value)` instances. Test `getOrElse` for both `None` (should return the default value) and `(Some value)` (should return the inner value). Test `mapOption` with functions that change type and/or value, applied to both `None` and `(Some value)`."
+          "testStrategy": "Unit test `Nil` and `Cons` CIFs. Test `isEmpty?` on `Nil` and non-empty lists. Test `append` with various list combinations. Test `length` on empty and non-empty lists. Test `mapList`, `filterList`, `foldLeft`, and `reverse` with various inputs and functions to ensure correctness."
+        },
+        {
+          "id": 3,
+          "title": "Define `NonEmptyList T` and Implement Safe `head`/`tail` Operations",
+          "description": "Defines the `NonEmptyList T` type to statically guarantee non-emptiness. Implements total functions `head` and `tail` that operate on this type, providing safe, proof-carrying access to list elements.",
+          "dependencies": [
+            5
+          ],
+          "details": "1. Define `NonEmptyList T` using `(deftype (NonEmptyList T) (NECons T (List T)))`.\n2. Ensure `NECons` is available as a CIF with the type `T (List T) -> (NonEmptyList T)`.\n3. Implement the following total PathFinder LISP functions:\n   - `head: (NonEmptyList T) -> T`\n   - `tail: (NonEmptyList T) -> (List T)`\n4. These functions are guaranteed to succeed because the type `NonEmptyList T` provides proof that there is at least one element.\n5. Place these definitions in the standard library module.",
+          "status": "pending",
+          "testStrategy": "Unit test the `NECons` CIF to ensure it creates `NonEmptyList` values. For a given `(NECons h t)`, verify that `(head (NECons h t))` returns `h` and `(tail (NECons h t))` returns `t`. Test with various types for `T`."
         },
         {
           "id": 4,
-          "title": "Implement `Nat` Arithmetic Operations: `add` and `subtract`",
-          "description": "Implements the arithmetic operations `add: Nat Nat -> Nat` and `subtract: Nat Nat -> Option Nat` for the `Nat` type defined in subtask 2. The `subtract` operation will utilize the `Option Nat` type (from subtask 3) to correctly handle cases where subtraction would result in a negative number (which is not representable by `Nat`).",
+          "title": "Implement `Nat` Arithmetic: `add` and Effectful `subtract`",
+          "description": "Implements the arithmetic operations `add: Nat Nat -> Nat` and `subtract: Nat Nat -> Nat` for the `Nat` type. The `subtract` operation is partial and will use the language's effect system to signal a domain error when subtraction is not possible within `Nat`.",
           "dependencies": [
-            2,
-            3
+            2
           ],
-          "details": "1. Implement PathFinder LISP functions for:\n   - `add: Nat Nat -> Nat` (Implement recursively: `(add Zero n) = n`, `(add (Succ m) n) = (Succ (add m n))`)\n   - `subtract: Nat Nat -> Option Nat` (Implement recursively: `(subtract m Zero) = (Some m)`, `(subtract Zero (Succ n)) = (None)`, `(subtract (Succ m) (Succ n)) = (subtract m n)`)\n2. These functions operate on the `Nat` type (defined in subtask 2) and `subtract` returns an `(Option Nat)` (defined in subtask 3).\n3. Ensure all functions are type-checked. Place in standard library module.",
+          "details": "1. Implement PathFinder LISP functions for:\n   - `add: Nat Nat -> Nat` (Implement recursively: `(add Zero n) = n`, `(add (Succ m) n) = (Succ (add m n))`)\n   - `subtract: Nat Nat -> Nat` (Implement recursively. For `(subtract (Succ m) (Succ n))`, recurse. For `(subtract Zero (Succ n))`, trigger a 'DomainError' effect.)\n2. These functions operate on the `Nat` type defined in subtask 2.\n3. Ensure all functions are type-checked. Place in standard library module.",
           "status": "pending",
-          "testStrategy": "Unit test `add` with various `Nat` inputs, including `Zero` as one or both arguments (e.g., `(add (Succ (Succ Zero)) (Succ Zero))`). Test `subtract` for cases yielding `(Some Nat)` (e.g., 5-3, 3-0, 3-3, where Nats are Peano numbers) and cases yielding `None` (e.g., 3-5, 0-3)."
-        },
-        {
-          "id": 5,
-          "title": "Define Parameterized `List T` Type and Implement All Associated Operations",
-          "description": "Defines the parameterized, recursive `List T` type using `deftype`: `(deftype (List T) (Nil) (Cons T (List T)))`. Implements its CIFs (`Nil`, `Cons`) and a comprehensive set of list operations as specified. This subtask relies on `deftype` supporting both parameterized and recursive types.",
-          "dependencies": [
-            1,
-            2,
-            3
-          ],
-          "details": "1. Define `List T` using `(deftype (List T) (Nil) (Cons T (List T)))`. Confirm `deftype` (Task 5) supports parameterized and recursive types.\n2. Ensure `Nil` (CIF for `Nil` variant, type `(List T)` for any `T`) and `Cons` (CIF for `Cons` variant, type `T (List T) -> (List T)`) are available.\n3. Implement PathFinder LISP functions for:\n   - `isEmpty?: (List T) -> Bool` (uses `Bool` from subtask 1)\n   - `head: (List T) -> (Option T)` (uses `Option T` from subtask 3; returns `None` for an empty list)\n   - `tail: (List T) -> (Option (List T))` (uses `Option (List T)` from subtask 3; returns `None` for an empty list)\n   - `append: (List T) (List T) -> (List T)`\n   - `length: (List T) -> Nat` (uses `Nat` from subtask 2, specifically `Zero` and `Succ` for a recursive definition: `(length Nil) = Zero`, `(length (Cons _ t)) = (Succ (length t))`)\n   - `mapList: (List T) (T -> U) -> (List U)`\n   - `filterList: (List T) (T -> Bool) -> (List T)` (predicate function uses `Bool` from subtask 1)\n   - `foldLeft: (List T) U ((U T) -> U) -> U`\n   - `reverse: (List T) -> (List T)` (can be implemented efficiently using `foldLeft`)\n4. Ensure all functions are type-checked, including generic types `T` and `U`. Place in standard library module. Implement functions recursively where appropriate. Initial implementations should focus on correctness; performance can be addressed later if needed.",
-          "status": "pending",
-          "testStrategy": "Unit test `Nil` and `Cons` CIFs. Test `isEmpty?` on `Nil` and non-empty lists. Test `head`/`tail` on empty lists (expect `None` variant of `Option`) and non-empty lists. Test `append` with various list combinations (empty/non-empty with empty/non-empty). Test `length` on empty and non-empty lists. Test `mapList` with identity and transforming functions. Test `filterList` with predicates that select all, none, or some elements. Test `foldLeft` for common use cases like sum, product, and list construction (e.g., implementing reverse). Test `reverse` independently."
+          "testStrategy": "Unit test `add` with various `Nat` inputs. Test `subtract` for successful cases (e.g., 5-3, 3-0, 3-3) to ensure the correct `Nat` is returned. Test failure cases (e.g., 3-5, 0-3) to ensure that the 'DomainError' effect is triggered and can be handled."
         }
       ]
     },
     {
       "id": 18,
       "title": "Implement Constraint System for Type Definitions and CIFs",
-      "description": "Extend the type system to support constraints on type definitions using a `:where` clause. This includes parsing constraint expressions, implementing validation logic for both compile-time and runtime checks, and integrating these checks into Canonical Instantiation Functions (CIFs).",
-      "details": "**1. Parser Extension (extending Task 5 `deftype`):**\n   - Modify the parser to recognize an optional `:where` clause in `deftype` expressions.\n   - Syntax: `(deftype TypeName ((field1 Type1) (field2 Type2) ...) :where <constraint-expression>)`\n   - The `<constraint-expression>` is a single expression that should evaluate to a boolean. It will be parsed into an AST node.\n   - Ensure field names (e.g., `field1`, `field2`) are correctly scoped and accessible within the `<constraint-expression>`.\n\n**2. AST Representation:**\n   - Define how the parsed constraint expression is stored within the AST representation of the type definition (e.g., as an additional child node or property of the type definition AST node).\n\n**3. Type Checker Integration (interacting with Task 4):**\n   - **Constraint Expression Type Checking:** The type checker must verify that the `<constraint-expression>` evaluates to a Boolean type. An error should be reported if it does not.\n   - **Compile-Time Constraint Validation:**\n     - Implement logic to attempt static evaluation of constraints if they involve only literal values or other compile-time evaluable expressions.\n     - If a constraint is proven true at compile-time, it can be noted or optimized.\n     - If a constraint is proven false at compile-time, the type definition itself should be considered invalid, and a type error reported.\n\n**4. CIF Modification (extending Task 5 CIFs):**\n   - Modify the generation and/or evaluation logic of Canonical Instantiation Functions (CIFs) for types that have constraints.\n   - **Runtime Constraint Evaluation:** For constraints not fully resolved at compile-time, the CIF must evaluate the constraint expression after the basic instance of the type is created but before it's returned.\n   - The evaluation environment for the constraint expression within the CIF must bind the type's field names to the corresponding values from the instance being created.\n   - If a runtime constraint evaluates to `#f` (false), the CIF must raise a distinct runtime error (e.g., `ConstraintViolationError`), preventing the instantiation of the type.\n\n**5. Evaluation of Constraints:**\n   - Constraint expressions will be evaluated using the existing evaluation engine (developed in Task 2).\n   - Ensure the evaluation context for constraints correctly resolves field names and any functions or values available in the scope where the type is defined or instantiated.\n\n**6. Error Reporting:**\n   - Implement clear and informative error messages for:\n     - Syntax errors in `:where` clauses.\n     - Type errors in constraint expressions (e.g., expression not Boolean-typed).\n     - Compile-time constraint violations (e.g., constraint statically proven false).\n     - Runtime constraint violations, indicating the specific type, the values being instantiated, and the constraint expression that failed.",
-      "testStrategy": "**1. Parser Tests:**\n   - Test `deftype` with valid `:where` clauses using various expressions (e.g., `(> field1 0)`, `(and (> field1 0) (< field2 100))`, `(string=? (kind-of-shape) \"circle\")`).\n   - Test `deftype` with syntactically invalid `:where` clauses.\n   - Test `deftype` without a `:where` clause to ensure backward compatibility.\n\n**2. Type Checker & Compile-Time Constraint Tests:**\n   - Define a type with a constraint that is statically true (e.g., `(deftype T1 (x Nat) :where (> 5 0))`). Verify the type definition is accepted.\n   - Define a type with a constraint that is statically false (e.g., `(deftype T2 (x Nat) :where (< 0 0))`). Verify the type definition is rejected with a compile-time error.\n   - Define a type with a constraint expression that does not evaluate to Boolean (e.g., `(deftype T3 (x Nat) :where x)`). Verify a type error is reported.\n   - Verify correct scoping of field names within constraint expressions during type checking.\n\n**3. CIF & Runtime Constraint Tests:**\n   - Define `(deftype PositiveNat (value Nat) :where (> value 0))`:\n     - Test `(PositiveNat 10)`: Should succeed and return an instance.\n     - Test `(PositiveNat 0)`: Should raise a runtime `ConstraintViolationError`.\n   - Define `(deftype LimitedRange (val Int) :where (and (>= val 0) (<= val 10)))`:\n     - Test `(LimitedRange 5)`: Should succeed.\n     - Test `(LimitedRange -1)`: Should raise a runtime `ConstraintViolationError`.\n     - Test `(LimitedRange 11)`: Should raise a runtime `ConstraintViolationError`.\n   - Define `(deftype OrderedPair (x Nat) (y Nat) :where (< x y))`:\n     - Test `(OrderedPair 1 2)`: Should succeed.\n     - Test `(OrderedPair 2 1)`: Should raise a runtime `ConstraintViolationError`.\n\n**4. Error Reporting Tests:**\n   - For each failure mode (syntax, type error, compile-time violation, runtime violation), verify that the error message is clear, indicates the source of the error, and provides relevant context (e.g., failed constraint expression, values involved).",
+      "description": "Extend the type system to support dependent type constraints on type definitions using a `:where` clause. This will be verified at compile-time using the HoTT type system. The implementation will focus on generating proof obligations from constraints, requiring proof-of-satisfaction during instantiation, and creating proof-carrying values. This system will integrate with the Tier 1 (compile-time verification) and Tier 2 (constraint-aware effects) architecture, replacing traditional runtime checks.",
       "status": "pending",
       "dependencies": [
         5,
         4
       ],
       "priority": "medium",
+      "details": "**1. Parser Extension (extending Task 5 `deftype`):**\n   - Modify the parser to recognize an optional `:where` clause in `deftype` expressions.\n   - Syntax: `(deftype TypeName ((field1 Type1) (field2 Type2) ...) :where <propositional-type>)`\n   - The `<propositional-type>` is a type-level expression that depends on the fields of the struct (e.g., `(> field1 0)` is interpreted as a proposition to be proven).\n\n**2. AST Representation:**\n   - Define how the parsed propositional type is stored within the AST representation of the type definition.\n\n**3. Type Checker & Proof Obligations (Tier 1):**\n   - The type checker must interpret the `:where` clause as a proof obligation, creating a dependent type. For a type `T` with fields `f1, f2` and constraint `P`, the full type is effectively `(T f1 f2 where (P f1 f2))`.\n   - At instantiation sites, e.g., `(T val1 val2)`, the type checker must verify that a proof for the proposition `(P val1 val2)` can be synthesized or is explicitly provided.\n   - Failure to construct or verify a proof must result in a compile-time type error.\n\n**4. Proof-Carrying Values & Instantiation:**\n   - Instances of constrained types are \"proof-carrying values.\" The runtime representation of the value must bundle the data with the evidence (the proof object) that its constraints are satisfied.\n   - The concept of Canonical Instantiation Functions (CIFs) is updated: instead of performing a runtime boolean check, the instantiation process now requires a proof object as an input (which may be synthesized by the compiler) and produces a proof-carrying value.\n\n**5. Tier 2 Integration (Constraint-Aware Effects):**\n   - Integrate with the Tier 2 effect system. Functions that produce values of a constrained type must have an effect signature that reflects the proof obligation.\n   - For example, a function `(-> Nat PositiveNat)` must have an effect that it discharges the proof for `(IsPositive result)`.\n   - Conversely, functions consuming proof-carrying values can use the carried proof to satisfy their own preconditions.\n\n**6. Error Reporting:**\n   - Implement clear and informative compile-time error messages for:\n     - Syntax errors in `:where` clauses.\n     - Proof failures during instantiation, indicating the specific proposition that could not be proven and the values involved.",
+      "testStrategy": "**1. Parser Tests:**\n   - Test `deftype` with valid `:where` clauses using various propositional types (e.g., `(IsPositive field1)`, `(< x y)`).\n   - Test `deftype` with syntactically invalid `:where` clauses.\n\n**2. Type Checker & Proof Verification Tests (Tier 1):**\n   - Define `(deftype PositiveNat (value Nat) :where (IsPositive value))`.\n     - Test `(PositiveNat 10)`: Should succeed at compile time as a proof can be synthesized.\n     - Test `(PositiveNat 0)`: Should fail at compile time with a proof error.\n   - Define `(deftype OrderedPair (x Nat) (y Nat) :where (< x y))`.\n     - Test `(OrderedPair 1 2)`: Should succeed.\n     - Test `(OrderedPair 2 1)`: Should fail at compile time with a proof error.\n\n**3. Proof-Carrying Value Tests:**\n   - Verify that an instance of `PositiveNat` contains both the numeric value and a proof object for `IsPositive`.\n   - Write a function `(fn [p PositiveNat] ...)` and verify that within its body, the compiler knows that `(> (p.value) 0)` is true without a runtime check.\n\n**4. Tier 2 Effect System Tests:**\n   - Test that a function declared as `(-> Nat PositiveNat)` is type-checked correctly and its effect signature reflects the proof obligation.\n   - Test that a function that internally calls `(PositiveNat -1)` fails to type-check because it cannot discharge its effect.\n\n**5. Error Reporting Tests:**\n   - For each proof failure mode, verify that the error message clearly indicates the proposition that failed, the values used, and why the proof could not be constructed.",
       "subtasks": [
         {
           "id": 1,
-          "title": "Extend Parser and AST for `:where` Constraint Clause",
-          "description": "Modify the `deftype` parser to recognize an optional `:where` clause and define the Abstract Syntax Tree (AST) structure for storing the parsed constraint expression. This forms the foundation for constraint processing.",
+          "title": "Extend Parser and AST for Dependent Type Constraints",
+          "description": "Modify the `deftype` parser to recognize a `:where` clause containing a propositional type and update the AST to represent this dependent constraint.",
           "dependencies": [],
-          "details": "1. Update the parser grammar for `deftype` expressions to support the syntax: `(deftype TypeName ((field1 Type1) ...) :where <constraint-expression>)`.\n2. The `<constraint-expression>` should be parsed into a standard AST node.\n3. Define how this constraint AST node is stored within the AST representation of the type definition (e.g., as a dedicated `constraint_expression` field or child node).\n4. Ensure that field names referenced within the `<constraint-expression>` are captured by the parser for later resolution during type checking and evaluation.",
+          "details": "1. Update the parser grammar for `deftype` to support the syntax: `(deftype TypeName ((field1 Type1) ...) :where <propositional-type>)`.\n2. The `<propositional-type>` should be parsed into a type-level AST node.\n3. Define how this constraint is stored within the AST of the type definition, linking it to the fields it depends on.",
           "status": "pending",
-          "testStrategy": "Unit tests for the parser: \n- Successfully parse `deftype` with valid `:where` clauses and various forms of constraint expressions.\n- Reject `deftype` with syntactically incorrect `:where` clauses.\n- Verify the generated AST structure for type definitions, ensuring the constraint expression is correctly represented and linked."
+          "testStrategy": "Unit tests for the parser: \n- Successfully parse `deftype` with valid `:where` clauses containing type-level propositions.\n- Reject syntactically incorrect `:where` clauses.\n- Verify the generated AST correctly represents the dependent constraint."
         },
         {
           "id": 2,
-          "title": "Implement Type Checking for Constraint Expressions",
-          "description": "Integrate logic into the type checker (Task 4) to verify that constraint expressions provided in `:where` clauses are semantically valid and evaluate to a Boolean type. This ensures type safety for constraints.",
+          "title": "Generate Proof Obligations in Type Checker",
+          "description": "Integrate logic into the type checker to interpret a `:where` clause as a proof obligation, effectively creating a dependent type.",
           "dependencies": [
             1
           ],
-          "details": "1. Access the constraint AST node from the type definition's AST (created in Subtask 1).\n2. Implement a type checking pass for the constraint expression.\n3. The type checking environment for the constraint expression must include the type's fields (e.g., `field1`, `field2`) with their declared types, making them accessible within the expression.\n4. Verify that the constraint expression ultimately resolves to a Boolean type. If not, report a type error.\n5. Report errors for any undefined variables or type mismatches within the constraint expression itself.",
+          "details": "1. The type checker, when processing a `deftype`, must identify the `:where` clause's proposition.\n2. It must establish the dependency of the proposition on the type's fields, creating a dependent type definition.\n3. This definition will be used to generate proof obligations at instantiation sites.",
           "status": "pending",
-          "testStrategy": "Unit tests for the type checker component:\n- Constraint expression correctly type-checks to Boolean.\n- Constraint expression type-checks to a non-Boolean type (should error).\n- Constraint expression uses type fields correctly.\n- Constraint expression uses undefined variables or functions (should error).\n- Constraint expression uses fields with incorrect types (should error)."
+          "testStrategy": "Unit tests for the type checker:\n- Verify that a `deftype` with a valid constraint results in a dependent type representation internally.\n- Test that propositions correctly capture dependencies on the type's fields.\n- Test error reporting for malformed propositions (e.g., using undefined fields)."
         },
         {
           "id": 3,
-          "title": "Implement Compile-Time Constraint Validation",
-          "description": "Enhance the type checker to perform static evaluation of constraints when possible. If a constraint can be proven false at compile-time, the type definition itself should be considered invalid.",
+          "title": "Implement Compile-Time Proof Verification (Tier 1)",
+          "description": "Implement the core logic in the type checker to verify proofs for constraints at instantiation sites. This is the primary compile-time validation step.",
           "dependencies": [
             2
           ],
-          "details": "1. After a constraint expression has been successfully type-checked as Boolean (from Subtask 2), attempt to statically evaluate it.\n2. Use the existing evaluation engine (from Task 2 development) for this purpose. The evaluation context should only include compile-time constant values and functions that are safe for compile-time evaluation.\n3. If the constraint expression evaluates to a literal `#f` (false) at compile-time, report a specific compile-time error indicating that the type definition is invalid due to an unsatisfiable constraint.\n4. If the constraint evaluates to a literal `#t` (true), this can be noted (e.g., for potential optimization, though the primary goal is validation).\n5. If the constraint cannot be fully evaluated at compile-time (e.g., it depends on runtime field values or non-foldable function calls), it should be passed through for runtime checking.",
+          "details": "1. When type-checking a call to a type constructor (e.g., `(MyType ...)`), retrieve the corresponding proof obligation.\n2. Attempt to automatically synthesize a proof for the obligation using the provided literal values and the HoTT system's theorem prover/proof synthesizer.\n3. If a proof cannot be synthesized, check if one was provided explicitly.\n4. A failure to find or verify a proof must result in a compile-time error.",
           "status": "pending",
-          "testStrategy": "Unit tests for compile-time validation:\n- Type definition with a constraint that is statically true (e.g., `(:where (> 10 5))`).\n- Type definition with a constraint that is statically false (e.g., `(:where (< 0 0))`); verify error reporting.\n- Type definition with a constraint involving literals and simple operations that can be folded.\n- Type definition with a constraint that cannot be evaluated at compile-time (e.g., depends on a field value `(:where (> field1 0))`)."
+          "testStrategy": "Unit tests for the proof verification logic:\n- Instantiate a constrained type where the proof is simple and can be synthesized (e.g., `(PositiveNat 10)`).\n- Attempt instantiation where the proof should fail (e.g., `(PositiveNat 0)`).\n- Test with multi-argument propositions (e.g., `(OrderedPair 2 1)`)."
         },
         {
           "id": 4,
-          "title": "Modify CIFs for Runtime Constraint Evaluation",
-          "description": "Update the generation and/or evaluation logic of Canonical Instantiation Functions (CIFs) to evaluate type constraints at runtime. If a constraint fails during instantiation, the CIF must raise a specific runtime error.",
+          "title": "Implement Proof-Carrying Values and Update Instantiation",
+          "description": "Modify the runtime representation of constrained types to be proof-carrying and update the instantiation logic (e.g., CIFs) to construct these values.",
           "dependencies": [
             3
           ],
-          "details": "1. For types that have a constraint (AST from Subtask 1) not fully resolved or proven true at compile-time (by Subtask 3):\n   a. Modify the CIF logic. After the basic instance of the type is created (fields are populated with initial values), the constraint expression must be evaluated.\n   b. The evaluation environment for the constraint expression within the CIF must bind the type's field names to the corresponding actual values from the instance being created.\n   c. Use the existing evaluation engine (Task 2) for this runtime evaluation.\n2. If the constraint expression evaluates to `#f` (false) at runtime, the CIF must raise a distinct runtime error (e.g., `ConstraintViolationError`). This error should prevent the instantiation of the type and the CIF should not return the partially formed instance.\n3. If the constraint evaluates to `#t` (true), the instantiation process completes normally, and the CIF returns the new instance.",
+          "details": "1. Define the runtime memory layout for a proof-carrying value, which bundles the data fields with a proof object.\n2. Modify the code generation for type instantiation. The instantiation function will now take the field values and a proof object as arguments.\n3. The compiler will be responsible for passing the synthesized or user-provided proof to this function at the call site.\n4. This replaces the old model of runtime boolean checks entirely.",
           "status": "pending",
-          "testStrategy": "Integration tests for CIFs:\n- Instantiate a type with a constraint that evaluates to true at runtime using provided field values.\n- Attempt to instantiate a type with a constraint that evaluates to false at runtime; verify that a `ConstraintViolationError` is raised and no instance is returned.\n- Test constraints involving various field values and types.\n- Test constraints that call functions available in the runtime scope."
+          "testStrategy": "Integration tests:\n- Instantiate a constrained type and inspect the resulting runtime object to confirm it contains both data and a proof.\n- Write a function that accepts a proof-carrying value and verify that the compiler can use the carried proof to satisfy other static checks."
         },
         {
           "id": 5,
-          "title": "Implement Comprehensive Error Reporting for Constraints",
-          "description": "Ensure clear, informative, and user-friendly error messages are generated for all potential issues related to type constraints, including syntax errors, type errors, compile-time violations, and runtime violations.",
+          "title": "Integrate with Tier 2 Effects and Implement Error Reporting",
+          "description": "Connect the constraint system to the Tier 2 effect system and implement clear, user-friendly error messages for all stages of proof failure.",
           "dependencies": [
             4
           ],
-          "details": "1. **Syntax Errors (Parser - Subtask 1):** Refine error messages for malformed `:where` clauses (e.g., `SyntaxError: Invalid constraint syntax in :where clause for type 'TypeName'. Expected single expression.`).\n2. **Type Errors (Type Checker - Subtask 2):** Ensure errors clearly state that a constraint expression must be Boolean, or if fields are used incorrectly (e.g., `TypeError: Constraint expression for type 'TypeName' must evaluate to Boolean, got 'Integer'.`).\n3. **Compile-Time Violations (Compile-Time Validation - Subtask 3):** Provide specific messages when a constraint is statically proven false (e.g., `CompileTimeError: Constraint for type 'TypeName' is statically false: '(<constraint-src>)'.`).\n4. **Runtime Violations (CIFs - Subtask 4):** Design the `ConstraintViolationError` to include:\n   - The name of the type being instantiated.\n   - The source form of the constraint expression that failed.\n   - The actual field names and their values for the instance that failed validation (e.g., `RuntimeError: Constraint violation for type 'TypeName'. Constraint '(<constraint-src>)' failed with values (field1: val1, field2: val2).`).\n5. Review and standardize all error messages for consistency and clarity.",
+          "details": "1. **Tier 2 Effects:** Ensure that functions producing constrained types declare this as part of their effect signature. The type checker must verify that the function body successfully discharges this proof obligation.\n2. **Error Reporting:** Design and implement clear compile-time error messages for proof failures. Messages should specify the proposition that failed and the concrete values that caused the failure.",
           "status": "pending",
-          "testStrategy": "Review existing tests from Subtasks 1-4 to ensure error messages are triggered and are adequate. Create new, specific test cases designed to trigger each category of error, then verify the content, clarity, and helpfulness of the generated messages. For example, test runtime errors with different numbers of fields and value types to ensure proper formatting."
+          "testStrategy": "End-to-end tests:\n- Define a function `(-> Nat PositiveNat)` and show it type-checks if it handles the proof correctly, and fails otherwise.\n- Trigger every expected proof failure scenario and verify the error message is informative and points to the correct source location and values."
         }
       ]
     },
     {
       "id": 19,
       "title": "Enhanced Error Reporting and Diagnostics System",
-      "description": "Implement a comprehensive error reporting and diagnostics system. This system will generate HoTT-aware error messages, report type constraint violations and effect-related errors, and provide user-friendly diagnostic information to improve developer experience.",
-      "details": "1. **Error Data Structures**: Define robust data structures for representing various error types (e.g., type mismatch, unbound variable, arity mismatch, constraint violation, effect errors). These structures should capture detailed contextual information: source location (file, line, column), relevant AST nodes, expected vs. actual types/values, and any HoTT-specific information.\n2. **HoTT-Aware Message Generation**: Develop a module to translate error data structures into human-readable, HoTT-aware messages. Messages should use precise HoTT terminology where appropriate (e.g., explaining path equality issues, universe inconsistencies, or type family application errors). Leverage type representations from Task 3 (Basic Type System) for accurate display and explanation of types.\n3. **Type Constraint Violation Reporting**: Integrate with the type checker (Task 4) to receive information about type constraint violations. Clearly explain which constraint was violated and why, providing context from the source code.\n4. **Effect-Related Error Handling Framework**: Design the system to be extensible for effect-related errors. Implement initial handling for any effect-related errors that can be detected with the current system components. Provide clear messages for effect mismatches or unhandled effects.\n5. **User-Friendly Diagnostics**: Focus on clarity, conciseness, and actionability of error messages. Include suggestions for fixes where possible. Ensure error messages clearly point to the source code location of the error.\n6. **Integration**: Integrate this system with the type checker (Task 4) and potentially other compiler phases that can generate errors. Ensure that error reporting is consistent across the system.",
-      "testStrategy": "1. **Unit Tests for Error Message Generation**: Create mock error data objects for various scenarios (type mismatches, HoTT-specific errors, constraint violations). Verify that generated messages are accurate, informative, HoTT-aware, and correctly formatted, using type definitions from Task 3.\n2. **Integration Tests with Type Checker (Task 4)**: Use code snippets designed to produce specific type errors. Run them through the type checker (once Task 4 is complete) and verify that the enhanced error reporting system produces the expected user-friendly and HoTT-aware diagnostic messages, including correct source locations.\n3. **Constraint Violation Tests**: Write test cases where type constraints are violated. Ensure error messages clearly identify the violated constraint.\n4. **Effect-Related Error Tests**: Test basic effect error reporting capabilities and the extensibility of the framework using simulated effect errors.\n5. **User-Friendliness Review**: Conduct reviews of error messages for clarity, helpfulness, and actionability.\n6. **HoTT-Awareness Validation**: Specifically test scenarios involving HoTT concepts in errors, verifying correct terminology and explanations by referencing type structures from Task 3.",
+      "description": "Implement a comprehensive, HoTT-aware error reporting and diagnostics system tailored for a 3-tier architecture. The system will replace traditional stack traces with context-aware diagnostics for proof failures (Tier 1), effect resolution issues (Tier 2), and runtime effect handler problems (Tier 3). It will generate messages that explain proof obligation failures, effect context violations, dependent type mismatches, and type universe errors, guiding users toward correct dependent type usage.",
       "status": "pending",
       "dependencies": [
         3,
         4
       ],
       "priority": "medium",
+      "details": "1. **Tier-Aware Error Data Structures**: Define data structures that capture the context of our 3-tier architecture. This includes specific structures for:\n    *   **Tier 1 Proof Failures**: Capturing the proof goal, hypotheses, and the point of failure in the proof term.\n    *   **Tier 2 Effect Violations**: Representing effect resolution failures, including expected vs. actual effect contexts and the source of the violation.\n    *   **Tier 3 Runtime Handler Errors**: Storing information about failures within runtime effect handlers.\n    *   **Dependent Type Errors**: Specifically for universe inconsistencies and dependent type mismatches, capturing the path and context of the type dependency.\n2. **Contextual Diagnostic Generation**: Develop a module to translate error structures into context-aware diagnostics, replacing traditional stack traces. The output should clearly present:\n    *   **Proof Obligation Traces**: For Tier 1, show the sequence of proof obligations that led to the failure.\n    *   **Effect Context Diffs**: For Tier 2, visualize the discrepancy between required and provided effect contexts.\n    *   **Dependent Type Mismatch Explanations**: Clearly articulate why a dependent type application is incorrect, guiding the user on how to fix it.\n3. **Integration with 3-Tier System**:\n    *   Integrate with the **Tier 1 proof engine** to capture and report proof failures.\n    *   Integrate with the **Tier 2 effect checker/resolver** to report effect violations.\n    *   Integrate with the **Tier 3 runtime system** to handle and report errors from effect handlers.\n4. **User Guidance for Dependent Types**: Ensure all relevant error messages, especially for type mismatches, are designed to educate the user on the principles of dependent types, providing actionable suggestions for correcting their code.",
+      "testStrategy": "1. **Unit Tests for Error Structures**: Verify that the new tier-aware data structures correctly capture context for proof failures, effect violations, and dependent type errors.\n2. **Tier 1 Proof Failure Tests**: Create test cases with incorrect proofs. Verify that the system generates clear proof obligation traces and accurately identifies the point of failure.\n3. **Tier 2 Effect Violation Tests**: Write code that violates effect constraints. Test that the system correctly reports the effect context mismatch and points to the source of the violation.\n4. **Tier 3 Runtime Handler Tests**: Simulate failures within runtime effect handlers and verify that the error reporting system captures and presents the errors correctly.\n5. **Dependent Type Error Tests**: Write code with common dependent type errors (e.g., universe inconsistencies, incorrect path applications). Verify that the error messages provide clear explanations and helpful guidance.\n6. **Diagnostic Usability Review**: Conduct reviews of the generated diagnostics (proof traces, effect diffs) for clarity, accuracy, and actionability with developers familiar with HoTT and effect systems.",
       "subtasks": [
         {
           "id": 1,
-          "title": "Define Core Error Data Structures and Contextual Information Capture",
-          "description": "Establish the foundational data structures for representing various error types (e.g., type mismatch, unbound variable, arity mismatch, constraint violation, effect errors). These structures must capture detailed contextual information crucial for diagnostics, including source location, relevant AST nodes, expected vs. actual types/values, and HoTT-specific details.",
+          "title": "Define Tier-Aware Error Data Structures for Proofs, Effects, and Types",
+          "description": "Establish foundational data structures tailored for our 3-tier architecture. These structures must capture detailed context for Tier 1 proof failures, Tier 2 effect violations, Tier 3 runtime errors, and complex dependent type mismatches.",
           "dependencies": [],
-          "details": "1. Define an enumeration or a set of classes/structs for high-level error categories (e.g., `TypeError`, `ScopeError`, `ConstraintViolationError`, `EffectError`).\n2. For each specific error type, define fields to store: source location (file path, line, column, span), references/IDs of relevant AST nodes, expected/actual types or values, and any HoTT-specific information (e.g., path details, universe levels).\n3. Implement a central error accumulator or collector service that compiler phases can use to report instances of these error structures.\n4. Ensure data structures are robust and can be serialized if needed for later analysis or tooling.",
+          "details": "1. Define specific classes/structs for `ProofFailureError`, `EffectContextViolationError`, `RuntimeHandlerError`, and `DependentTypeError`.\n2. For `ProofFailureError`, include fields for the proof goal, hypotheses, and the failing sub-term.\n3. For `EffectContextViolationError`, include fields for expected vs. actual effect signatures and the operation causing the violation.\n4. For `DependentTypeError`, include fields for universe levels, path details, and the context of the type dependency.\n5. Update the central error collector to handle these new, specialized error structures.",
           "status": "pending",
-          "testStrategy": "Unit tests: Verify that error data structures can correctly store and retrieve all required contextual information for various simulated error scenarios. Test serialization/deserialization if implemented."
+          "testStrategy": "Unit tests: Verify that the tier-aware data structures can correctly store and retrieve all required contextual information for simulated proof, effect, and dependent type errors."
         },
         {
           "id": 2,
-          "title": "Develop HoTT-Aware Error Message Generation Engine",
-          "description": "Create a module responsible for translating the structured error data (from subtask 1) into human-readable, HoTT-aware error messages. This engine will leverage type representations from Task 3 (Basic Type System).",
+          "title": "Develop Contextual Diagnostic Generation Engine",
+          "description": "Create a module to translate the structured, tier-aware error data (from subtask 1) into human-readable, contextual diagnostics that replace traditional stack traces. This includes generating proof failure traces and effect context diffs.",
           "dependencies": [
             1
           ],
-          "details": "1. Implement a primary function or class that accepts an error data object (from subtask 1) as input.\n2. Develop formatting logic for each defined error category and specific error type. Prioritize common errors initially.\n3. Ensure messages utilize precise HoTT terminology where appropriate (e.g., explaining path equality issues, universe inconsistencies, type family application errors).\n4. Integrate with type representation utilities (from external Task 3) to display types accurately and understandably within error messages.\n5. Design the engine to be extensible for new error types and customizable message formats (e.g., plain text, markdown, JSON).",
+          "details": "1. Implement a primary function that accepts a tier-aware error object (from subtask 1).\n2. For `ProofFailureError`, generate a trace of the proof obligations leading to the failure.\n3. For `EffectContextViolationError`, generate a clear \"diff\" showing the discrepancy between the required and provided effect contexts.\n4. For `DependentTypeError`, generate messages that explain the universe mismatch or path inconsistency, guiding the user toward a correct formulation.\n5. Ensure the output format is clear and helps developers debug issues across the three tiers.",
           "status": "pending",
-          "testStrategy": "Unit tests: For the message generation engine, provide various error data objects and verify the output messages for accuracy, clarity, correct use of HoTT terminology, and proper type display. Test with diverse and complex type structures."
+          "testStrategy": "Unit tests: Provide various tier-aware error objects and verify the output diagnostics. Test that proof traces are logical, effect diffs are accurate, and dependent type explanations are helpful."
         },
         {
           "id": 3,
-          "title": "Integrate Type Constraint Violation Reporting with Type Checker",
-          "description": "Modify the existing type checker (from external Task 4) to utilize the new error reporting system (subtasks 1 and 2) for reporting type constraint violations. Ensure messages clearly explain the violation and its context.",
+          "title": "Integrate Tier 1 Proof Failure Reporting with Proof Engine",
+          "description": "Integrate the new error reporting system with the Tier 1 proof engine to capture and report proof failures, including failed proof obligations and ill-formed proof terms.",
           "dependencies": [
             1,
             2
           ],
-          "details": "1. Identify all points in the type checker (external Task 4) where type constraints are enforced and violations can be detected.\n2. When a violation is detected, instantiate the appropriate error data structure (from subtask 1) with all relevant contextual information (e.g., the specific constraint, involved types/terms, source location of the constraint and the violation).\n3. Report the populated error object using the central error accumulator/collector.\n4. Verify that the message generation engine (subtask 2) produces clear, informative messages for these constraint violations, explaining which constraint was violated and why, referencing source code.",
+          "details": "1. Identify all points in the proof engine where proof obligations are generated and checked.\n2. When a proof fails, instantiate the `ProofFailureError` data structure (from subtask 1) with the goal, context, and failing term.\n3. Report the error object to the central collector.\n4. Verify that the diagnostic engine (subtask 2) produces a clear proof trace that helps the user understand why their proof is incorrect.",
           "status": "pending",
-          "testStrategy": "Integration tests: Create test code snippets that intentionally violate various type constraints. Run the type checker and verify that the correct error data is generated and the resulting messages (via subtask 2) are accurate, informative, and point to the correct source locations."
+          "testStrategy": "Integration tests: Create test cases with incorrect proofs (e.g., mismatched types, unprovable goals). Run the proof engine and verify that the correct `ProofFailureError` is generated and the resulting diagnostic trace is accurate and informative."
         },
         {
           "id": 4,
-          "title": "Implement Framework and Initial Handling for Effect-Related Errors",
-          "description": "Design the error reporting system to be extensible for effect-related errors and implement initial detection and reporting for such errors, including effect mismatches or unhandled effects.",
+          "title": "Integrate Tier 2 and Tier 3 Effect Error Reporting",
+          "description": "Integrate the error reporting system with the Tier 2 effect checker and Tier 3 runtime system to provide detailed diagnostics for effect-related errors.",
           "dependencies": [
             1,
             2
           ],
-          "details": "1. Extend the error data structures (subtask 1) to specifically represent effect-related errors (e.g., `EffectMismatchError`, `UnhandledEffectError`, `ForbiddenEffectError`). Include fields for expected effects, actual effects, effect context, and relevant source locations.\n2. Update the message generation engine (subtask 2) to produce clear and specific messages for these new effect error types.\n3. Identify any current system components (e.g., type checker, an early-stage effect analysis pass) that can detect basic effect errors.\n4. Integrate these components to report effect errors using the new structures and message generation.\n5. Ensure the design allows for future expansion as the effect system (if separate) capabilities grow.",
+          "details": "1. In the Tier 2 effect checker, when an effect violation is detected, create and report an `EffectContextViolationError` object.\n2. Ensure the error context includes the expected and actual effects.\n3. In the Tier 3 runtime, wrap effect handler execution to catch exceptions or failures.\n4. When a handler fails, create and report a `RuntimeHandlerError` object with relevant runtime state.\n5. Verify the diagnostic engine (subtask 2) produces clear messages for both compile-time effect violations and runtime handler failures.",
           "status": "pending",
-          "testStrategy": "Unit tests: For formatting effect-related error messages. Integration tests: If system components can detect effect errors, write tests with code that triggers these errors and verify the reported errors and messages are correct and helpful."
+          "testStrategy": "Integration tests: For Tier 2, write code that violates effect signatures. For Tier 3, create mock effect handlers that fail at runtime. Verify that the system reports these errors with the correct context and helpful diagnostics."
         },
         {
           "id": 5,
-          "title": "Enhance User-Friendliness of Diagnostics and Add Suggestions",
-          "description": "Focus on improving the overall developer experience by making all error messages exceptionally clear, concise, actionable, and providing helpful suggestions for fixes where possible. Ensure errors clearly point to source locations.",
+          "title": "Refine Diagnostics for Dependent Types and Add User Guidance",
+          "description": "Focus on making diagnostics for dependent type errors exceptionally clear and educational. Refine messages to guide users in correctly using dependent types, path equalities, and universe levels.",
           "dependencies": [
             2,
             3,
             4
           ],
-          "details": "1. Review all error messages generated by the system (from subtask 2, for errors from subtask 3, 4, and others). Refine wording for maximum clarity and conciseness, balancing HoTT precision with understandability.\n2. Implement logic to provide actionable suggestions for common error types (e.g., for unbound variables: \"Did you mean 'variable_x'?\", for type mismatches: \"Consider applying function Y or converting X to Z\").\n3. Ensure all error messages clearly and accurately point to the source code location (file, line, column, span) of the error. Consider mechanisms to display relevant code snippets.\n4. Develop and document guidelines for writing good error messages to maintain quality as new error types are added.\n5. Collect feedback on error messages from potential users if possible.",
+          "details": "1. Review and refine all messages related to `DependentTypeError`.\n2. For common errors like universe inconsistencies, provide explicit suggestions (e.g., \"Try lifting the type to a higher universe level\").\n3. For dependent type mismatches, attempt to pinpoint the specific part of the type that is incorrect and explain the dependency.\n4. Ensure error messages related to type families and path equalities are precise and link back to the relevant definitions.\n5. Collect feedback from developers on the clarity of these specific error messages.",
           "status": "pending",
-          "testStrategy": "Peer review of error messages. Usability testing: Have developers write sample code designed to trigger various errors and evaluate the helpfulness, clarity, and actionability of the diagnostics. A/B testing for different message phrasings if feasible."
+          "testStrategy": "Usability testing: Have developers write code designed to trigger complex dependent type errors. Evaluate whether the diagnostics help them understand and fix the problem. Compare message variations to find the most effective phrasing."
         }
       ]
     },
@@ -1437,6 +1435,390 @@
           "details": "1. **IDE/Editor Setup**: Document recommended IDEs/editors (e.g., DrRacket, VS Code with Racket/LSP extension, Emacs with racket-mode). Provide basic setup instructions or links to relevant extensions/plugins in `README.md` or a development guide.\n2. **Linter Setup**: Investigate and set up `raco lint` for static analysis. Document its usage (e.g., `raco lint src/**/*.rkt tests/**/*.rkt`). Consider integrating it into a pre-commit hook or a CI pipeline script.\n3. **Code Formatter (Optional)**: Investigate and optionally set up a code formatter compatible with Racket/Rhombus. Document its usage if adopted.\n4. **Finalize Utility Scripts**: Review, refine, and document all scripts in the `scripts/` directory (e.g., for building the project, running tests, generating documentation, linting code). Ensure they are executable and robust.",
           "status": "done",
           "testStrategy": "Verify that the recommended IDE/editor extensions can be installed and provide basic functionality (e.g., syntax highlighting for `.rkt` files). Run `raco lint` on the existing codebase and ensure it executes. Execute all scripts in the `scripts/` directory to confirm they work as intended and produce the expected outcomes."
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "MCP Server for Structural S-Expression Editing",
+      "description": "Develop an MCP (Multi-Connection Protocol) server that provides tools for structural S-expression editing. This server will enable parsing Racket/Lisp files into S-expression trees, performing structural modifications, and serializing them back with proper formatting.",
+      "details": "The server should expose the following functionalities, likely as MCP methods:\n1.  `read_sexp(filePath: string) -> SExpressionTree`: Parses a Racket/Lisp file at `filePath` into an internal S-expression tree representation. This should leverage the existing parser from Task 1.\n2.  `modify_sexp(tree: SExpressionTree, path: SPath, newSubtree: SExpression) -> SExpressionTree`: Modifies the S-expression tree at a given `path` (e.g., a list of indices specifying the route to the sub-expression) by replacing it with `newSubtree`.\n3.  `insert_sexp(tree: SExpressionTree, path: SPath, index: int, newSubtree: SExpression) -> SExpressionTree`: Inserts `newSubtree` into a list at `path` at the given `index`.\n4.  `delete_sexp(tree: SExpressionTree, path: SPath) -> SExpressionTree`: Deletes the sub-expression at the given `path`.\n5.  `wrap_sexp(tree: SExpressionTree, path: SPath, wrapperSymbol: string) -> SExpressionTree`: Wraps the sub-expression at `path` with a new list structure, e.g., `(wrapperSymbol originalSubExpression)`.\n6.  `format_sexp(tree: SExpressionTree) -> string`: Pretty-prints the S-expression tree into a well-formatted string, suitable for writing back to a file. This should ensure consistent indentation and readability.\n7.  `validate_sexp(tree: SExpressionTree) -> bool/errors`: Checks the structural validity of the S-expression tree (e.g., balanced parentheses, valid atom types). This is primarily about syntactic structure, not semantic correctness or type checking.\n\nThe server should be designed to integrate with IDEs or other development tools that require programmatic manipulation of Lisp code. The internal S-expression tree representation should be compatible with or based on the AST defined in Task 2. This server aims to provide a robust foundation for advanced S-expression editing capabilities, helping to resolve issues like bracket matching for consumers like the type checker.",
+      "testStrategy": "1.  **Unit Tests for `read_sexp`**:\n    *   Test with valid Racket/Lisp files containing various S-expression structures (nested lists, atoms, strings, numbers, comments).\n    *   Test with empty files and files with syntax errors; ensure appropriate error handling.\n2.  **Unit Tests for Modification Functions (`modify_sexp`, `insert_sexp`, `delete_sexp`, `wrap_sexp`)**:\n    *   For each function, create various S-expression trees and test modifications at different valid and invalid paths.\n    *   Verify that the returned tree reflects the changes correctly.\n    *   Test edge cases: modifying root, inserting into empty lists, deleting from lists, wrapping atoms and lists.\n3.  **Unit Tests for `format_sexp`**:\n    *   Test with various complex S-expression trees.\n    *   Verify that the output string is correctly formatted (indentation, spacing, line breaks).\n    *   Ensure that formatting is idempotent (formatting an already formatted string produces the same result or a structurally equivalent one).\n4.  **Unit Tests for `validate_sexp`**:\n    *   Test with well-formed S-expression trees.\n    *   Test with malformed trees (e.g., issues not caught by initial parsing but relevant to structural integrity rules defined for this function).\n5.  **Integration Tests**:\n    *   Test a sequence of operations: read a file, perform several modifications, format the result, and validate it.\n    *   Compare the formatted output with an expected output file.\n    *   Test the MCP server interface: send requests for each function and verify the responses.",
+      "status": "done",
+      "dependencies": [
+        1,
+        2,
+        21
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "MCP Server Foundation and `read_sexp` Implementation",
+          "description": "Initialize the MCP server framework. Implement the `read_sexp` functionality to parse Racket/Lisp files into an internal S-expression tree, leveraging the parser from Task 1 and the AST from Task 2. This subtask also involves defining or confirming the `SExpressionTree` and `SPath` data structures.",
+          "dependencies": [],
+          "details": "1. Select and configure an MCP library/framework suitable for the project's language (e.g., Python, Java, Node.js).\n2. Implement the basic server structure: connection handling, request dispatching.\n3. Define the internal `SExpressionTree` representation, ensuring compatibility with the AST from Task 2. This includes nodes for atoms (symbols, numbers, strings, etc.) and lists/conses.\n4. Define the `SPath` representation (e.g., a list of integer indices or specific keys) for uniquely identifying sub-expressions within an `SExpressionTree`.\n5. Implement the `read_sexp(filePath: string) -> SExpressionTree` MCP method:\n    a. Input: `filePath` (string).\n    b. Action: Use the existing parser (from Task 1) to read the file content and generate an AST.\n    c. Convert/adapt this AST to the server's internal `SExpressionTree` representation.\n    d. Output: The resulting `SExpressionTree` object.",
+          "status": "done",
+          "testStrategy": "1. Unit test `read_sexp` with various valid Racket/Lisp files (simple, nested, empty, comments) and invalid files (syntax errors, non-existent files).\n2. Verify the structure of the generated `SExpressionTree` against expected outputs.\n3. Test basic MCP server connectivity and successful invocation of the `read_sexp` method via an MCP client."
+        },
+        {
+          "id": 2,
+          "title": "Implement `format_sexp` and `validate_sexp` Utilities",
+          "description": "Develop the `format_sexp` function for pretty-printing S-expression trees into human-readable, consistently formatted strings, and the `validate_sexp` function for checking the structural integrity of S-expression trees.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Implement `format_sexp(tree: SExpressionTree) -> string`:\n    a. Input: `SExpressionTree`.\n    b. Action: Traverse the tree and generate a string representation.\n    c. Ensure consistent indentation, line breaks for readability, and proper handling of different S-expression elements (atoms, lists, dotted pairs if applicable).\n    d. Output: Formatted string.\n2. Implement `validate_sexp(tree: SExpressionTree) -> bool/errors`:\n    a. Input: `SExpressionTree`.\n    b. Action: Traverse the tree to check for structural validity (e.g., all list elements are valid S-expressions, atoms have valid types according to the S-expression grammar). This is primarily syntactic, not semantic.\n    c. Output: Boolean `true` if valid, or an object/list containing error descriptions if invalid.",
+          "status": "done",
+          "testStrategy": "1. Unit test `format_sexp` with diverse `SExpressionTree` structures (empty, simple, deeply nested, various atom types) and verify the output string matches expected formatting rules.\n2. Unit test `validate_sexp` with known valid `SExpressionTree` instances and instances with deliberate structural errors (e.g., improper list termination if not caught by parser, invalid atom types if your definition is strict)."
+        },
+        {
+          "id": 3,
+          "title": "Implement Core Destructive Modifications: `modify_sexp` and `delete_sexp`",
+          "description": "Implement the `modify_sexp` operation to replace a sub-expression at a given `SPath` and `delete_sexp` to remove a sub-expression at a given `SPath`. These operations modify the tree structure.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Implement helper function(s) for navigating an `SExpressionTree` using an `SPath` to locate and access the parent and target sub-expression. Handle invalid or out-of-bounds paths gracefully (e.g., by raising an error or returning a specific status).\n2. Implement `modify_sexp(tree: SExpressionTree, path: SPath, newSubtree: SExpression) -> SExpressionTree`:\n    a. Inputs: Original `SExpressionTree`, `SPath` to the target node, `newSubtree` (an `SExpression`).\n    b. Action: Locate the sub-expression at `path`. Replace it with `newSubtree`. Consider if operations should be in-place or return a new tree (returning a new tree is generally safer).\n    c. Output: The modified `SExpressionTree`.\n3. Implement `delete_sexp(tree: SExpressionTree, path: SPath) -> SExpressionTree`:\n    a. Inputs: Original `SExpressionTree`, `SPath` to the target node.\n    b. Action: Locate the sub-expression at `path`. Remove it from its parent list. If the path points to an element that cannot be deleted (e.g., root, or an atom that's not part of a list), handle appropriately.\n    c. Output: The modified `SExpressionTree`.",
+          "status": "done",
+          "testStrategy": "1. Unit test `modify_sexp`: provide various `SExpressionTree`s, `SPath`s (root, leaf, mid-level, invalid), and `newSubtree`s. Verify the returned tree structure.\n2. Unit test `delete_sexp`: provide various `SExpressionTree`s and `SPath`s. Test deleting from start, middle, end of lists, and deleting the only element. Verify returned tree structure and error handling for invalid paths."
+        },
+        {
+          "id": 4,
+          "title": "Implement Additive Modification Operations: `insert_sexp` and `wrap_sexp`",
+          "description": "Implement the `insert_sexp` operation to add a new sub-expression into a list at a specific `SPath` and index, and `wrap_sexp` to wrap an existing sub-expression at an `SPath` with a new list structure.",
+          "dependencies": [
+            1,
+            3
+          ],
+          "details": "1. Leverage or extend path navigation logic from subtask 3.\n2. Implement `insert_sexp(tree: SExpressionTree, path: SPath, index: int, newSubtree: SExpression) -> SExpressionTree`:\n    a. Inputs: Original `SExpressionTree`, `SPath` to the parent list, `index` for insertion, `newSubtree` (an `SExpression`).\n    b. Action: Navigate to the list identified by `path`. Insert `newSubtree` at the specified `index`. Handle out-of-bounds indices (e.g., clamp to list bounds, or error). The `path` should point to a list.\n    c. Output: The modified `SExpressionTree`.\n3. Implement `wrap_sexp(tree: SExpressionTree, path: SPath, wrapperSymbol: string) -> SExpressionTree`:\n    a. Inputs: Original `SExpressionTree`, `SPath` to the target sub-expression, `wrapperSymbol` (string).\n    b. Action: Locate the sub-expression at `path`. Create a new list `(wrapperSymbol originalSubExpression)`. Replace the original sub-expression at `path` with this new list.\n    c. Output: The modified `SExpressionTree`.",
+          "status": "done",
+          "testStrategy": "1. Unit test `insert_sexp`: test inserting into empty lists, at the beginning, middle, and end of existing lists. Test with various `SPath`s, valid/invalid indices, and `newSubtree`s. Verify tree structure.\n2. Unit test `wrap_sexp`: test with various `SPath`s (targeting atoms and lists) and `wrapperSymbol`s. Verify the structure of the newly created wrapper list and its correct placement."
+        },
+        {
+          "id": 5,
+          "title": "Expose All Operations as MCP Methods and Finalize Server",
+          "description": "Integrate all implemented S-expression manipulation functions (`format_sexp`, `validate_sexp`, `modify_sexp`, `delete_sexp`, `insert_sexp`, `wrap_sexp`) as methods within the MCP server established in Subtask 1. Finalize server implementation including robust error handling and documentation for MCP methods.",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "1. For each core function (`format_sexp`, `validate_sexp`, `modify_sexp`, `delete_sexp`, `insert_sexp`, `wrap_sexp`), create a corresponding MCP method handler in the server.\n2. Ensure MCP method handlers correctly parse incoming request parameters (e.g., `SExpressionTree` JSON, `SPath` array, `index` integer, `filePath` string).\n3. Call the respective core logic functions with these parameters.\n4. Serialize return values (e.g., `SExpressionTree` to JSON, string, boolean/error object) into appropriate MCP responses.\n5. Implement comprehensive error handling at the MCP layer: catch exceptions from core logic, handle invalid MCP requests/parameters, and return meaningful error responses over MCP.\n6. Add logging for MCP requests, responses, and significant server events.\n7. Prepare documentation for each exposed MCP method, detailing its purpose, parameters (name, type, description), return value (type, description), and potential errors.",
+          "status": "done",
+          "testStrategy": "1. Integration tests: Use an MCP client to invoke each of the exposed MCP methods (`read_sexp`, `format_sexp`, `validate_sexp`, `modify_sexp`, `delete_sexp`, `insert_sexp`, `wrap_sexp`).\n2. Test with a variety of valid inputs and expected successful outcomes.\n3. Test with invalid inputs (e.g., malformed SPath, incorrect types, non-existent files for `read_sexp`) to verify robust error reporting via MCP.\n4. Verify that sequences of operations (e.g., read, modify, format) work correctly together through the MCP interface."
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Type Inference and Elaboration Engine",
+      "description": "Implement a type inference and elaboration engine that automatically deduces dependent type parameters, universe levels, and generates proof obligations. This will simplify type annotations for users, making the HoTT-based language more practical.",
+      "details": "Implement a bidirectional type checking algorithm (synthesis and checking modes) that can infer missing type information, extending the existing type checker (from Task 4 and Task 10). Focus on inferring types for lambda parameters, function application arguments, and let-bindings.\n\n**Dependent Type Inference**:\n- Infer parameters for Π-types and Σ-types. For example, if `f : (Π (A : Type) (x : A) -> A)`, in an application `(f _ y)`, infer the first argument (the type `A`) from the type of `y`.\n- Handle implicit arguments in dependent type constructors and functions.\n\n**Universe Level Inference** (if applicable to the language design):\n- Implement inference for universe levels to ensure consistency (e.g., `Type i`). This might involve collecting constraints on universe levels and solving them.\n\n**Proof Obligation Generation**:\n- When type checking expressions involving propositions (e.g., `Id A x y` from Task 11), if a proof is required but not explicitly provided, the system should generate a proof obligation.\n- These obligations could be represented as new goals for a separate proof assistant component or require the user to provide the proof term.\n\n**Elaboration**:\n- The inference engine should elaborate partially typed Abstract Syntax Trees (ASTs) into fully typed ASTs. This means filling in all inferred types, implicit arguments, and potentially inserting coercions or other type-level constructs.\n- The elaborated AST will be the input for subsequent compilation or evaluation stages.\n\n**Error Reporting**:\n- Provide clear and informative error messages when inference fails or leads to ambiguity. Messages should guide the user on how to resolve the issue (e.g., by adding explicit type annotations).\n\n**Integration**:\n- Integrate the inference engine into the main type checking pipeline.\n- Ensure it works correctly with features from Task 4 (simple types/functions), Task 10 (dependent types), Task 11 (Identity types), and types defined in Task 17 (Standard Library).",
+      "testStrategy": "**Unit Tests for Inference Rules**:\n- Test inference of simple function argument types and return types.\n- Test inference of lambda parameter types.\n- Test inference for let-bindings.\n\n**Dependent Type Inference Tests**:\n- Define functions with dependent types (Π-types, Σ-types) where some parameters can be inferred. Test that the engine correctly infers these parameters in various application scenarios.\n- Example: `(define id (lambda (A : Type) (lambda (x : A) x)))`. Test `(id _ 5)` infers `A` as `Nat` (assuming Nat is part of the system from Task 17 or similar).\n- Test inference with types from the standard library (Task 17), e.g., inferring the type parameter for `List` or `Option` in functions like `map` or `flatMap` if their types allow for inference.\n\n**Universe Level Inference Tests** (if applicable):\n- Create scenarios that require universe level constraints and verify that the inference engine correctly assigns or infers consistent universe levels.\n- Test for universe inconsistency errors.\n\n**Proof Obligation Generation Tests**:\n- Create expressions that should logically require a proof (e.g., using an equality that isn't `refl` without providing a proof term for `Id A x y` from Task 11).\n- Verify that the system correctly identifies and generates the appropriate proof obligation.\n\n**Elaboration Tests**:\n- Inspect the elaborated AST to ensure that all inferred types and implicit arguments are correctly inserted.\n- Verify that the elaborated AST is well-typed according to the full, non-inferential type checker.\n\n**Error Reporting Tests**:\n- Create ambiguous type scenarios and verify that the system reports an error rather than inferring an incorrect type.\n- Create unsolvable inference problems and check for clear error messages that guide the user.\n- Test cases where insufficient information is provided for inference, prompting the user for annotations.\n\n**Integration Tests**:\n- Write small programs that heavily rely on type inference for various constructs (functions, data types from Task 17, dependent types from Task 10, identity types from Task 11).\n- Verify that these programs type check correctly and that the inferred types match expectations.\n- Test interaction with `deftype` and Canonical Instantiation Functions (CIFs) (related to Task 5, via Task 17).",
+      "status": "pending",
+      "dependencies": [
+        4,
+        10,
+        11,
+        17
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Extend Type Checker with Bidirectional Inference for Basic Constructs",
+          "description": "Modify the existing type checker (from Task 4 & 10) to support bidirectional type checking (synthesis and checking modes). Implement inference for lambda parameters, function application arguments, and types in let-bindings. This forms the foundation for more advanced inference.",
+          "dependencies": [],
+          "details": "Define two main functions: `infer(context, term)` returning a type, and `check(context, term, type)` verifying the term has the given type. For lambdas `λx. body`, infer parameter type `A` if `x` is unannotated and context allows, or use annotation; then check/infer body. For applications `(f e)`, synthesize type of `f` (e.g., `Π(x:A).B`), check `e` against `A` (or infer `A` if possible), result type is `B[x := e]`. For `let x = e1 in e2`, infer type of `e1` as `A`, then check/infer `e2` in context extended with `x:A`.",
+          "status": "pending",
+          "testStrategy": "Unit tests for inferring types of simple lambdas (annotated and unannotated parameters where inferable), applications (argument type checking and polymorphic function instantiation), and let-bindings (inferring binding's type). Test cases where type annotations are missing and can be inferred, and cases where they are essential and omission leads to an error (to be handled better in Subtask 5)."
+        },
+        {
+          "id": 2,
+          "title": "Implement Dependent Type Parameter Inference (Π/Σ-types, Implicit Arguments)",
+          "description": "Extend the bidirectional engine to infer missing parameters for dependent Π-types and Σ-types. Implement handling of implicit arguments in dependent type constructors and functions, allowing users to omit them when they can be deduced from context.",
+          "dependencies": [
+            1
+          ],
+          "details": "For Π-type parameter inference (e.g., `f : Π (A : Type) (x : A) -> C` in `(f _ y)`), infer `A` from the type of `y` using unification or constraint-based type matching. For Σ-types, ensure dependent components can be inferred. For implicit arguments (marked in function/constructor definitions), attempt inference based on types of explicit arguments or the expected type of the overall expression. Example: for `Id x y` where `Id : Π {A:Type} (a:A) (b:A) -> Type`, infer `A` from type of `x` or `y`.",
+          "status": "pending",
+          "testStrategy": "Test cases for functions and constructors (e.g., `Vec`, `Id` from Task 11) with dependent types where some type arguments are placeholders (`_`) or implicit and should be inferred. Verify inference for parameters in Π-binders and Σ-pair components."
+        },
+        {
+          "id": 3,
+          "title": "Implement Universe Level Inference",
+          "description": "Develop mechanisms for inferring universe levels (e.g., `Type i`). This involves collecting constraints on universe levels during type checking (e.g., from `Type i : Type j` implying `i < j`, or `Π (A : Type i) -> B : Type j` implying `i <= j`) and solving these constraints to ensure consistency and assign concrete or minimal levels.",
+          "dependencies": [
+            1
+          ],
+          "details": "Represent universe levels with variables (e.g., `?u1`). During type checking of type formers (Π, Σ, Type literal, etc.), generate constraints like `?u1 < ?u2` or `?u1 = max(?u2, ?u3)`. Collect all constraints into a system. Implement a solver for these constraints (e.g., based on a directed graph for inequalities, or simple unification for equalities). Report errors for inconsistent universes. Inferred levels become part of the elaborated AST.",
+          "status": "pending",
+          "testStrategy": "Unit tests for expressions that generate universe constraints (e.g., `(Type i) : Type (i+1)`, `Π (A:Type i) (x:A) -> B x` where `B x : Type i`). Test scenarios with solvable constraints, minimally solvable constraints, and unsolvable (inconsistent) constraints, ensuring correct level assignment or error reporting."
+        },
+        {
+          "id": 4,
+          "title": "Proof Obligation Generation and AST Elaboration",
+          "description": "Implement the generation of proof obligations for propositions (e.g., equality proofs for `Id A x y` from Task 11) when a proof is required but not explicitly provided. Concurrently, elaborate the partially typed Abstract Syntax Tree (AST) into a fully typed AST by filling in all inferred types, implicit arguments, resolved universe levels, and generated proof obligations.",
+          "dependencies": [
+            2,
+            3
+          ],
+          "details": "Proof Obligation Generation: Identify contexts requiring a proof term (e.g., an argument to a function expecting `Id A x y`). If a placeholder `_` is used, generate a proof obligation object containing the goal proposition and current context. These obligations can be special nodes in the AST. AST Elaboration: Define the structure for the fully elaborated AST. As inference proceeds, construct this new AST, populating it with: 1. Explicit type annotations for all variables and sub-expressions. 2. Instantiated implicit arguments. 3. Solved universe levels for all type expressions. 4. Embedded proof obligations. This elaborated AST is the definitive output of the inference phase.",
+          "status": "pending",
+          "testStrategy": "Test with expressions that should generate proof obligations (e.g., using `subst` or `rewrite` with an omitted equality proof). Verify the content of generated obligations. Inspect the elaborated AST to confirm that all inferred information (types, implicits, universe levels) is correctly and explicitly represented."
+        },
+        {
+          "id": 5,
+          "title": "Integrate Engine, Implement Robust Error Reporting, and Test with Standard Library",
+          "description": "Integrate the complete type inference and elaboration engine into the main type checking pipeline. Implement clear, informative, and actionable error messages for inference failures, ambiguities, or unsatisfiable constraints. Conduct thorough testing with existing language features (Tasks 4, 10, 11) and types/functions from the Standard Library (Task 17).",
+          "dependencies": [
+            4
+          ],
+          "details": "Integration: Ensure the inference engine is invoked correctly within the compiler/interpreter, and its output (elaborated AST, proof obligations) is consumed by subsequent stages. Error Reporting: Design error messages to be user-friendly. For type mismatches, show expected vs. actual types. For inference failure, pinpoint the problematic expression and suggest adding annotations. For universe errors, explain the inconsistency. For ambiguities, list potential candidates if possible. Testing: Create comprehensive end-to-end tests using examples from the standard library (e.g., `Vector` operations, `Nat` arithmetic, `Fin` properties) that rely on inference. Test interactions with dependent types, identity types, and simple types. Specifically test error reporting for common mistakes.",
+          "status": "pending",
+          "testStrategy": "End-to-end tests using a suite of HoTT programs exercising all aspects of inference. Include programs that are correct and should type check with inference, and programs that are intentionally incorrect to verify the quality of error messages. Test against all relevant definitions in the Standard Library (Task 17) to ensure compatibility and utility."
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Implement Practical Syntactic Sugar and Desugaring",
+      "description": "Implement syntactic sugar for common programming patterns such as list literals, optional chaining (maybe-monad syntax like `x?.field`), and threading macros. These constructs will desugar into core HoTT-based language expressions, enhancing developer experience and code readability while preserving mathematical rigor.",
+      "details": "Implementations should extend the parser (from Task 1) to recognize new syntactic forms and then transform these forms into equivalent core Abstract Syntax Tree (AST) structures (from Task 2) before type checking (Task 4) and evaluation (Task 2).\n\n**1. List Literals:**\n   - Syntax: `[elem1 elem2 ... elemN]` (e.g., `[1 2 3]`, `[]`).\n   - Parser Extension: Lexer to recognize `[` and `]`. Parser to construct an internal representation for list literals.\n   - Desugaring: Transform into a sequence of `List.cons` calls and `List.nil` from the standard library (Task 17). \n     - Example: `[1 2 3]` desugars to `(List.cons 1 (List.cons 2 (List.cons 3 List.nil)))`.\n     - Example: `[]` desugars to `List.nil`.\n\n**2. Maybe-Monad Syntax (Optional Chaining for `Option` types):**\n   - Syntax: `expr?.field` for field access, and `expr?.(function-call arg ...)` for safe method/function calls on an optional value.\n   - Prerequisites: `Option` type and its operations (`Option.map`, `Option.bind`, `Option.pure`, `None`) from Task 17. Product types (structs/records) from Task 5 for field access, and a mechanism like `(get-field instance 'fieldName')`.\n   - Desugaring for field access (`expr?.field`):\n     - Transforms to an expression that checks if `expr` is `Some`. If so, accesses `field` from the wrapped value and returns `(Some fieldValue)`; otherwise, returns `None`.\n     - Example: `myOption?.data` could desugar to `(Option.map myOption (lambda (value) (get-field value 'data')))`. The result type would be `(Option FieldType)`.\n   - Desugaring for function call (`expr?.(f arg)`):\n     - Transforms to an expression that checks if `expr` is `Some`. If so, applies the function to the wrapped value and arguments; otherwise, returns `None`.\n     - Example: `optVal?.(processItem \"arg2\")` could desugar to `(Option.bind optVal (lambda (v) (processItem v \"arg2\")))` if `processItem` returns an `Option`, or `(Option.map optVal (lambda (v) (processItem v \"arg2\")))` if `processItem` returns a plain value to be wrapped in `Some`.\n\n**3. Threading Macro (e.g., Thread-First `->`):**\n   - Syntax: `(-> initial-expr form1 form2 ...)`\n   - Purpose: Reduces nesting for sequential function applications.\n   - Desugaring: The `initial-expr` is passed as the first argument to `form1`. The result of that is passed as the first argument to `form2`, and so on.\n     - If a `form` is a symbol `s`, it becomes `(s threaded-value)`.\n     - If a `form` is a list `(op arg1 ...)` it becomes `(op threaded-value arg1 ...)`.\n   - Example: `(-> \"hello\" (string-append \" world\") string-upcase)` desugars to `(string-upcase (string-append \"hello\" \" world\"))` (assuming `string-append` and `string-upcase` are available, potentially from an extended standard library).\n   - Parser Extension: Recognize `->` as a special form/macro triggering this transformation.\n\n**General Considerations:**\n- All desugared expressions must be valid core language ASTs.\n- The desugaring process should happen after parsing and before type checking.\n- Error reporting for malformed sugar syntax should be clear.",
+      "testStrategy": "Each syntactic sugar feature requires thorough testing:\n\n**1. List Literals:**\n   - Parse and desugar `[]`. Verify it becomes `List.nil`. Check type and evaluation.\n   - Parse and desugar `[1 2 3]`. Verify desugaring to `(List.cons 1 (List.cons 2 (List.cons 3 List.nil)))`. Check type `(List Nat)` and evaluate to the correct list structure.\n   - Test with lists of other types (e.g., `Bool`, `String` if available) and empty lists of specific types if supported.\n   - Test nested list literals: `[[1] [2 3]]`.\n   - Test parsing errors for malformed list literals, e.g., `[1 2`. \n\n**2. Maybe-Monad Syntax (`?.`):**\n   - Setup: Define a product type (e.g., `(deftype User ((id Nat) (name String)))`) and an `Option User` variable.\n   - Field Access:\n     - Test `optionUser?.id` when `optionUser` is `(Some (User 1 \"Alice\"))`. Expected: `(Some 1)`.\n     - Test `optionUser?.id` when `optionUser` is `None`. Expected: `None`.\n     - Verify type of the result is `(Option Nat)`.\n   - Function Call:\n     - Define a function `(define (format-user u) (string-append \"ID: \" (nat-to-string (get-field u 'id))))` which returns a `String`.\n     - Test `optionUser?.(format-user)` (if `format-user` is adapted or `Option.map` is used for non-Option returning functions). Expected: `(Some \"ID: 1\")` or `None`.\n     - Test with functions that themselves return `Option` using `Option.bind` desugaring.\n     - Verify type correctness of desugared expressions.\n   - Test parsing errors for malformed `?.` syntax.\n\n**3. Threading Macro (`->`):**\n   - Test simple case: `(-> 10 (add 5) (multiply 2))` (assuming `add` and `multiply` exist and take first arg as input). Expected desugaring: `(multiply (add 10 5) 2)`. Evaluate to `30`.\n   - Test with symbol forms: `(-> \"data\" process-step1 process-step2)` where `process-step1` and `process-step2` are functions. Expected: `(process-step2 (process-step1 \"data\"))`.\n   - Test with more complex forms and multiple arguments in steps: `(-> initial-value (funcA \"param1\") (funcB \"param2\" \"param3\"))`.\n   - Verify type checking of the desugared forms.\n   - Test parsing errors for malformed `->` expressions.\n\n**General Tests:**\n- Ensure that the introduction of syntactic sugar does not break existing parsing or evaluation of core language forms.\n- Verify that error messages from the type checker (Task 4) for type errors within desugared code are clear and map back to the original sugared syntax if possible (stretch goal).",
+      "status": "pending",
+      "dependencies": [
+        1,
+        2,
+        17
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Extend Parser to Recognize New Syntactic Sugar Forms",
+          "description": "Modify the lexer and parser to recognize the syntax for list literals (`[...]`), optional chaining (`?.`), and the thread-first macro (`->`). The parser should generate specific, temporary AST nodes for these constructs that will be processed by a subsequent desugaring pass.",
+          "dependencies": [],
+          "details": "Lexer: Add new tokens for `LBRACKET` (`[`), `RBRACKET` (`]`), and `OPT_CHAIN` (`?.`).\nParser: Implement rules to parse `[expr1 expr2 ...]` into an `AST.ListLiteral` node. Modify expression parsing to handle `expr?.field` and `expr?.(call...)`, creating `AST.OptionalAccess` and `AST.OptionalCall` nodes. Recognize `(-> ...)` as a special form and parse it into an `AST.ThreadMacro` node.",
+          "status": "pending",
+          "testStrategy": "Write unit tests for the parser that verify correct AST node generation for each new syntactic form, including valid cases, nested forms, and syntax errors for malformed sugar."
+        },
+        {
+          "id": 2,
+          "title": "Implement Desugaring of List Literals",
+          "description": "Create the initial desugaring transformation pass that walks the AST and replaces `AST.ListLiteral` nodes with their equivalent core language expressions built from `List.cons` and `List.nil`.",
+          "dependencies": [],
+          "details": "Implement a function `desugar(ast)` that traverses the AST. When an `AST.ListLiteral` node is encountered, transform it. The transformation for `[e1 e2 ... en]` is a right-fold, resulting in `(List.cons e1 (List.cons e2 ... (List.cons en List.nil)))`. An empty list `[]` transforms directly to the `List.nil` identifier. The elements `e1`, `e2`, etc., must also be recursively desugared.",
+          "status": "pending",
+          "testStrategy": "Test the desugaring pass with various list literals: empty, single-element, multi-element, and nested lists. Verify that the output AST is a valid core language expression and matches the expected `List.cons`/`List.nil` structure."
+        },
+        {
+          "id": 3,
+          "title": "Implement Desugaring for Optional Field Access (`expr?.field`)",
+          "description": "Extend the desugaring pass to handle `AST.OptionalAccess` nodes. This syntax provides safe access to fields of a value wrapped in an `Option` type by transforming it into an `Option.map` call.",
+          "dependencies": [],
+          "details": "In the `desugar` function, add a case for `AST.OptionalAccess(expr, 'field')`. The node should be transformed into the AST representation of `(Option.map (desugar expr) (lambda (v) (get-field v 'field')))`. This relies on `Option.map` from the standard library (Task 17) and a core `get-field` primitive (Task 5).",
+          "status": "pending",
+          "testStrategy": "Write tests that desugar expressions like `myOption?.data` and verify the resulting AST corresponds to the correct `Option.map` structure. Test with nested optional access, e.g., `opt1?.field1?.field2`."
+        },
+        {
+          "id": 4,
+          "title": "Implement Desugaring for Optional Function Calls (`expr?.(call)`)",
+          "description": "Extend the desugaring pass to handle `AST.OptionalCall` nodes. This syntax provides a way to safely call a function with a value wrapped in an `Option` type, transforming into an `Option.bind` call.",
+          "dependencies": [],
+          "details": "In the `desugar` function, add a case for `AST.OptionalCall(expr, func, args)`. The node should be transformed into the AST for `(Option.bind (desugar expr) (lambda (v) (func v ...args)))`. The unwrapped value `v` is inserted as the first argument to the function call inside the lambda. This uses `Option.bind` to handle cases where the called function itself returns an `Option`.",
+          "status": "pending",
+          "testStrategy": "Test desugaring of expressions like `optUser?.(getProfile)`. Verify the output AST uses `Option.bind` and correctly constructs the lambda and inner function call. Test with functions that take multiple arguments."
+        },
+        {
+          "id": 5,
+          "title": "Implement Desugaring for the Thread-First Macro (`->`)",
+          "description": "Finalize the desugaring pass by implementing the transformation for `AST.ThreadMacro` nodes. This macro simplifies the syntax of chained function calls by threading a value as the first argument to subsequent forms.",
+          "dependencies": [],
+          "details": "In the `desugar` function, add a case for `AST.ThreadMacro(initialExpr, forms)`. Implement a left-fold over the `forms`. The accumulator starts as `desugar(initialExpr)`. For each `form`, if it's a symbol `s`, the new accumulator is `(s accumulator)`; if it's a list `(op arg1 ...)` the new accumulator is `(op accumulator arg1 ...)`.",
+          "status": "pending",
+          "testStrategy": "Test the macro with various inputs: simple chains, chains with functions that take multiple arguments, and chains where the initial value is a complex expression. Verify the final nested AST is correct, e.g., `(-> x f g)` becomes `(g (f x))`."
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Implement Computational Reflection for Decidable Propositions",
+      "description": "Develop a mechanism to automatically solve decidable propositions (e.g., equality, ordering) by computation and reflect the computational evidence into formal proof terms. This leverages HoTT's principle of computation as proof for decidable predicates.",
+      "details": "This task involves creating a system where the truth of certain propositions can be determined by direct computation, and this computational result can be automatically translated into a formal proof term recognized by the type system.\n\n1.  **Identify Target Decidable Propositions:**\n    *   Initially focus on equality for primitive types from the Standard Library (Task 17), such as `Nat` and `Bool`. Example: `(Id Nat x y)`. \n    *   Consider simple ordering relations on `Nat` (e.g., less than, greater than or equal to) if `Nat` operations support them.\n\n2.  **Implement Computational Decision Procedures:**\n    *   For each target decidable proposition, implement a corresponding computational function (decision procedure). For example:\n        *   `nat_eq_dec : Nat -> Nat -> Bool` (determines if two `Nat`s are equal).\n        *   `bool_eq_dec : Bool -> Bool -> Bool`.\n        *   These functions must reliably compute the truth value of the proposition.\n    *   These decision procedures should operate on evaluated/canonical forms of their arguments.\n\n3.  **Develop the Reflection Tactic/Macro (e.g., `compute_and_reflect`):\n    *   This tactic will take a proposition (a type, e.g., `(Id Nat n m)`) as input.\n    *   **Recognition:** It must identify if the input proposition corresponds to a known decidable predicate for which a computational solver exists.\n    *   **Invocation:** If recognized, it invokes the appropriate decision procedure with the arguments extracted from the proposition (after evaluation/normalization).\n    *   **Proof Construction:** Based on the computational result (typically a boolean):\n        *   If the proposition is computationally true (e.g., `nat_eq_dec x y` returns `true`), the tactic constructs a proof term for that proposition. For `(Id A x x)`, this would be `(refl evaluated_x)` (relies on Task 11).\n        *   If the proposition is computationally false, the tactic should construct a proof of its negation (e.g., a term of type `(Not (Id A x y))`). This might involve a type like `(Dec P)` defined as `(Sigma (b : Bool) (if b then P else (Not P)))`, where the tactic provides the full proof.\n\n4.  **Proof Term Generation Details:**\n    *   **Equality:** For a proposition `(Id T term1 term2)`, evaluate `term1` and `term2` to `val1` and `val2`. If `val1` and `val2` are computationally equal (and `T` has decidable equality), and `val1` is syntactically identical to `val2` after normalization, generate `(refl val1)`. The system must ensure that computational equality implies definitional equality for these cases.\n    *   **Other Predicates:** For a predicate `(P x y)`, if `P_dec x y` returns `true`, generate a term `proof_P_true x y : (P x y)`. If `false`, generate `proof_P_false x y : (Not (P x y))`. The structure of these proof terms will depend on how `P` and `Not P` are defined.\n\n5.  **Integration and Trust:**\n    *   The generated proof terms must be type-checked and accepted by the system (leveraging Task 4 and Task 10).\n    *   The computational decision procedures are effectively part of the trusted computing base for this reflection mechanism. Their correctness is crucial.\n    *   Consider a registry or dispatch mechanism for the `compute_and_reflect` tactic to find the appropriate solver for a given proposition form.\n\n6.  **Error Handling:**\n    *   The tactic should report errors if the proposition is not recognized as decidable or if arguments are malformed.",
+      "testStrategy": "1.  **Unit Test Decision Procedures:**\n    *   For `nat_eq_dec`: Test with equal numbers `(nat_eq_dec 5 5)`, unequal numbers `(nat_eq_dec 5 6)`, and expressions `(nat_eq_dec (+ 2 3) 5)`.\n    *   Similarly, test `bool_eq_dec` and any other decision procedures (e.g., for ordering).\n\n2.  **Test Reflection Tactic for Equality (`Id` type):\n    *   Verify that `(compute_and_reflect (Id Nat 3 3))` successfully generates a term of type `(Id Nat 3 3)` (e.g., `(refl 3)`).\n    *   Verify for expressions: `(compute_and_reflect (Id Nat (+ 1 2) 3))`. \n    *   Verify for `Bool`: `(compute_and_reflect (Id Bool #t #t))`. \n    *   Test cases where equality is false: `(compute_and_reflect (Id Nat 3 4))`. The tactic should produce a proof of `(Not (Id Nat 3 4))`.\n\n3.  **Test Reflection Tactic for Other Decidable Propositions (if implemented, e.g., ordering):\n    *   Assume a proposition `(NatLe n m)` (n <= m) and a solver `nat_le_dec`.\n    *   `(compute_and_reflect (NatLe 3 5))` should produce a proof of `(NatLe 3 5)`.\n    *   `(compute_and_reflect (NatLe 5 3))` should produce a proof of `(Not (NatLe 5 3))`.\n\n4.  **Integration with Type Checker:**\n    *   Define terms or functions whose types are proven using the reflection tactic, e.g.:\n      `(define proof_equal_3_3 : (Id Nat 3 3) (compute_and_reflect (Id Nat 3 3)))`\n    *   Ensure these definitions type-check correctly.\n\n5.  **Error Handling Tests:**\n    *   Call `compute_and_reflect` with a proposition for which no decision procedure is defined; expect a clear error.\n    *   Call with malformed propositions or arguments; expect appropriate errors.\n\n6.  **HoTT Compliance Check:**\n    *   Ensure that for `(Id A x y)`, if `x` and `y` compute to the same value `v`, the proof generated is definitionally equal to `(refl v)`.",
+      "status": "pending",
+      "dependencies": [
+        10,
+        11,
+        17
+      ],
+      "priority": "medium",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Define the `Decidable` Type and Conditional Type Construct",
+          "description": "Implement the foundational `(Dec P)` type, representing a decidable proposition `P`. This type encapsulates a boolean result and a proof that this boolean correctly reflects the truth of `P`. This requires implementing a type-level `if-then-else` construct.",
+          "dependencies": [],
+          "details": "Define `(Dec P)` as the sigma type `(Sigma (b : Bool) (if b then P else (Not P)))`. The `(Not P)` type should be defined as `(-> P Empty)`, where `Empty` is the uninhabited type. The core of this task is to enhance the type checker (from Task 10) to handle the `if C then T else F` construct for types. When the condition `C` evaluates to a boolean literal (`true` or `false`), the entire expression must reduce to `T` or `F` respectively during type checking.",
+          "status": "pending",
+          "testStrategy": "Add unit tests to the type checker to verify that `if true then TypeA else TypeB` correctly reduces to `TypeA`, and `if false then TypeA else TypeB` reduces to `TypeB`. Manually construct a term of type `(Dec P)` for a simple proposition `P` and ensure it type-checks correctly against the new definitions."
+        },
+        {
+          "id": 2,
+          "title": "Implement Decision Procedures for `Nat` and `Bool` Equality",
+          "description": "Create the computational functions that decide equality for `Nat` and `Bool` types. These functions will not just return a boolean, but a full proof of decidability, i.e., a term of type `(Dec (Id T x y))`, using the structure defined in the previous subtask.",
+          "dependencies": [],
+          "details": "Implement two primitive functions within the evaluator: 1. `nat_eq_dec : (x : Nat) -> (y : Nat) -> (Dec (Id Nat x y))`. This function compares `x` and `y`. If they are equal, it returns `(pair true (refl x))`. If not, it returns `(pair false proof_of_negation)`, where `proof_of_negation` is a term of type `(-> (Id Nat x y) Empty)`. 2. `bool_eq_dec : (x : Bool) -> (y : Bool) -> (Dec (Id Bool x y))`. This can be implemented by simple case analysis on the inputs. These functions must operate on evaluated/canonical values.",
+          "status": "pending",
+          "testStrategy": "Write unit tests that directly invoke these new decision procedures with various inputs (e.g., `nat_eq_dec 5 5`, `nat_eq_dec 5 6`). Verify that the boolean component of the returned pair is correct and that the proof component successfully type-checks as either `(Id T x y)` or `(Not (Id T x y))`."
+        },
+        {
+          "id": 3,
+          "title": "Create the `compute_and_reflect` Tactic Scaffolding and Dispatch Registry",
+          "description": "Implement the basic structure of the user-facing `compute_and_reflect` tactic. This involves parsing the current proof goal and creating a registry to map recognizable proposition forms to their corresponding decision procedures.",
+          "dependencies": [],
+          "details": "Create a new tactic named `compute_and_reflect`. The tactic must inspect the current goal's type, parsing its head symbol (e.g., `Id`) and argument types (e.g., `Nat`). Implement a registry, such as a hash map, within the tactic's environment. This registry will map a key representing the proposition form (e.g., a tuple `('Id', 'Nat')`) to a reference to its decision procedure function (e.g., `nat_eq_dec`). Populate this registry with the handlers for `Nat` and `Bool` equality. The tactic should fail with a clear error if the goal's form is not found in the registry.",
+          "status": "pending",
+          "testStrategy": "Set up proof states with various goals like `(Id Nat 3 3)`, `(Id Bool true false)`, and an unsupported one like `(Id String \"a\" \"b\")`. Run the `compute_and_reflect` tactic. Verify that it correctly identifies a handler for the `Nat` and `Bool` goals (without solving them yet) and fails gracefully for the `String` goal, reporting that no decision procedure is available."
+        },
+        {
+          "id": 4,
+          "title": "Implement Tactic Logic to Evaluate Arguments and Invoke Decision Procedure",
+          "description": "Enhance the `compute_and_reflect` tactic to normalize the arguments of the proposition and then invoke the appropriate decision procedure with these computed values.",
+          "dependencies": [],
+          "details": "After the tactic identifies the goal (e.g., `(Id Nat (+ 1 1) 2)`) and finds its decision procedure (`nat_eq_dec`), it must use the evaluator (from Task 10) to normalize the arguments of the proposition (e.g., `(+ 1 1)` becomes `2`, and `2` remains `2`). The tactic will then construct and evaluate a call to the decision procedure with the normalized arguments, e.g., `(nat_eq_dec 2 2)`. The result of this evaluation, which is a term of type `(Dec ...)` like `(pair true (refl 2))`, must be captured by the tactic for the final step.",
+          "status": "pending",
+          "testStrategy": "Use logging or a debugger to trace the tactic's execution. For a goal like `(Id Nat (* 2 3) 6)`, verify that the tactic correctly normalizes `(* 2 3)` to `6`, invokes `nat_eq_dec` with `6` and `6`, and correctly captures the resulting `(Dec ...)` term from the evaluator."
+        },
+        {
+          "id": 5,
+          "title": "Generate and Apply Final Proof Term from Computation Result",
+          "description": "Finalize the `compute_and_reflect` tactic by using the result from the decision procedure to solve the original proof goal. This completes the reflection of computational evidence into a formal proof.",
+          "dependencies": [],
+          "details": "The tactic will inspect the `(Dec P)` term (e.g., `(pair b proof_term)`) captured in the previous step. If the boolean `b` is `true`, the tactic extracts the `proof_term` and uses it to solve the original goal, causing the tactic to succeed. If `b` is `false`, the proposition is false, and the tactic must fail with an informative error message stating that the goal is computationally false. The application of the extracted proof term must be checked by the kernel (Task 4), ensuring the entire process remains sound.",
+          "status": "pending",
+          "testStrategy": "Write end-to-end integration tests. A proof script with `prove (Id Nat (+ 2 3) 5) with compute_and_reflect.` should succeed and close the goal. A script with `prove (Id Nat 4 5) with compute_and_reflect.` should fail with a clear error message. Test with nested computations like `prove (Id Bool (nat_eq_dec 3 3).1 true) with compute_and_reflect.`."
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Evaluate Rust backend migration for production PathFinder implementation",
+      "description": "After completing dependent types, consider migrating from Racket to Rust host for: 1) Native performance 2) Multiple backends (interpreter, Cranelift JIT, LLVM AOT, WASM) 3) Better deployment (single binary) 4) Integration with compiler ecosystem. Goal: PathFinder IL → Rust implementation with same three-tier effect system. Could potentially dogfood by implementing the Rust backend in PathFinder itself.",
+      "details": "",
+      "testStrategy": "",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "medium",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Define Core PathFinder IL Data Structures in Rust",
+          "description": "Create the foundational Rust structs and enums to accurately represent the PathFinder Intermediate Language (IL). This includes defining types for expressions, statements, function definitions, and the components of the effect system. This is a prerequisite for any processing or execution of PathFinder code in Rust.",
+          "dependencies": [],
+          "details": "In a new Rust library crate, define modules for the IL's Abstract Syntax Tree (AST). Use Rust's enum and struct features to model the language constructs. For example, `enum Expression { Literal(Value), Var(String), ... }`. Derive `Debug`, `Clone`, and potentially `serde::Serialize` for easier testing and debugging.",
+          "status": "pending",
+          "testStrategy": "Write unit tests for each data structure to ensure they can be constructed correctly. Implement a simple round-trip serialization/deserialization test (e.g., to JSON) to verify the structure's integrity and completeness against a known-good IL example."
+        },
+        {
+          "id": 2,
+          "title": "Implement the Three-Tier Effect System Machinery",
+          "description": "Develop the core runtime logic for PathFinder's three-tier effect system. This involves creating the mechanisms for defining effects, handling them, and managing continuations. This module will be a self-contained library component used by all execution backends.",
+          "dependencies": [],
+          "details": "Create data structures for effect handlers and the effect context stack. Implement the core function for invoking an effect, which should search the context stack for a matching handler. Implement the logic for capturing, saving, and resuming continuations (resumptions). This logic should be generic and not tied to a specific backend (interpreter vs. JIT) at this stage.",
+          "status": "pending",
+          "testStrategy": "Create a suite of unit tests that exercise the effect system in isolation. Test scenarios should include: invoking an unhandled effect, handling a simple effect, handling nested effects, and resuming a continuation with a value."
+        },
+        {
+          "id": 3,
+          "title": "Build a Tree-Walk Interpreter Backend",
+          "description": "Implement an interpreter that directly executes the PathFinder IL AST. This serves as a reference implementation to validate the correctness of the IL data structures and the effect system logic in an end-to-end execution flow.",
+          "dependencies": [],
+          "details": "Create an `Interpreter` struct with an `eval` method that recursively walks the IL AST. Maintain an environment for variable bindings. When an effectful operation is encountered in the AST, the interpreter should call into the effect system machinery developed in the previous subtask. The result of an `eval` call should be a final value or an unhandled effect.",
+          "status": "pending",
+          "testStrategy": "Port a representative set of test cases from the original Racket implementation. For each test case, construct the corresponding IL AST in Rust and execute it with the interpreter. Assert that the final output or unhandled effect matches the expected result from the Racket version."
+        },
+        {
+          "id": 4,
+          "title": "Implement a JIT Backend using Cranelift",
+          "description": "Develop a Just-In-Time (JIT) compilation backend using the Cranelift code generation library. This backend will translate PathFinder IL into native machine code at runtime to achieve significant performance improvements over the interpreter.",
+          "dependencies": [],
+          "details": "Create a `JitCompiler` module that traverses the PathFinder IL AST and emits Cranelift IR. Use `cranelift-jit` to manage memory and compile the IR into executable code. Implement 'trampolines' or foreign function calls from the JIT-ed code back into the Rust runtime to handle the effect system logic (e.g., calling the effect handler search function). Map PathFinder functions to JIT-ed functions and manage their pointers.",
+          "status": "pending",
+          "testStrategy": "Re-use the test suite from the interpreter subtask. For each test case, the JIT-compiled code should produce the exact same result as the interpreter. Add performance benchmarks comparing the execution time of key algorithms (e.g., recursive functions, tight loops) between the interpreter and the JIT backend."
+        },
+        {
+          "id": 5,
+          "title": "Develop a Unified CLI and Single-Binary Build Process",
+          "description": "Create a user-facing command-line interface (CLI) to drive the PathFinder execution engine. The CLI should allow users to specify an input file and select the desired backend (interpreter or JIT). The entire project should be configurable to build into a single, distributable binary.",
+          "dependencies": [],
+          "details": "Create a new binary crate that depends on the library crate containing the IL and backends. Use a crate like `clap` to define and parse command-line arguments, such as `--backend [interpreter|jit]` and the input file path. Implement logic to read a file, parse it into the IL AST representation (initially, this can be a placeholder parser that reads a debug format like JSON), and dispatch to the selected backend. Configure `Cargo.toml` to build a release binary.",
+          "status": "pending",
+          "testStrategy": "Write end-to-end integration tests using a testing framework like `assert_cmd`. These tests will execute the compiled binary with different command-line flags and input files, capturing stdout/stderr and asserting that the output matches the expected results for both the interpreter and JIT backends."
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Implement Tier 0 Distributed Proof Cache",
+      "description": "Implement a distributed, content-addressable proof cache that acts as a 'Tier 0' in the architecture. This system will transparently resolve proof obligations by searching a network of pre-computed proofs before falling back to local computation, effectively creating a global mathematical commons.",
+      "details": "This task establishes a new architectural tier, \"Tier 0\", for distributed, pre-computed proofs, making the network an invisible acceleration layer.\n\n**1. Content-Addressable Proof Obligation Hashing:**\n   - Develop a canonical serialization format for proof obligations generated by the constraint system (Task 18).\n   - The serialization must be stable and independent of variable names (e.g., using de Bruijn indices) to ensure that logically equivalent obligations produce identical hashes.\n   - This hash will serve as the unique key for retrieving proofs from any cache (local or distributed).\n\n**2. Transparent Proof Resolution Pipeline:**\n   - Integrate a new resolution pipeline into the core proof search mechanism (Task 20).\n   - When a proof is required, the system will attempt to resolve it in the following order:\n     1. Query the distributed cache over the network.\n     2. Query the local, on-disk cache.\n     3. Attempt to solve using Tier 1 compile-time mechanisms (e.g., computational reflection from Task 25).\n     4. Defer to Tier 2 runtime checks if applicable.\n     5. Fall back to network coordination for complex proofs if all else fails.\n\n**3. Distributed Cache and Network Protocol:**\n   - Implement a peer-to-peer mechanism for nodes to discover and share proofs.\n   - Define a simple network protocol for querying peers for a proof by its obligation hash.\n   - When a peer generates a new, expensive proof, it should be added to its local cache and made available to the network.\n\n**4. Automatic Verification and Caching:**\n   - Any proof retrieved from any source (local or distributed) must be formally verified against the original proof obligation before being used.\n   - Once a proof is successfully generated locally or verified from a remote source, it should be automatically stored in a local on-disk cache to accelerate future requests.",
+      "testStrategy": "**1. Hashing Stability Test:**\n   - Create multiple test cases where proof obligations are structurally identical but use different variable names or syntactic forms.\n   - Verify that the canonical hashing mechanism produces the exact same hash for all equivalent obligations.\n\n**2. Resolution Pipeline Test:**\n   - Define a computationally expensive but decidable proposition (e.g., using functions from Task 25).\n   - First compilation: Verify that the proof is generated using local computation (e.g., reflection) and measure the time taken.\n   - Clear the in-memory cache and re-compile: Verify the proof is now loaded from the local on-disk cache, resulting in a significantly faster time.\n\n**3. Distributed Cache Test:**\n   - Set up two running instances of the system (Peer A and Peer B) on a local network.\n   - On Peer A, compile code that generates and caches an expensive proof.\n   - On Peer B, compile code that requires the identical proof.\n   - Monitor network traffic and logs to confirm that Peer B successfully queries and retrieves the proof from Peer A without performing the expensive computation itself.\n\n**4. Proof Verification Test:**\n   - Manually inject a malformed or incorrect proof term into the cache of Peer A for a valid proof obligation hash.\n   - Have Peer B request this proof.\n   - Verify that Peer B rejects the invalid proof upon receipt because it fails the verification step, and then proceeds to the next stage of the resolution pipeline (local computation).",
+      "status": "pending",
+      "dependencies": [
+        18,
+        20,
+        25
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Canonical Serialization and Hashing for Proof Obligations",
+          "description": "Develop a stable, canonical serialization format for proof obligations from the constraint system. This serialization must be independent of incidental details like variable names to ensure logically equivalent obligations produce identical hashes. This hash will be the content-addressable key for the cache.",
+          "dependencies": [],
+          "details": "Use a technique like de Bruijn indexing to abstract away variable names during serialization. The serialization format should be a well-defined, compact byte stream (e.g., using a library like MessagePack or a custom binary format). The final output should be a cryptographic hash (e.g., SHA-256) of this byte stream. This function will be a prerequisite for all caching operations.",
+          "status": "pending",
+          "testStrategy": "Create multiple logically equivalent but syntactically different proof obligations. Assert that they all produce the same hash. Create two logically distinct obligations and assert they produce different hashes."
+        },
+        {
+          "id": 2,
+          "title": "Create a Local On-Disk Proof Cache",
+          "description": "Implement a local, persistent cache on the file system to store and retrieve computed proofs. The cache will use the proof obligation hash as the key, enabling fast local lookups.",
+          "dependencies": [],
+          "details": "The cache should be stored in a standard user cache directory (e.g., `~/.cache/my_system/proofs/`). Proofs should be stored in files named after their obligation hash (e.g., `<hash>.proof`). Implement functions for `put(hash, proof_data)` and `get(hash) -> Option<proof_data>`. Handle file I/O, including creating the directory structure if it doesn't exist.",
+          "status": "pending",
+          "testStrategy": "Test the `put` and `get` functions. Verify that a proof can be stored with a given hash (from subtask #28) and then retrieved using the same hash. Test edge cases like a cache miss (requesting a hash that doesn't exist) and file system errors."
+        },
+        {
+          "id": 3,
+          "title": "Integrate Local Cache Lookup into the Proof Resolution Pipeline",
+          "description": "Modify the core proof search mechanism to query the local on-disk cache before attempting to generate a proof. If a proof is generated locally, it should be stored in the cache for future use.",
+          "dependencies": [],
+          "details": "In the proof search function (from Task 20), first, generate the hash of the proof obligation using the function from subtask #28. Second, attempt to retrieve the proof from the local cache using the `get` function from subtask #29. If a proof is found (cache hit), return it. If not (cache miss), proceed with the existing proof generation logic. Upon successful generation of a new proof, use the `put` function from subtask #29 to store it in the local cache.",
+          "status": "pending",
+          "testStrategy": "Run a proof obligation twice. The first run should be a cache miss, triggering local computation and populating the cache. The second run for the *same* obligation should be a cache hit, resulting in a significantly faster resolution time. Use logging or metrics to confirm the cache hit."
+        },
+        {
+          "id": 4,
+          "title": "Define and Implement a Peer-to-Peer Proof Query Protocol",
+          "description": "Design and implement a simple P2P network protocol for nodes to query each other for proofs by hash. This includes both the client-side logic to send a request and the server-side logic to listen for and respond to requests from its local cache.",
+          "dependencies": [],
+          "details": "Define two primary message types: `QUERY <hash>` and `PROOF <hash> <proof_data>`. A node should listen on a configured port for incoming `QUERY` messages. Upon receiving a query, it should check its local on-disk cache (from subtask #29) for the corresponding proof. If found, it responds with a `PROOF` message. The client logic will involve connecting to a list of known peers and sending a `QUERY` message.",
+          "status": "pending",
+          "testStrategy": "Set up two instances of the application. On instance A, populate its local cache with a proof. From instance B, send a `QUERY` message for that proof's hash to instance A. Verify that instance B receives the correct `PROOF` message from A. Test the case where A does not have the proof (no response or a `NOT_FOUND` response)."
+        },
+        {
+          "id": 5,
+          "title": "Integrate Distributed Lookup and Verification into the Resolution Pipeline",
+          "description": "Enhance the proof resolution pipeline to query the network for a proof as the first step. Crucially, any proof received from the network must be formally verified against the obligation before being used or cached locally.",
+          "dependencies": [],
+          "details": "Modify the pipeline from subtask #30. The new resolution order will be: 1. Query network peers (using the client from subtask #31). 2. If a proof is received, verify it against the original obligation. If valid, use it and store it in the local cache. 3. If no proof is found on the network or the received proof is invalid, proceed with the existing logic (check local cache, then compute). The verification step is critical for security and correctness.",
+          "status": "pending",
+          "testStrategy": "Set up three nodes (A, B, C). Node A has a valid proof. Node C has an invalid proof for the same hash. Node B requests the proof. Test that B can receive, verify, and use the proof from A. Then, test that if B receives the proof from C, it fails verification, discards it, and falls back to other resolution methods."
         }
       ]
     }

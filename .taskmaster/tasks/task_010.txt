@@ -1,6 +1,6 @@
 # Task ID: 10
 # Title: Dependent Types Implementation (Π-types and Σ-types)
-# Status: pending
+# Status: done
 # Dependencies: 4
 # Priority: medium
 # Description: Implement dependent function types (Π-types) and dependent pair/product types (Σ-types) in the type system and type checker.
@@ -11,31 +11,31 @@ Extend type representations: `PiType(var_name, var_type, body_type)`, `SigmaType
 Define and type check functions using Π-types (e.g., a function returning a length-indexed vector `Vec A n`). Define and type check data structures using Σ-types (e.g., a pair where the type of the second element depends on the first `(Sigma (n : Nat) (Vec Bool n))`). Test with simple examples like `(deftype Vec ((A : Type) (n : Nat)) ...)` where `n` is used in constraints or structure.
 
 # Subtasks:
-## 1. Define AST Nodes and Internal Representation for Π-types and Σ-types [pending]
+## 1. Define AST Nodes and Internal Representation for Π-types and Σ-types [done]
 ### Dependencies: None
 ### Description: Extend the Abstract Syntax Tree (AST) and internal type representation to include `PiType(var_name, var_type, body_type)` and `SigmaType(var_name, var_type, body_type)`. This forms the foundational data structures for dependent types.
 ### Details:
 Define `PiType` structure: `var_name` (String/Identifier), `var_type` (Type Expression), `body_type` (Type Expression which may refer to `var_name`). Define `SigmaType` structure: `var_name` (String/Identifier), `var_type` (Type Expression), `body_type` (Type Expression which may refer to `var_name`). Ensure these new type structures integrate with existing type representations (e.g., as variants in an enum or subclasses). Consider how `var_name` will be bound within `body_type` (e.g., de Bruijn indices or explicit name binding).
 
-## 2. Implement Parser Extensions for Π-type and Σ-type Syntax [pending]
+## 2. Implement Parser Extensions for Π-type and Σ-type Syntax [done]
 ### Dependencies: 10.1
 ### Description: Update the language parser to recognize and correctly parse the syntax for Π-types (e.g., `(Pi (x : A) (B x))` or `(x : A) -> B x`) and Σ-types (e.g., `(Sigma (x : A) (B x))` or `(x : A) * B x`).
 ### Details:
 Define or confirm the concrete syntax for Π-types and Σ-types. Modify the parser grammar (e.g., LALR, PEG, or recursive descent) to incorporate these new syntactic forms. Ensure the parser constructs the correct `PiType` and `SigmaType` AST nodes defined in Subtask 1, capturing `var_name`, `var_type`, and `body_type` appropriately.
 
-## 3. Implement Core Type-Level Substitution and Normalization Engine [pending]
+## 3. Implement Core Type-Level Substitution and Normalization Engine [done]
 ### Dependencies: 10.1
 ### Description: Develop the foundational engine for substituting values (or value expressions) into type expressions and normalizing these expressions. This is essential for resolving dependencies in Π-types and Σ-types during type checking.
 ### Details:
 Implement `substitute(type_expr, var_name, value_expr)`: Replaces free occurrences of `var_name` in `type_expr` with `value_expr`. Must correctly handle variable capture (e.g., via alpha-conversion or de Bruijn indices). Implement `normalize(type_expr)`: Reduces a type expression to its normal form. This may involve evaluating parts of expressions that are known at compile-time (e.g., constants, simple arithmetic if allowed in types, or reducing beta-redexes if functions are allowed in types). Ensure this engine can operate on all type structures, including the new `PiType` and `SigmaType` (e.g., substitution under binders).
 
-## 4. Implement Type Checking for Π-types (Dependent Functions) [pending]
+## 4. Implement Type Checking for Π-types (Dependent Functions) [done]
 ### Dependencies: 10.1, 10.2, 10.3
 ### Description: Extend the type checker to handle formation, introduction (lambda abstraction), and elimination (application) rules for Π-types, utilizing the substitution and normalization engine.
 ### Details:
 Formation: For `(Pi (x : A) Bx)`, check that `A` is a valid type. Then, in a context extended with `x : A`, check that `Bx` is a valid type. Introduction (Lambda): For `lambda (x : A) . body`, type check `body` in a context extended with `x : A`. If `body : Bx`, the lambda has type `(Pi (x : A) Bx)`. Elimination (Application): For `f arg`, if `f : (Pi (x : A) Bx)` and `arg : A'`, check type equivalence of `A` and `A'`. The result type is `Bx` with `arg` substituted for `x`, followed by normalization: `normalize(substitute(Bx, x, arg))`. Update the typing environment/context management to handle the dependent variable `x` correctly.
 
-## 5. Implement Type Checking for Σ-types (Dependent Pairs) [pending]
+## 5. Implement Type Checking for Σ-types (Dependent Pairs) [done]
 ### Dependencies: 10.1, 10.2, 10.3
 ### Description: Extend the type checker for formation, introduction (pair construction), and elimination (projections) of Σ-types, utilizing the substitution and normalization engine.
 ### Details:

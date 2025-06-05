@@ -3,69 +3,78 @@
 # Status: pending
 # Dependencies: 3, 4
 # Priority: medium
-# Description: Implement a comprehensive error reporting and diagnostics system. This system will generate HoTT-aware error messages, report type constraint violations and effect-related errors, and provide user-friendly diagnostic information to improve developer experience.
+# Description: Implement a comprehensive, HoTT-aware error reporting and diagnostics system tailored for a 3-tier architecture. The system will replace traditional stack traces with context-aware diagnostics for proof failures (Tier 1), effect resolution issues (Tier 2), and runtime effect handler problems (Tier 3). It will generate messages that explain proof obligation failures, effect context violations, dependent type mismatches, and type universe errors, guiding users toward correct dependent type usage.
 # Details:
-1. **Error Data Structures**: Define robust data structures for representing various error types (e.g., type mismatch, unbound variable, arity mismatch, constraint violation, effect errors). These structures should capture detailed contextual information: source location (file, line, column), relevant AST nodes, expected vs. actual types/values, and any HoTT-specific information.
-2. **HoTT-Aware Message Generation**: Develop a module to translate error data structures into human-readable, HoTT-aware messages. Messages should use precise HoTT terminology where appropriate (e.g., explaining path equality issues, universe inconsistencies, or type family application errors). Leverage type representations from Task 3 (Basic Type System) for accurate display and explanation of types.
-3. **Type Constraint Violation Reporting**: Integrate with the type checker (Task 4) to receive information about type constraint violations. Clearly explain which constraint was violated and why, providing context from the source code.
-4. **Effect-Related Error Handling Framework**: Design the system to be extensible for effect-related errors. Implement initial handling for any effect-related errors that can be detected with the current system components. Provide clear messages for effect mismatches or unhandled effects.
-5. **User-Friendly Diagnostics**: Focus on clarity, conciseness, and actionability of error messages. Include suggestions for fixes where possible. Ensure error messages clearly point to the source code location of the error.
-6. **Integration**: Integrate this system with the type checker (Task 4) and potentially other compiler phases that can generate errors. Ensure that error reporting is consistent across the system.
+1. **Tier-Aware Error Data Structures**: Define data structures that capture the context of our 3-tier architecture. This includes specific structures for:
+    *   **Tier 1 Proof Failures**: Capturing the proof goal, hypotheses, and the point of failure in the proof term.
+    *   **Tier 2 Effect Violations**: Representing effect resolution failures, including expected vs. actual effect contexts and the source of the violation.
+    *   **Tier 3 Runtime Handler Errors**: Storing information about failures within runtime effect handlers.
+    *   **Dependent Type Errors**: Specifically for universe inconsistencies and dependent type mismatches, capturing the path and context of the type dependency.
+2. **Contextual Diagnostic Generation**: Develop a module to translate error structures into context-aware diagnostics, replacing traditional stack traces. The output should clearly present:
+    *   **Proof Obligation Traces**: For Tier 1, show the sequence of proof obligations that led to the failure.
+    *   **Effect Context Diffs**: For Tier 2, visualize the discrepancy between required and provided effect contexts.
+    *   **Dependent Type Mismatch Explanations**: Clearly articulate why a dependent type application is incorrect, guiding the user on how to fix it.
+3. **Integration with 3-Tier System**:
+    *   Integrate with the **Tier 1 proof engine** to capture and report proof failures.
+    *   Integrate with the **Tier 2 effect checker/resolver** to report effect violations.
+    *   Integrate with the **Tier 3 runtime system** to handle and report errors from effect handlers.
+4. **User Guidance for Dependent Types**: Ensure all relevant error messages, especially for type mismatches, are designed to educate the user on the principles of dependent types, providing actionable suggestions for correcting their code.
 
 # Test Strategy:
-1. **Unit Tests for Error Message Generation**: Create mock error data objects for various scenarios (type mismatches, HoTT-specific errors, constraint violations). Verify that generated messages are accurate, informative, HoTT-aware, and correctly formatted, using type definitions from Task 3.
-2. **Integration Tests with Type Checker (Task 4)**: Use code snippets designed to produce specific type errors. Run them through the type checker (once Task 4 is complete) and verify that the enhanced error reporting system produces the expected user-friendly and HoTT-aware diagnostic messages, including correct source locations.
-3. **Constraint Violation Tests**: Write test cases where type constraints are violated. Ensure error messages clearly identify the violated constraint.
-4. **Effect-Related Error Tests**: Test basic effect error reporting capabilities and the extensibility of the framework using simulated effect errors.
-5. **User-Friendliness Review**: Conduct reviews of error messages for clarity, helpfulness, and actionability.
-6. **HoTT-Awareness Validation**: Specifically test scenarios involving HoTT concepts in errors, verifying correct terminology and explanations by referencing type structures from Task 3.
+1. **Unit Tests for Error Structures**: Verify that the new tier-aware data structures correctly capture context for proof failures, effect violations, and dependent type errors.
+2. **Tier 1 Proof Failure Tests**: Create test cases with incorrect proofs. Verify that the system generates clear proof obligation traces and accurately identifies the point of failure.
+3. **Tier 2 Effect Violation Tests**: Write code that violates effect constraints. Test that the system correctly reports the effect context mismatch and points to the source of the violation.
+4. **Tier 3 Runtime Handler Tests**: Simulate failures within runtime effect handlers and verify that the error reporting system captures and presents the errors correctly.
+5. **Dependent Type Error Tests**: Write code with common dependent type errors (e.g., universe inconsistencies, incorrect path applications). Verify that the error messages provide clear explanations and helpful guidance.
+6. **Diagnostic Usability Review**: Conduct reviews of the generated diagnostics (proof traces, effect diffs) for clarity, accuracy, and actionability with developers familiar with HoTT and effect systems.
 
 # Subtasks:
-## 1. Define Core Error Data Structures and Contextual Information Capture [pending]
+## 1. Define Tier-Aware Error Data Structures for Proofs, Effects, and Types [pending]
 ### Dependencies: None
-### Description: Establish the foundational data structures for representing various error types (e.g., type mismatch, unbound variable, arity mismatch, constraint violation, effect errors). These structures must capture detailed contextual information crucial for diagnostics, including source location, relevant AST nodes, expected vs. actual types/values, and HoTT-specific details.
+### Description: Establish foundational data structures tailored for our 3-tier architecture. These structures must capture detailed context for Tier 1 proof failures, Tier 2 effect violations, Tier 3 runtime errors, and complex dependent type mismatches.
 ### Details:
-1. Define an enumeration or a set of classes/structs for high-level error categories (e.g., `TypeError`, `ScopeError`, `ConstraintViolationError`, `EffectError`).
-2. For each specific error type, define fields to store: source location (file path, line, column, span), references/IDs of relevant AST nodes, expected/actual types or values, and any HoTT-specific information (e.g., path details, universe levels).
-3. Implement a central error accumulator or collector service that compiler phases can use to report instances of these error structures.
-4. Ensure data structures are robust and can be serialized if needed for later analysis or tooling.
+1. Define specific classes/structs for `ProofFailureError`, `EffectContextViolationError`, `RuntimeHandlerError`, and `DependentTypeError`.
+2. For `ProofFailureError`, include fields for the proof goal, hypotheses, and the failing sub-term.
+3. For `EffectContextViolationError`, include fields for expected vs. actual effect signatures and the operation causing the violation.
+4. For `DependentTypeError`, include fields for universe levels, path details, and the context of the type dependency.
+5. Update the central error collector to handle these new, specialized error structures.
 
-## 2. Develop HoTT-Aware Error Message Generation Engine [pending]
+## 2. Develop Contextual Diagnostic Generation Engine [pending]
 ### Dependencies: 19.1
-### Description: Create a module responsible for translating the structured error data (from subtask 1) into human-readable, HoTT-aware error messages. This engine will leverage type representations from Task 3 (Basic Type System).
+### Description: Create a module to translate the structured, tier-aware error data (from subtask 1) into human-readable, contextual diagnostics that replace traditional stack traces. This includes generating proof failure traces and effect context diffs.
 ### Details:
-1. Implement a primary function or class that accepts an error data object (from subtask 1) as input.
-2. Develop formatting logic for each defined error category and specific error type. Prioritize common errors initially.
-3. Ensure messages utilize precise HoTT terminology where appropriate (e.g., explaining path equality issues, universe inconsistencies, type family application errors).
-4. Integrate with type representation utilities (from external Task 3) to display types accurately and understandably within error messages.
-5. Design the engine to be extensible for new error types and customizable message formats (e.g., plain text, markdown, JSON).
+1. Implement a primary function that accepts a tier-aware error object (from subtask 1).
+2. For `ProofFailureError`, generate a trace of the proof obligations leading to the failure.
+3. For `EffectContextViolationError`, generate a clear "diff" showing the discrepancy between the required and provided effect contexts.
+4. For `DependentTypeError`, generate messages that explain the universe mismatch or path inconsistency, guiding the user toward a correct formulation.
+5. Ensure the output format is clear and helps developers debug issues across the three tiers.
 
-## 3. Integrate Type Constraint Violation Reporting with Type Checker [pending]
+## 3. Integrate Tier 1 Proof Failure Reporting with Proof Engine [pending]
 ### Dependencies: 19.1, 19.2
-### Description: Modify the existing type checker (from external Task 4) to utilize the new error reporting system (subtasks 1 and 2) for reporting type constraint violations. Ensure messages clearly explain the violation and its context.
+### Description: Integrate the new error reporting system with the Tier 1 proof engine to capture and report proof failures, including failed proof obligations and ill-formed proof terms.
 ### Details:
-1. Identify all points in the type checker (external Task 4) where type constraints are enforced and violations can be detected.
-2. When a violation is detected, instantiate the appropriate error data structure (from subtask 1) with all relevant contextual information (e.g., the specific constraint, involved types/terms, source location of the constraint and the violation).
-3. Report the populated error object using the central error accumulator/collector.
-4. Verify that the message generation engine (subtask 2) produces clear, informative messages for these constraint violations, explaining which constraint was violated and why, referencing source code.
+1. Identify all points in the proof engine where proof obligations are generated and checked.
+2. When a proof fails, instantiate the `ProofFailureError` data structure (from subtask 1) with the goal, context, and failing term.
+3. Report the error object to the central collector.
+4. Verify that the diagnostic engine (subtask 2) produces a clear proof trace that helps the user understand why their proof is incorrect.
 
-## 4. Implement Framework and Initial Handling for Effect-Related Errors [pending]
+## 4. Integrate Tier 2 and Tier 3 Effect Error Reporting [pending]
 ### Dependencies: 19.1, 19.2
-### Description: Design the error reporting system to be extensible for effect-related errors and implement initial detection and reporting for such errors, including effect mismatches or unhandled effects.
+### Description: Integrate the error reporting system with the Tier 2 effect checker and Tier 3 runtime system to provide detailed diagnostics for effect-related errors.
 ### Details:
-1. Extend the error data structures (subtask 1) to specifically represent effect-related errors (e.g., `EffectMismatchError`, `UnhandledEffectError`, `ForbiddenEffectError`). Include fields for expected effects, actual effects, effect context, and relevant source locations.
-2. Update the message generation engine (subtask 2) to produce clear and specific messages for these new effect error types.
-3. Identify any current system components (e.g., type checker, an early-stage effect analysis pass) that can detect basic effect errors.
-4. Integrate these components to report effect errors using the new structures and message generation.
-5. Ensure the design allows for future expansion as the effect system (if separate) capabilities grow.
+1. In the Tier 2 effect checker, when an effect violation is detected, create and report an `EffectContextViolationError` object.
+2. Ensure the error context includes the expected and actual effects.
+3. In the Tier 3 runtime, wrap effect handler execution to catch exceptions or failures.
+4. When a handler fails, create and report a `RuntimeHandlerError` object with relevant runtime state.
+5. Verify the diagnostic engine (subtask 2) produces clear messages for both compile-time effect violations and runtime handler failures.
 
-## 5. Enhance User-Friendliness of Diagnostics and Add Suggestions [pending]
+## 5. Refine Diagnostics for Dependent Types and Add User Guidance [pending]
 ### Dependencies: 19.2, 19.3, 19.4
-### Description: Focus on improving the overall developer experience by making all error messages exceptionally clear, concise, actionable, and providing helpful suggestions for fixes where possible. Ensure errors clearly point to source locations.
+### Description: Focus on making diagnostics for dependent type errors exceptionally clear and educational. Refine messages to guide users in correctly using dependent types, path equalities, and universe levels.
 ### Details:
-1. Review all error messages generated by the system (from subtask 2, for errors from subtask 3, 4, and others). Refine wording for maximum clarity and conciseness, balancing HoTT precision with understandability.
-2. Implement logic to provide actionable suggestions for common error types (e.g., for unbound variables: "Did you mean 'variable_x'?", for type mismatches: "Consider applying function Y or converting X to Z").
-3. Ensure all error messages clearly and accurately point to the source code location (file, line, column, span) of the error. Consider mechanisms to display relevant code snippets.
-4. Develop and document guidelines for writing good error messages to maintain quality as new error types are added.
-5. Collect feedback on error messages from potential users if possible.
+1. Review and refine all messages related to `DependentTypeError`.
+2. For common errors like universe inconsistencies, provide explicit suggestions (e.g., "Try lifting the type to a higher universe level").
+3. For dependent type mismatches, attempt to pinpoint the specific part of the type that is incorrect and explain the dependency.
+4. Ensure error messages related to type families and path equalities are precise and link back to the relevant definitions.
+5. Collect feedback from developers on the clarity of these specific error messages.
 

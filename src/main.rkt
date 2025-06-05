@@ -42,7 +42,7 @@
          [ast (parse tokens)]
          [checked-type (type-check ast)])
     ;; Type checking is now integrated
-    (evaluate ast)))
+    (evaluate ast (make-global-environment))))
 
 ;; File evaluation
 (define (evaluate-file filename)

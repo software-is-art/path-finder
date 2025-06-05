@@ -1,6 +1,6 @@
 # Task ID: 6
 # Title: Basic REPL Implementation
-# Status: pending
+# Status: done
 # Dependencies: 5
 # Priority: medium
 # Description: Create a basic Read-Eval-Print Loop (REPL) for interactive development, integrating the parser, type checker, and evaluator. This provides an initial user interface for the language.
@@ -11,31 +11,31 @@ The REPL should: Read a line of user input. Parse the input S-expression. Type c
 Interactive testing: Define types using `deftype`. Define functions. Instantiate types. Evaluate expressions involving these definitions. Check error handling and reporting within the REPL for all stages (read, type check, eval). Verify environment persistence.
 
 # Subtasks:
-## 1. Implement REPL Core Loop and User Input Reading [pending]
+## 1. Implement REPL Core Loop and User Input Reading [done]
 ### Dependencies: None
 ### Description: Set up the fundamental REPL structure that continuously prompts the user for input, reads a line of text, and handles basic exit commands (e.g., 'exit', 'quit'). This forms the basic interaction shell.
 ### Details:
 Implement an infinite loop that: 1. Prints a prompt (e.g., '> '). 2. Reads a line of text from standard input. 3. Checks if the input is an exit command (e.g., 'exit', ':q'). If so, terminate the REPL. Otherwise, proceed to the next step (parsing, to be added in a subsequent subtask). Use appropriate I/O functions for the target language/environment.
 
-## 2. Integrate S-expression Parser and Handle Parse Errors [pending]
+## 2. Integrate S-expression Parser and Handle Parse Errors [done]
 ### Dependencies: 6.1
 ### Description: Connect the existing S-expression parser to the REPL. For each user input (that is not an exit command), attempt to parse it. If parsing fails, display a clear, user-friendly parse error message. If successful, the AST should be available for the next stage.
 ### Details:
 After reading input in the REPL loop (from subtask 1), pass the input string to the `parse()` function from the parser module. Implement try-catch or error-checking around the parse call. If a parse error occurs, print a message like 'Parse Error: [error details]' to standard error and loop back for new input. If successful, store the generated AST.
 
-## 3. Integrate Type Checker and Handle Type Errors [pending]
+## 3. Integrate Type Checker and Handle Type Errors [done]
 ### Dependencies: 6.2
 ### Description: Integrate the type checker module into the REPL. After successful parsing, pass the AST to the type checker. If type checking fails, display a clear type error message. If successful, the (potentially annotated) AST proceeds to evaluation. For this subtask, the type checker will operate with a fresh/empty environment for each input.
 ### Details:
 After a successful parse (from subtask 2), call the `typeCheck(ast, initialEnvironment)` function from the type checker module. `initialEnvironment` will be a new, empty environment for each call in this subtask. Implement try-catch or error-checking for type errors. If a type error occurs, print 'Type Error: [error details]' and loop back. If successful, store the (typed) AST.
 
-## 4. Integrate Evaluator, Handle Runtime Errors, and Print Results [pending]
+## 4. Integrate Evaluator, Handle Runtime Errors, and Print Results [done]
 ### Dependencies: 6.3
 ### Description: Integrate the evaluator module. After successful type checking, pass the AST to the evaluator. Print the result of the evaluation. If a runtime error occurs, display a clear runtime error message. For this subtask, the evaluator will operate with a fresh/empty environment for each input (matching the type checker).
 ### Details:
 After successful type checking (from subtask 3), call the `evaluate(ast, initialEnvironment)` function from the evaluator module. `initialEnvironment` will be a new, empty environment. Implement try-catch or error-checking for runtime errors. If evaluation is successful, print the resulting value to standard output. If a runtime error occurs (e.g., division by zero, unbound variable before persistence), print 'Runtime Error: [error details]'. Always loop back for new input.
 
-## 5. Implement Persistent Environment Across REPL Inputs [pending]
+## 5. Implement Persistent Environment Across REPL Inputs [done]
 ### Dependencies: 6.4
 ### Description: Modify the REPL to initialize and maintain a single, persistent environment that is used across all user inputs. This allows definitions (e.g., variables, functions) made in one REPL interaction to be available in subsequent interactions.
 ### Details:

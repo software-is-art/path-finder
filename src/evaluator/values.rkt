@@ -30,12 +30,20 @@
 ;; Equivalence values (inhabitants of equivalence types)
 (struct equivalence-runtime-value value (type-a type-b function quasi-inv) #:transparent)
 
+;; String values (for Tier 2 effects)
+(struct string-value value (content) #:transparent)
+
+;; Effect values (algebraic effects that signal operations)
+(struct effect-value value (effect) #:transparent)
+
+;; All effects now use the generic effect-value struct
+
 ;; Values have no inhabitants for Empty type (𝟘)
 
 ;; Value contracts
 (define value/c
   (or/c constructor-value? closure-value? builtin-value? unit-value? 
-        path-runtime-value? equivalence-runtime-value?))
+        path-runtime-value? equivalence-runtime-value? string-value? effect-value?))
 
 ;; Predefined values for HoTT inductive types
 
@@ -54,33 +62,10 @@
 (define unit (unit-value))
 
 ;; Helper to create natural number values from Racket numbers
-(define/contract (racket-number->nat-value n)
-  (-> exact-nonnegative-integer? constructor-value?)
-  (if (= n 0)
-      zero-value
-      (succ-value (racket-number->nat-value (- n 1)))))
-
-;; Helper to extract Racket number from natural number value
-(define/contract (nat-value->racket-number val)
-  (-> constructor-value? exact-nonnegative-integer?)
-  (match val
-    [(constructor-value "zero" '() _) 0]
-    [(constructor-value "succ" (list pred) _) 
-     (+ 1 (nat-value->racket-number pred))]
-    [_ (error "Not a natural number value: " val)]))
-
-;; Helper to create boolean value from Racket boolean
-(define/contract (racket-boolean->bool-value b)
-  (-> boolean? constructor-value?)
-  (if b true-value false-value))
-
-;; Helper to extract Racket boolean from boolean value
-(define/contract (bool-value->racket-boolean val)
-  (-> constructor-value? boolean?)
-  (match val
-    [(constructor-value "true" '() _) #t]
-    [(constructor-value "false" '() _) #f]
-    [_ (error "Not a boolean value: " val)]))
+;; ============================================================================
+;; PURE HOTT VALUE SYSTEM - NO RACKET DEPENDENCIES
+;; ============================================================================
+;; All Racket conversion functions moved to host-bridge.rkt for self-hosting
 
 ;; Type checking for values
 (define/contract (value-has-type? val type)
@@ -126,6 +111,8 @@
     [(closure-value _ _ _) "#<closure>"]
     [(builtin-value name _ _) (string-append "#<builtin:" name ">")]
     [(unit-value) "unit"]
+    [(string-value content) (string-append "\"" content "\"")]
+    [(effect-value effect) (string-append "#<effect:" (format "~a" effect) ">")]
     [(path-runtime-value type start end proof)
      (string-append "path[" (type->string type) " : " 
                    (value->string start) " = " (value->string end) "]")]

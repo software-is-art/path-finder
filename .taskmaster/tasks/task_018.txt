@@ -3,119 +3,98 @@
 # Status: pending
 # Dependencies: 5, 4
 # Priority: medium
-# Description: Extend the type system to support constraints on type definitions using a `:where` clause. This includes parsing constraint expressions, implementing validation logic for both compile-time and runtime checks, and integrating these checks into Canonical Instantiation Functions (CIFs).
+# Description: Extend the type system to support dependent type constraints on type definitions using a `:where` clause. This will be verified at compile-time using the HoTT type system. The implementation will focus on generating proof obligations from constraints, requiring proof-of-satisfaction during instantiation, and creating proof-carrying values. This system will integrate with the Tier 1 (compile-time verification) and Tier 2 (constraint-aware effects) architecture, replacing traditional runtime checks.
 # Details:
 **1. Parser Extension (extending Task 5 `deftype`):**
    - Modify the parser to recognize an optional `:where` clause in `deftype` expressions.
-   - Syntax: `(deftype TypeName ((field1 Type1) (field2 Type2) ...) :where <constraint-expression>)`
-   - The `<constraint-expression>` is a single expression that should evaluate to a boolean. It will be parsed into an AST node.
-   - Ensure field names (e.g., `field1`, `field2`) are correctly scoped and accessible within the `<constraint-expression>`.
+   - Syntax: `(deftype TypeName ((field1 Type1) (field2 Type2) ...) :where <propositional-type>)`
+   - The `<propositional-type>` is a type-level expression that depends on the fields of the struct (e.g., `(> field1 0)` is interpreted as a proposition to be proven).
 
 **2. AST Representation:**
-   - Define how the parsed constraint expression is stored within the AST representation of the type definition (e.g., as an additional child node or property of the type definition AST node).
+   - Define how the parsed propositional type is stored within the AST representation of the type definition.
 
-**3. Type Checker Integration (interacting with Task 4):**
-   - **Constraint Expression Type Checking:** The type checker must verify that the `<constraint-expression>` evaluates to a Boolean type. An error should be reported if it does not.
-   - **Compile-Time Constraint Validation:**
-     - Implement logic to attempt static evaluation of constraints if they involve only literal values or other compile-time evaluable expressions.
-     - If a constraint is proven true at compile-time, it can be noted or optimized.
-     - If a constraint is proven false at compile-time, the type definition itself should be considered invalid, and a type error reported.
+**3. Type Checker & Proof Obligations (Tier 1):**
+   - The type checker must interpret the `:where` clause as a proof obligation, creating a dependent type. For a type `T` with fields `f1, f2` and constraint `P`, the full type is effectively `(T f1 f2 where (P f1 f2))`.
+   - At instantiation sites, e.g., `(T val1 val2)`, the type checker must verify that a proof for the proposition `(P val1 val2)` can be synthesized or is explicitly provided.
+   - Failure to construct or verify a proof must result in a compile-time type error.
 
-**4. CIF Modification (extending Task 5 CIFs):**
-   - Modify the generation and/or evaluation logic of Canonical Instantiation Functions (CIFs) for types that have constraints.
-   - **Runtime Constraint Evaluation:** For constraints not fully resolved at compile-time, the CIF must evaluate the constraint expression after the basic instance of the type is created but before it's returned.
-   - The evaluation environment for the constraint expression within the CIF must bind the type's field names to the corresponding values from the instance being created.
-   - If a runtime constraint evaluates to `#f` (false), the CIF must raise a distinct runtime error (e.g., `ConstraintViolationError`), preventing the instantiation of the type.
+**4. Proof-Carrying Values & Instantiation:**
+   - Instances of constrained types are "proof-carrying values." The runtime representation of the value must bundle the data with the evidence (the proof object) that its constraints are satisfied.
+   - The concept of Canonical Instantiation Functions (CIFs) is updated: instead of performing a runtime boolean check, the instantiation process now requires a proof object as an input (which may be synthesized by the compiler) and produces a proof-carrying value.
 
-**5. Evaluation of Constraints:**
-   - Constraint expressions will be evaluated using the existing evaluation engine (developed in Task 2).
-   - Ensure the evaluation context for constraints correctly resolves field names and any functions or values available in the scope where the type is defined or instantiated.
+**5. Tier 2 Integration (Constraint-Aware Effects):**
+   - Integrate with the Tier 2 effect system. Functions that produce values of a constrained type must have an effect signature that reflects the proof obligation.
+   - For example, a function `(-> Nat PositiveNat)` must have an effect that it discharges the proof for `(IsPositive result)`.
+   - Conversely, functions consuming proof-carrying values can use the carried proof to satisfy their own preconditions.
 
 **6. Error Reporting:**
-   - Implement clear and informative error messages for:
+   - Implement clear and informative compile-time error messages for:
      - Syntax errors in `:where` clauses.
-     - Type errors in constraint expressions (e.g., expression not Boolean-typed).
-     - Compile-time constraint violations (e.g., constraint statically proven false).
-     - Runtime constraint violations, indicating the specific type, the values being instantiated, and the constraint expression that failed.
+     - Proof failures during instantiation, indicating the specific proposition that could not be proven and the values involved.
 
 # Test Strategy:
 **1. Parser Tests:**
-   - Test `deftype` with valid `:where` clauses using various expressions (e.g., `(> field1 0)`, `(and (> field1 0) (< field2 100))`, `(string=? (kind-of-shape) "circle")`).
+   - Test `deftype` with valid `:where` clauses using various propositional types (e.g., `(IsPositive field1)`, `(< x y)`).
    - Test `deftype` with syntactically invalid `:where` clauses.
-   - Test `deftype` without a `:where` clause to ensure backward compatibility.
 
-**2. Type Checker & Compile-Time Constraint Tests:**
-   - Define a type with a constraint that is statically true (e.g., `(deftype T1 (x Nat) :where (> 5 0))`). Verify the type definition is accepted.
-   - Define a type with a constraint that is statically false (e.g., `(deftype T2 (x Nat) :where (< 0 0))`). Verify the type definition is rejected with a compile-time error.
-   - Define a type with a constraint expression that does not evaluate to Boolean (e.g., `(deftype T3 (x Nat) :where x)`). Verify a type error is reported.
-   - Verify correct scoping of field names within constraint expressions during type checking.
-
-**3. CIF & Runtime Constraint Tests:**
-   - Define `(deftype PositiveNat (value Nat) :where (> value 0))`:
-     - Test `(PositiveNat 10)`: Should succeed and return an instance.
-     - Test `(PositiveNat 0)`: Should raise a runtime `ConstraintViolationError`.
-   - Define `(deftype LimitedRange (val Int) :where (and (>= val 0) (<= val 10)))`:
-     - Test `(LimitedRange 5)`: Should succeed.
-     - Test `(LimitedRange -1)`: Should raise a runtime `ConstraintViolationError`.
-     - Test `(LimitedRange 11)`: Should raise a runtime `ConstraintViolationError`.
-   - Define `(deftype OrderedPair (x Nat) (y Nat) :where (< x y))`:
+**2. Type Checker & Proof Verification Tests (Tier 1):**
+   - Define `(deftype PositiveNat (value Nat) :where (IsPositive value))`.
+     - Test `(PositiveNat 10)`: Should succeed at compile time as a proof can be synthesized.
+     - Test `(PositiveNat 0)`: Should fail at compile time with a proof error.
+   - Define `(deftype OrderedPair (x Nat) (y Nat) :where (< x y))`.
      - Test `(OrderedPair 1 2)`: Should succeed.
-     - Test `(OrderedPair 2 1)`: Should raise a runtime `ConstraintViolationError`.
+     - Test `(OrderedPair 2 1)`: Should fail at compile time with a proof error.
 
-**4. Error Reporting Tests:**
-   - For each failure mode (syntax, type error, compile-time violation, runtime violation), verify that the error message is clear, indicates the source of the error, and provides relevant context (e.g., failed constraint expression, values involved).
+**3. Proof-Carrying Value Tests:**
+   - Verify that an instance of `PositiveNat` contains both the numeric value and a proof object for `IsPositive`.
+   - Write a function `(fn [p PositiveNat] ...)` and verify that within its body, the compiler knows that `(> (p.value) 0)` is true without a runtime check.
+
+**4. Tier 2 Effect System Tests:**
+   - Test that a function declared as `(-> Nat PositiveNat)` is type-checked correctly and its effect signature reflects the proof obligation.
+   - Test that a function that internally calls `(PositiveNat -1)` fails to type-check because it cannot discharge its effect.
+
+**5. Error Reporting Tests:**
+   - For each proof failure mode, verify that the error message clearly indicates the proposition that failed, the values used, and why the proof could not be constructed.
 
 # Subtasks:
-## 1. Extend Parser and AST for `:where` Constraint Clause [pending]
+## 1. Extend Parser and AST for Dependent Type Constraints [pending]
 ### Dependencies: None
-### Description: Modify the `deftype` parser to recognize an optional `:where` clause and define the Abstract Syntax Tree (AST) structure for storing the parsed constraint expression. This forms the foundation for constraint processing.
+### Description: Modify the `deftype` parser to recognize a `:where` clause containing a propositional type and update the AST to represent this dependent constraint.
 ### Details:
-1. Update the parser grammar for `deftype` expressions to support the syntax: `(deftype TypeName ((field1 Type1) ...) :where <constraint-expression>)`.
-2. The `<constraint-expression>` should be parsed into a standard AST node.
-3. Define how this constraint AST node is stored within the AST representation of the type definition (e.g., as a dedicated `constraint_expression` field or child node).
-4. Ensure that field names referenced within the `<constraint-expression>` are captured by the parser for later resolution during type checking and evaluation.
+1. Update the parser grammar for `deftype` to support the syntax: `(deftype TypeName ((field1 Type1) ...) :where <propositional-type>)`.
+2. The `<propositional-type>` should be parsed into a type-level AST node.
+3. Define how this constraint is stored within the AST of the type definition, linking it to the fields it depends on.
 
-## 2. Implement Type Checking for Constraint Expressions [pending]
+## 2. Generate Proof Obligations in Type Checker [pending]
 ### Dependencies: 18.1
-### Description: Integrate logic into the type checker (Task 4) to verify that constraint expressions provided in `:where` clauses are semantically valid and evaluate to a Boolean type. This ensures type safety for constraints.
+### Description: Integrate logic into the type checker to interpret a `:where` clause as a proof obligation, effectively creating a dependent type.
 ### Details:
-1. Access the constraint AST node from the type definition's AST (created in Subtask 1).
-2. Implement a type checking pass for the constraint expression.
-3. The type checking environment for the constraint expression must include the type's fields (e.g., `field1`, `field2`) with their declared types, making them accessible within the expression.
-4. Verify that the constraint expression ultimately resolves to a Boolean type. If not, report a type error.
-5. Report errors for any undefined variables or type mismatches within the constraint expression itself.
+1. The type checker, when processing a `deftype`, must identify the `:where` clause's proposition.
+2. It must establish the dependency of the proposition on the type's fields, creating a dependent type definition.
+3. This definition will be used to generate proof obligations at instantiation sites.
 
-## 3. Implement Compile-Time Constraint Validation [pending]
+## 3. Implement Compile-Time Proof Verification (Tier 1) [pending]
 ### Dependencies: 18.2
-### Description: Enhance the type checker to perform static evaluation of constraints when possible. If a constraint can be proven false at compile-time, the type definition itself should be considered invalid.
+### Description: Implement the core logic in the type checker to verify proofs for constraints at instantiation sites. This is the primary compile-time validation step.
 ### Details:
-1. After a constraint expression has been successfully type-checked as Boolean (from Subtask 2), attempt to statically evaluate it.
-2. Use the existing evaluation engine (from Task 2 development) for this purpose. The evaluation context should only include compile-time constant values and functions that are safe for compile-time evaluation.
-3. If the constraint expression evaluates to a literal `#f` (false) at compile-time, report a specific compile-time error indicating that the type definition is invalid due to an unsatisfiable constraint.
-4. If the constraint evaluates to a literal `#t` (true), this can be noted (e.g., for potential optimization, though the primary goal is validation).
-5. If the constraint cannot be fully evaluated at compile-time (e.g., it depends on runtime field values or non-foldable function calls), it should be passed through for runtime checking.
+1. When type-checking a call to a type constructor (e.g., `(MyType ...)`), retrieve the corresponding proof obligation.
+2. Attempt to automatically synthesize a proof for the obligation using the provided literal values and the HoTT system's theorem prover/proof synthesizer.
+3. If a proof cannot be synthesized, check if one was provided explicitly.
+4. A failure to find or verify a proof must result in a compile-time error.
 
-## 4. Modify CIFs for Runtime Constraint Evaluation [pending]
+## 4. Implement Proof-Carrying Values and Update Instantiation [pending]
 ### Dependencies: 18.3
-### Description: Update the generation and/or evaluation logic of Canonical Instantiation Functions (CIFs) to evaluate type constraints at runtime. If a constraint fails during instantiation, the CIF must raise a specific runtime error.
+### Description: Modify the runtime representation of constrained types to be proof-carrying and update the instantiation logic (e.g., CIFs) to construct these values.
 ### Details:
-1. For types that have a constraint (AST from Subtask 1) not fully resolved or proven true at compile-time (by Subtask 3):
-   a. Modify the CIF logic. After the basic instance of the type is created (fields are populated with initial values), the constraint expression must be evaluated.
-   b. The evaluation environment for the constraint expression within the CIF must bind the type's field names to the corresponding actual values from the instance being created.
-   c. Use the existing evaluation engine (Task 2) for this runtime evaluation.
-2. If the constraint expression evaluates to `#f` (false) at runtime, the CIF must raise a distinct runtime error (e.g., `ConstraintViolationError`). This error should prevent the instantiation of the type and the CIF should not return the partially formed instance.
-3. If the constraint evaluates to `#t` (true), the instantiation process completes normally, and the CIF returns the new instance.
+1. Define the runtime memory layout for a proof-carrying value, which bundles the data fields with a proof object.
+2. Modify the code generation for type instantiation. The instantiation function will now take the field values and a proof object as arguments.
+3. The compiler will be responsible for passing the synthesized or user-provided proof to this function at the call site.
+4. This replaces the old model of runtime boolean checks entirely.
 
-## 5. Implement Comprehensive Error Reporting for Constraints [pending]
+## 5. Integrate with Tier 2 Effects and Implement Error Reporting [pending]
 ### Dependencies: 18.4
-### Description: Ensure clear, informative, and user-friendly error messages are generated for all potential issues related to type constraints, including syntax errors, type errors, compile-time violations, and runtime violations.
+### Description: Connect the constraint system to the Tier 2 effect system and implement clear, user-friendly error messages for all stages of proof failure.
 ### Details:
-1. **Syntax Errors (Parser - Subtask 1):** Refine error messages for malformed `:where` clauses (e.g., `SyntaxError: Invalid constraint syntax in :where clause for type 'TypeName'. Expected single expression.`).
-2. **Type Errors (Type Checker - Subtask 2):** Ensure errors clearly state that a constraint expression must be Boolean, or if fields are used incorrectly (e.g., `TypeError: Constraint expression for type 'TypeName' must evaluate to Boolean, got 'Integer'.`).
-3. **Compile-Time Violations (Compile-Time Validation - Subtask 3):** Provide specific messages when a constraint is statically proven false (e.g., `CompileTimeError: Constraint for type 'TypeName' is statically false: '(<constraint-src>)'.`).
-4. **Runtime Violations (CIFs - Subtask 4):** Design the `ConstraintViolationError` to include:
-   - The name of the type being instantiated.
-   - The source form of the constraint expression that failed.
-   - The actual field names and their values for the instance that failed validation (e.g., `RuntimeError: Constraint violation for type 'TypeName'. Constraint '(<constraint-src>)' failed with values (field1: val1, field2: val2).`).
-5. Review and standardize all error messages for consistency and clarity.
+1. **Tier 2 Effects:** Ensure that functions producing constrained types declare this as part of their effect signature. The type checker must verify that the function body successfully discharges this proof obligation.
+2. **Error Reporting:** Design and implement clear compile-time error messages for proof failures. Messages should specify the proposition that failed and the concrete values that caused the failure.
 

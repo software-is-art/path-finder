@@ -41,7 +41,55 @@
       (type-env-define! env "*" nat-nat-nat)
       (type-env-define! env "-" nat-nat-nat)
       (type-env-define! env "=" nat-nat-bool)
-      (type-env-define! env "<" nat-nat-bool))
+      (type-env-define! env "<" nat-nat-bool)
+      (type-env-define! env "<=" nat-nat-bool)
+      (type-env-define! env ">" nat-nat-bool)
+      (type-env-define! env ">=" nat-nat-bool))
+
+    ;; Natural number query and unary operations
+    (let ([nat-bool (make-function-type Nat Bool)]
+          [nat-nat (make-function-type Nat Nat)])
+      (type-env-define! env "is-zero?" nat-bool)
+      (type-env-define! env "predecessor" nat-nat))
+    
+    ;; Constructor functions for inductive types (CIFs)
+    (let ([unit-nat (make-function-type Unit Nat)]
+          [nat-nat (make-function-type Nat Nat)]
+          [unit-bool (make-function-type Unit Bool)])
+      (type-env-define! env "zero" unit-nat)
+      (type-env-define! env "successor" nat-nat)
+      (type-env-define! env "true" unit-bool)
+      (type-env-define! env "false" unit-bool))
+
+    ;; Boolean logical operations
+    (let ([bool-bool-bool (make-function-type (make-product-type Bool Bool) Bool)]
+          [bool-bool (make-function-type Bool Bool)])
+      (type-env-define! env "and" bool-bool-bool)
+      (type-env-define! env "or" bool-bool-bool)
+      (type-env-define! env "not" bool-bool))
+
+
+    ;; Proof-aware safe operations (demonstrating path-based safety)
+    (let ([nat-nat-nat (make-function-type (make-product-type Nat Nat) Nat)])
+      (type-env-define! env "auto-safe-divide" nat-nat-nat))
+
+    ;; Tier 1: Computational CIFs (Mathematical operations with compile-time computation)
+    (let ([nat-nat-nat (make-function-type (make-product-type Nat Nat) Nat)])
+      (type-env-define! env "comp-add" nat-nat-nat)
+      (type-env-define! env "comp-mult" nat-nat-nat)
+      (type-env-define! env "comp-sub" nat-nat-nat)
+      (type-env-define! env "comp-divide" nat-nat-nat))
+
+    ;; Generic effect system primitives (no specific effects!)
+    (let ([effect-type (inductive-type "Effect" '())]
+          [handler-type (inductive-type "Handler" '())])
+      ;; Generic effect operations - the type checker doesn't know about specific effects
+      (type-env-define! env "perform-effect" 
+                        (make-function-type effect-type effect-type))
+      (type-env-define! env "handle-with" 
+                        (make-function-type (make-product-type effect-type handler-type) Unit))
+      (type-env-define! env "pure" 
+                        (make-function-type Unit effect-type)))
     
     ;; Path and equivalence operations - simplified types for now
     (let ([path-type (make-function-type Nat Nat)]  ; Simplified
@@ -65,7 +113,7 @@
     ;; Literals have their corresponding inductive types
     [(number-atom _) Nat]
     [(boolean-atom _) Bool]
-    [(string-atom _) (error "String literals not yet implemented in HoTT type system")]
+    [(string-atom _) (inductive-type "String" '())]
     
     ;; Variable lookup
     [(symbol-atom name)
@@ -191,28 +239,8 @@
          (error "Pattern literal type mismatch: expected" scrutinee-type "got" literal-type))
        env)]
     
-    ;; HoTT-specific patterns
-    [(zero-pattern)
-     (unless (hott-type-equal? scrutinee-type Nat)
-       (error "Zero pattern requires Nat type, got" scrutinee-type))
-     env]
-    
-    [(successor-pattern sub-pattern)
-     (unless (hott-type-equal? scrutinee-type Nat)
-       (error "Successor pattern requires Nat type, got" scrutinee-type))
-     (typecheck-pattern sub-pattern Nat env)]
-    
-    [(true-pattern)
-     (unless (hott-type-equal? scrutinee-type Bool)
-       (error "True pattern requires Bool type, got" scrutinee-type))
-     env]
-    
-    [(false-pattern)
-     (unless (hott-type-equal? scrutinee-type Bool)
-       (error "False pattern requires Bool type, got" scrutinee-type))
-     env]
-    
-    ;; Constructor patterns (simplified for now)
+    ;; All HoTT patterns now use general constructor pattern mechanism
+    ;; This handles zero, true, false, none, some, successor, etc. uniformly
     [(constructor-pattern constructor-name sub-patterns)
      ;; For now, just check that all sub-patterns type check
      ;; Full constructor type checking will be implemented later
@@ -304,7 +332,8 @@
 (define/contract (has-pattern-covering-true? patterns)
   (-> (listof pattern-node/c) boolean?)
   (ormap (lambda (p)
-           (or (true-pattern? p)
+           (or (and (constructor-pattern? p)
+                    (string=? (constructor-pattern-constructor-name p) "true"))
                (and (literal-pattern? p) 
                     (eq? (literal-pattern-value p) #t))))
          patterns))
@@ -313,7 +342,8 @@
 (define/contract (has-pattern-covering-false? patterns)
   (-> (listof pattern-node/c) boolean?)
   (ormap (lambda (p)
-           (or (false-pattern? p)
+           (or (and (constructor-pattern? p)
+                    (string=? (constructor-pattern-constructor-name p) "false"))
                (and (literal-pattern? p) 
                     (eq? (literal-pattern-value p) #f))))
          patterns))
@@ -322,7 +352,8 @@
 (define/contract (has-pattern-covering-zero? patterns)
   (-> (listof pattern-node/c) boolean?)
   (ormap (lambda (p)
-           (or (zero-pattern? p)
+           (or (and (constructor-pattern? p)
+                    (string=? (constructor-pattern-constructor-name p) "zero"))
                (and (literal-pattern? p)
                     (eqv? (literal-pattern-value p) 0))))
          patterns))
@@ -331,7 +362,8 @@
 (define/contract (has-pattern-covering-successor? patterns)
   (-> (listof pattern-node/c) boolean?)
   (ormap (lambda (p)
-           (successor-pattern? p))
+           (and (constructor-pattern? p)
+                (string=? (constructor-pattern-constructor-name p) "successor")))
          patterns))
 
 ;; Check for unreachable patterns
@@ -363,15 +395,19 @@
     [(literal-pattern? pattern)
      (has-literal-pattern? preceding-patterns (literal-pattern-value pattern))]
     
-    ;; Specific constructor pattern is unreachable if same constructor covered
-    [(zero-pattern? pattern)
-     (has-pattern-covering-zero? preceding-patterns)]
-    
-    [(true-pattern? pattern) 
-     (has-pattern-covering-true? preceding-patterns)]
-    
-    [(false-pattern? pattern)
-     (has-pattern-covering-false? preceding-patterns)]
+    ;; Constructor patterns - check if same constructor already covered
+    [(constructor-pattern? pattern)
+     (let ([constructor-name (constructor-pattern-constructor-name pattern)])
+       (cond
+         [(string=? constructor-name "zero") (has-pattern-covering-zero? preceding-patterns)]
+         [(string=? constructor-name "true") (has-pattern-covering-true? preceding-patterns)]
+         [(string=? constructor-name "false") (has-pattern-covering-false? preceding-patterns)]
+         [(string=? constructor-name "successor") (has-pattern-covering-successor? preceding-patterns)]
+         ;; For other constructors, check if same constructor name already covered
+         [else (ormap (lambda (p)
+                       (and (constructor-pattern? p)
+                            (string=? (constructor-pattern-constructor-name p) constructor-name)))
+                     preceding-patterns)]))]
     
     ;; For other patterns, assume reachable for now
     [else #f]))
