@@ -1,6 +1,6 @@
 # Task ID: 16
 # Title: Pattern Matching for Product and Sum Types
-# Status: pending
+# Status: done
 # Dependencies: 4, 5
 # Priority: high
 # Description: Implement a pattern matching system for destructuring product types (field access) and matching sum type variants, including syntax parsing, match expression evaluation, and type checker integration for exhaustiveness and type safety.
@@ -58,31 +58,31 @@ Develop a comprehensive pattern matching facility. This involves:
     *   Verify correct evaluation, full type checking (including exhaustiveness), and error reporting.
 
 # Subtasks:
-## 1. Define AST Nodes and Extend Parser for Match Expressions and Patterns [pending]
+## 1. Define AST Nodes and Extend Parser for Match Expressions and Patterns [done]
 ### Dependencies: None
 ### Description: Define the Abstract Syntax Tree (AST) nodes for `MatchExpression` and various `Pattern` types (Literal, Variable, Wildcard, Constructor). Extend the existing S-expression parser (from Task 1) to parse the `(match ...)` syntax and pattern syntax into these AST nodes.
 ### Details:
 Define `MatchExpression` AST node: `(scrutinee: Expr, cases: List[(Pattern, Expr)])`. Define `Pattern` AST hierarchy: `LiteralPattern(value: LiteralValue)`, `VariablePattern(name: String)`, `WildcardPattern()`, `ConstructorPattern(constructorName: String, subPatterns: List[Pattern])`. The parser should handle S-expression syntax like `(match <scrutinee-expr> (<pattern1> <body1>) ... (<patternN> <bodyN>))` and patterns such as `10`, `#t`, `"hello"`, `x`, `_`, `(Point x y)`, `(Some val)`. Ensure the parser correctly integrates with existing AST structures and error reporting.
 
-## 2. Implement Core Match Expression Evaluation Logic [pending]
+## 2. Implement Core Match Expression Evaluation Logic [done]
 ### Dependencies: 16.1
 ### Description: Implement the runtime evaluation mechanism for `MatchExpression` AST nodes. This includes evaluating the scrutinee, iterating through patterns in order, performing matching for literals, variables, and wildcards, binding variables to an extended environment, and executing the corresponding body. If no pattern matches, a runtime error should be raised.
 ### Details:
 Implement `eval_match(match_expr, env)`: 1. Evaluate `match_expr.scrutinee` in `env` to get `scrutinee_value`. 2. Iterate through `match_expr.cases`. For each `(pattern, body)`: a. Implement `match_pattern(pattern, scrutinee_value)` which returns `Option[Map[String, Value]]` representing new bindings. Initially, support `LiteralPattern` (compare value), `VariablePattern` (binds scrutinee_value to variable name), `WildcardPattern` (always matches, no bindings). b. If match succeeds, create `extended_env` from `env` plus new bindings. Evaluate `body` in `extended_env` and return result. 3. If loop finishes with no match, raise a runtime error (e.g., "Non-exhaustive match error"). `ConstructorPattern` matching logic will be fully developed in a later subtask (ID 5), but basic name matching could be stubbed if necessary.
 
-## 3. Integrate Match Expressions into Type Checker: Scrutinee, Basic Pattern, and Body Typing [pending]
+## 3. Integrate Match Expressions into Type Checker: Scrutinee, Basic Pattern, and Body Typing [done]
 ### Dependencies: 16.1
 ### Description: Extend the type checker (Task 4) to analyze `MatchExpression` AST nodes. This involves: determining the scrutinee's type; type checking basic patterns (Literal, Variable, Wildcard) against the scrutinee's type; inferring types for variables bound in these simple patterns; and ensuring all bodies in a single `match` expression have a common, compatible type, which becomes the type of the `match` expression.
 ### Details:
 Implement `typecheck_match(match_expr, type_env)`: 1. Typecheck `match_expr.scrutinee` to get `scrutinee_type`. 2. For each `(pattern, body)`: a. Implement `typecheck_pattern(pattern, scrutinee_type, type_env)` for basic patterns: `LiteralPattern` (literal's type must be compatible with `scrutinee_type`), `VariablePattern` (variable is typed as `scrutinee_type`; add to `extended_type_env`), `WildcardPattern` (compatible with any type, no new bindings). b. Typecheck `body` in the `extended_type_env` (derived from `type_env` plus pattern bindings) to get `body_type`. 3. Collect all `body_type`s. Compute their least common supertype (LUB). This LUB is the type of the `match` expression. If no LUB exists (incompatible body types), report a type error. `ConstructorPattern` type checking will be fully developed in a later subtask (ID 5).
 
-## 4. Implement Exhaustiveness and Unreachability Checks in Type Checker [pending]
+## 4. Implement Exhaustiveness and Unreachability Checks in Type Checker [done]
 ### Dependencies: 16.3
 ### Description: Enhance the type checker to perform exhaustiveness checks for `match` expressions, reporting a compile-time error if a match is not exhaustive. This primarily applies to sum types (defined via `deftype` from Task 5) and booleans. Optionally, implement unreachability checks for patterns (e.g., a pattern following a wildcard).
 ### Details:
 Extend `typecheck_match` or add a separate pass: 1. **Exhaustiveness Checking**: `check_exhaustiveness(patterns, scrutinee_type, type_definitions_from_Task5)`: a. If `scrutinee_type` is `Bool`, check if patterns cover `#t` and `#f`, or if a wildcard `_` is present. b. If `scrutinee_type` is a sum type, retrieve its variants from `type_definitions_from_Task5`. Check if all variants are covered by `ConstructorPattern`s or if a wildcard `_` is present. c. If not exhaustive, report a compile-time error. 2. **Unreachability Checking (Optional)**: `check_unreachability(patterns)`: Analyze patterns in sequence. If a pattern `P_i` is found to be unreachable because preceding patterns `P_1 ... P_{i-1}` cover all cases `P_i` could match, issue a warning or compile-time error. For example, any pattern after `_` or `x` (variable pattern of the same type) is unreachable.
 
-## 5. Implement Constructor Pattern Destructuring and Full Type System Integration [pending]
+## 5. Implement Constructor Pattern Destructuring and Full Type System Integration [done]
 ### Dependencies: 16.2, 16.4
 ### Description: Fully implement pattern matching for product type destructuring (e.g., `(Point x y)`) and sum type variant matching (e.g., `(Some val)`). This involves refining both evaluation (`match_pattern`) and type checking (`typecheck_pattern`) to correctly handle `ConstructorPattern`s, using type definitions from `deftype` (Task 5) for field/variant names, arity, and types of sub-patterns/payloads.
 ### Details:

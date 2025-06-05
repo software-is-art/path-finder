@@ -5,6 +5,7 @@
          "../src/parser/ast.rkt"
          "../src/evaluator/evaluator.rkt"
          "../src/evaluator/values.rkt"
+         racket/list
          rackunit)
 
 ;; Tests for PathFinder LISP Descriptive Pattern Matching
@@ -108,13 +109,14 @@
 ;; ============================================================================
 
 (test-case "pattern matching in function body"
-  (let* ([input "((lambda (n) (match n ((zero) \"zero\") ((successor x) x))) 3)"]
+  (let* ([input "((lambda (n) (match n ((zero) 42) ((successor x) x))) 3)"]
          [env (make-global-environment)])
-    ;; Note: This would fail due to string literals, but tests the structure
-    (check-exn exn:fail? (lambda () 
-                          (let* ([tokens (tokenize input)]
-                                 [ast (parse tokens)])
-                            (evaluate ast env))))))
+    ;; Test pattern matching within a function - should work now
+    (let* ([tokens (tokenize input)]
+           [ast (parse tokens)]
+           [result (evaluate ast env)])
+      (check-true (nat-value? result))
+      (check-equal? (nat-value->racket-number result) 2))))
 
 (test-case "fibonacci with pattern matching"
   (let* ([fib-def "(define fib (lambda (n) (match n ((zero) 0) ((successor (zero)) 1) ((successor (successor k)) (+ (fib (successor k)) (fib k))))))"]
