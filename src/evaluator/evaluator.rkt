@@ -114,6 +114,24 @@
     (error "ua requires an equivalence value"))
   (univalence-apply equiv))
 
+;; Natural number constructor functions
+(define/contract (zero-constructor)
+  (-> value/c)
+  zero-value)
+
+(define/contract (successor-constructor n)
+  (-> value/c value/c)
+  (succ-value n))
+
+;; Boolean constructor functions  
+(define/contract (true-constructor)
+  (-> value/c)
+  true-value)
+
+(define/contract (false-constructor)
+  (-> value/c)
+  false-value)
+
 ;; Built-in functions with proper HoTT types
 (define builtin-environment
   (let ([env (make-environment)])
@@ -125,6 +143,15 @@
       (env-define! env "-" (builtin-value "-" nat-sub nat-nat-nat))
       (env-define! env "=" (builtin-value "=" nat-equal? nat-nat-bool))
       (env-define! env "<" (builtin-value "<" nat-less? nat-nat-bool)))
+    
+    ;; Constructor functions for inductive types
+    (let ([unit-nat (make-function-type Unit Nat)]
+          [nat-nat (make-function-type Nat Nat)]
+          [unit-bool (make-function-type Unit Bool)])
+      (env-define! env "zero" (builtin-value "zero" (lambda () zero-constructor) unit-nat))
+      (env-define! env "successor" (builtin-value "successor" successor-constructor nat-nat))
+      (env-define! env "true" (builtin-value "true" (lambda () true-constructor) unit-bool))  
+      (env-define! env "false" (builtin-value "false" (lambda () false-constructor) unit-bool)))
     
     ;; Path and equivalence operations - simplified types for now
     (let ([path-type (make-function-type Nat Nat)]) ; Simplified
@@ -222,10 +249,12 @@
                            (loop (rest exprs) (evaluate (first exprs) extended-env)))))]
                   
                   [(builtin-value name proc _)
-                   ;; Handle binary operations by taking pairs of arguments
+                   ;; Handle various argument counts for built-in functions
                    (cond
-                     [(= (length args) 2) (proc (first args) (second args))]
-                     [else (error "Built-in function" name "expects 2 arguments, got" (length args))])]
+                     [(= (length args) 0) (proc)]  ; Zero-argument constructors
+                     [(= (length args) 1) (proc (first args))]  ; Unary functions/constructors  
+                     [(= (length args) 2) (proc (first args) (second args))]  ; Binary operations
+                     [else (error "Built-in function" name "expects 0-2 arguments, got" (length args))])]
                   
                   [_ (error "Cannot call non-function value: " func)]))])))]
     
