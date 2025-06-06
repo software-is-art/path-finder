@@ -1,6 +1,6 @@
 # Task ID: 11
 # Title: Identity Types (`Id A x y`) and Path Equality (`refl`)
-# Status: pending
+# Status: done
 # Dependencies: 10
 # Priority: medium
 # Description: Implement Identity types `(Id A x y)` representing the proposition that `x` and `y` (of type `A`) are equal. Include the reflexivity constructor `refl`.
@@ -11,7 +11,7 @@ Introduce `Id` as a type constructor: `(Id A x y)` is a type. `A` is a type, `x`
 Define identity types for various base types `A`. Construct proofs of reflexivity, e.g., `(refl 5)` should have type `(Id Nat 5 5)`. Type check expressions involving `Id` types and `refl`. Test that `(Id Nat 1 2)` is a valid type, even if potentially uninhabited without further axioms.
 
 # Subtasks:
-## 1. Define AST Node and Parser Rule for `Id` Type Constructor [pending]
+## 1. Define AST Node and Parser Rule for `Id` Type Constructor [done]
 ### Dependencies: None
 ### Description: Introduce the `Id` type constructor `(Id A x y)` into the system's syntax and Abstract Syntax Tree (AST). This allows the system to recognize and represent identity types.
 ### Details:
@@ -19,7 +19,7 @@ Modify the lexer and parser to recognize the `Id` keyword and its three argument
 Define a new AST node type (e.g., `IdTypeNode`) to represent `(Id A x y)`. This node should store references or sub-nodes for `A`, `x`, and `y`.
 Ensure the parser correctly constructs this AST node from input expressions like `(Id Nat zero zero)`.
 
-## 2. Implement Type Checking Rule for `Id A x y` [pending]
+## 2. Implement Type Checking Rule for `Id A x y` [done]
 ### Dependencies: 11.1
 ### Description: Implement the type checking logic to validate that `(Id A x y)` is a well-formed type. This involves checking its components `A`, `x`, and `y`, and determining the universe of `(Id A x y)`.
 ### Details:
@@ -30,7 +30,7 @@ In the type checker module, add a new rule or extend an existing one to handle `
 4. Verify that `A_x` and `A_y` are judgmentally equal to `A` (the type specified in the `Id` expression).
 5. If all checks pass, the expression `(Id A x y)` itself is a type. It typically resides in the same universe as `A`, or a base universe like `Prop` if such a distinction exists (e.g., `Type` or `Prop`).
 
-## 3. Define AST Node and Parser Rule for `refl` Constructor [pending]
+## 3. Define AST Node and Parser Rule for `refl` Constructor [done]
 ### Dependencies: 11.1
 ### Description: Introduce the `refl` constructor `(refl x)` into the system's syntax and AST. This allows the system to recognize and represent proofs of reflexivity.
 ### Details:
@@ -38,7 +38,7 @@ Modify the lexer and parser to recognize the `refl` keyword and its single argum
 Define a new AST node type (e.g., `ReflNode`) to represent `(refl x)`. This node should store a reference or sub-node for the term `x`.
 Ensure the parser correctly constructs this AST node from input expressions like `(refl zero)`.
 
-## 4. Implement Type Checking Rule for `refl x` [pending]
+## 4. Implement Type Checking Rule for `refl x` [done]
 ### Dependencies: 11.2, 11.3
 ### Description: Implement the type checking logic for the `refl` constructor. The term `(refl t)` should have the type `(Id A t t)`, where `A` is the type of `t`.
 ### Details:
@@ -48,7 +48,7 @@ In the type checker module, add a new rule or extend an existing one to handle `
 3. This involves constructing an `IdTypeNode` (or its internal representation) with `A = A_inferred`, left term = `t` (deep copy or reference), and right term = `t` (deep copy or reference).
 Ensure the type checker correctly forms this `Id` type as the result.
 
-## 5. Integrate `Id` and `refl` and Add End-to-End Tests [pending]
+## 5. Integrate `Id` and `refl` and Add End-to-End Tests [done]
 ### Dependencies: 11.4
 ### Description: Ensure `Id` types and `refl` terms are fully integrated into the type system. Write comprehensive tests demonstrating their interaction and usage in definitions and proofs.
 ### Details:

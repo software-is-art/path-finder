@@ -1,0 +1,99 @@
+# Task ID: 25
+# Title: Implement Computational Reflection for Decidable Propositions
+# Status: pending
+# Dependencies: 10, 11, 17
+# Priority: medium
+# Description: Develop a mechanism to automatically solve decidable propositions (e.g., equality, ordering) by computation and reflect the computational evidence into formal proof terms. This leverages HoTT's principle of computation as proof for decidable predicates.
+# Details:
+This task involves creating a system where the truth of certain propositions can be determined by direct computation, and this computational result can be automatically translated into a formal proof term recognized by the type system.
+
+1.  **Identify Target Decidable Propositions:**
+    *   Initially focus on equality for primitive types from the Standard Library (Task 17), such as `Nat` and `Bool`. Example: `(Id Nat x y)`. 
+    *   Consider simple ordering relations on `Nat` (e.g., less than, greater than or equal to) if `Nat` operations support them.
+
+2.  **Implement Computational Decision Procedures:**
+    *   For each target decidable proposition, implement a corresponding computational function (decision procedure). For example:
+        *   `nat_eq_dec : Nat -> Nat -> Bool` (determines if two `Nat`s are equal).
+        *   `bool_eq_dec : Bool -> Bool -> Bool`.
+        *   These functions must reliably compute the truth value of the proposition.
+    *   These decision procedures should operate on evaluated/canonical forms of their arguments.
+
+3.  **Develop the Reflection Tactic/Macro (e.g., `compute_and_reflect`):
+    *   This tactic will take a proposition (a type, e.g., `(Id Nat n m)`) as input.
+    *   **Recognition:** It must identify if the input proposition corresponds to a known decidable predicate for which a computational solver exists.
+    *   **Invocation:** If recognized, it invokes the appropriate decision procedure with the arguments extracted from the proposition (after evaluation/normalization).
+    *   **Proof Construction:** Based on the computational result (typically a boolean):
+        *   If the proposition is computationally true (e.g., `nat_eq_dec x y` returns `true`), the tactic constructs a proof term for that proposition. For `(Id A x x)`, this would be `(refl evaluated_x)` (relies on Task 11).
+        *   If the proposition is computationally false, the tactic should construct a proof of its negation (e.g., a term of type `(Not (Id A x y))`). This might involve a type like `(Dec P)` defined as `(Sigma (b : Bool) (if b then P else (Not P)))`, where the tactic provides the full proof.
+
+4.  **Proof Term Generation Details:**
+    *   **Equality:** For a proposition `(Id T term1 term2)`, evaluate `term1` and `term2` to `val1` and `val2`. If `val1` and `val2` are computationally equal (and `T` has decidable equality), and `val1` is syntactically identical to `val2` after normalization, generate `(refl val1)`. The system must ensure that computational equality implies definitional equality for these cases.
+    *   **Other Predicates:** For a predicate `(P x y)`, if `P_dec x y` returns `true`, generate a term `proof_P_true x y : (P x y)`. If `false`, generate `proof_P_false x y : (Not (P x y))`. The structure of these proof terms will depend on how `P` and `Not P` are defined.
+
+5.  **Integration and Trust:**
+    *   The generated proof terms must be type-checked and accepted by the system (leveraging Task 4 and Task 10).
+    *   The computational decision procedures are effectively part of the trusted computing base for this reflection mechanism. Their correctness is crucial.
+    *   Consider a registry or dispatch mechanism for the `compute_and_reflect` tactic to find the appropriate solver for a given proposition form.
+
+6.  **Error Handling:**
+    *   The tactic should report errors if the proposition is not recognized as decidable or if arguments are malformed.
+
+# Test Strategy:
+1.  **Unit Test Decision Procedures:**
+    *   For `nat_eq_dec`: Test with equal numbers `(nat_eq_dec 5 5)`, unequal numbers `(nat_eq_dec 5 6)`, and expressions `(nat_eq_dec (+ 2 3) 5)`.
+    *   Similarly, test `bool_eq_dec` and any other decision procedures (e.g., for ordering).
+
+2.  **Test Reflection Tactic for Equality (`Id` type):
+    *   Verify that `(compute_and_reflect (Id Nat 3 3))` successfully generates a term of type `(Id Nat 3 3)` (e.g., `(refl 3)`).
+    *   Verify for expressions: `(compute_and_reflect (Id Nat (+ 1 2) 3))`. 
+    *   Verify for `Bool`: `(compute_and_reflect (Id Bool #t #t))`. 
+    *   Test cases where equality is false: `(compute_and_reflect (Id Nat 3 4))`. The tactic should produce a proof of `(Not (Id Nat 3 4))`.
+
+3.  **Test Reflection Tactic for Other Decidable Propositions (if implemented, e.g., ordering):
+    *   Assume a proposition `(NatLe n m)` (n <= m) and a solver `nat_le_dec`.
+    *   `(compute_and_reflect (NatLe 3 5))` should produce a proof of `(NatLe 3 5)`.
+    *   `(compute_and_reflect (NatLe 5 3))` should produce a proof of `(Not (NatLe 5 3))`.
+
+4.  **Integration with Type Checker:**
+    *   Define terms or functions whose types are proven using the reflection tactic, e.g.:
+      `(define proof_equal_3_3 : (Id Nat 3 3) (compute_and_reflect (Id Nat 3 3)))`
+    *   Ensure these definitions type-check correctly.
+
+5.  **Error Handling Tests:**
+    *   Call `compute_and_reflect` with a proposition for which no decision procedure is defined; expect a clear error.
+    *   Call with malformed propositions or arguments; expect appropriate errors.
+
+6.  **HoTT Compliance Check:**
+    *   Ensure that for `(Id A x y)`, if `x` and `y` compute to the same value `v`, the proof generated is definitionally equal to `(refl v)`.
+
+# Subtasks:
+## 1. Define the `Decidable` Type and Conditional Type Construct [pending]
+### Dependencies: None
+### Description: Implement the foundational `(Dec P)` type, representing a decidable proposition `P`. This type encapsulates a boolean result and a proof that this boolean correctly reflects the truth of `P`. This requires implementing a type-level `if-then-else` construct.
+### Details:
+Define `(Dec P)` as the sigma type `(Sigma (b : Bool) (if b then P else (Not P)))`. The `(Not P)` type should be defined as `(-> P Empty)`, where `Empty` is the uninhabited type. The core of this task is to enhance the type checker (from Task 10) to handle the `if C then T else F` construct for types. When the condition `C` evaluates to a boolean literal (`true` or `false`), the entire expression must reduce to `T` or `F` respectively during type checking.
+
+## 2. Implement Decision Procedures for `Nat` and `Bool` Equality [pending]
+### Dependencies: None
+### Description: Create the computational functions that decide equality for `Nat` and `Bool` types. These functions will not just return a boolean, but a full proof of decidability, i.e., a term of type `(Dec (Id T x y))`, using the structure defined in the previous subtask.
+### Details:
+Implement two primitive functions within the evaluator: 1. `nat_eq_dec : (x : Nat) -> (y : Nat) -> (Dec (Id Nat x y))`. This function compares `x` and `y`. If they are equal, it returns `(pair true (refl x))`. If not, it returns `(pair false proof_of_negation)`, where `proof_of_negation` is a term of type `(-> (Id Nat x y) Empty)`. 2. `bool_eq_dec : (x : Bool) -> (y : Bool) -> (Dec (Id Bool x y))`. This can be implemented by simple case analysis on the inputs. These functions must operate on evaluated/canonical values.
+
+## 3. Create the `compute_and_reflect` Tactic Scaffolding and Dispatch Registry [pending]
+### Dependencies: None
+### Description: Implement the basic structure of the user-facing `compute_and_reflect` tactic. This involves parsing the current proof goal and creating a registry to map recognizable proposition forms to their corresponding decision procedures.
+### Details:
+Create a new tactic named `compute_and_reflect`. The tactic must inspect the current goal's type, parsing its head symbol (e.g., `Id`) and argument types (e.g., `Nat`). Implement a registry, such as a hash map, within the tactic's environment. This registry will map a key representing the proposition form (e.g., a tuple `('Id', 'Nat')`) to a reference to its decision procedure function (e.g., `nat_eq_dec`). Populate this registry with the handlers for `Nat` and `Bool` equality. The tactic should fail with a clear error if the goal's form is not found in the registry.
+
+## 4. Implement Tactic Logic to Evaluate Arguments and Invoke Decision Procedure [pending]
+### Dependencies: None
+### Description: Enhance the `compute_and_reflect` tactic to normalize the arguments of the proposition and then invoke the appropriate decision procedure with these computed values.
+### Details:
+After the tactic identifies the goal (e.g., `(Id Nat (+ 1 1) 2)`) and finds its decision procedure (`nat_eq_dec`), it must use the evaluator (from Task 10) to normalize the arguments of the proposition (e.g., `(+ 1 1)` becomes `2`, and `2` remains `2`). The tactic will then construct and evaluate a call to the decision procedure with the normalized arguments, e.g., `(nat_eq_dec 2 2)`. The result of this evaluation, which is a term of type `(Dec ...)` like `(pair true (refl 2))`, must be captured by the tactic for the final step.
+
+## 5. Generate and Apply Final Proof Term from Computation Result [pending]
+### Dependencies: None
+### Description: Finalize the `compute_and_reflect` tactic by using the result from the decision procedure to solve the original proof goal. This completes the reflection of computational evidence into a formal proof.
+### Details:
+The tactic will inspect the `(Dec P)` term (e.g., `(pair b proof_term)`) captured in the previous step. If the boolean `b` is `true`, the tactic extracts the `proof_term` and uses it to solve the original goal, causing the tactic to succeed. If `b` is `false`, the proposition is false, and the tactic must fail with an informative error message stating that the goal is computationally false. The application of the extracted proof term must be checked by the kernel (Task 4), ensuring the entire process remains sound.
+

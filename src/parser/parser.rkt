@@ -184,41 +184,9 @@
                   [state (advance-parser state)])
               ;; Check for special HoTT patterns
               (cond
-                [(string=? constructor-name "zero")
-                 ;; Zero pattern: (zero)
-                 (let ([state (skip-non-essential state)])
-                   (let ([token (current-token state)])
-                     (if (equal? (token-type token) 'right-paren)
-                         (values (make-zero-pattern) (advance-parser state))
-                         (error "Zero pattern should have no sub-patterns"))))]
-                
-                [(string=? constructor-name "successor")
-                 ;; Successor pattern: (successor pattern)
-                 (let-values ([(sub-pattern state) (parse-pattern state)])
-                   (let ([state (skip-non-essential state)])
-                     (let ([token (current-token state)])
-                       (if (equal? (token-type token) 'right-paren)
-                           (values (make-successor-pattern sub-pattern) (advance-parser state))
-                           (error "Successor pattern should have exactly one sub-pattern")))))]
-                
-                [(string=? constructor-name "true")
-                 ;; True pattern: (true)
-                 (let ([state (skip-non-essential state)])
-                   (let ([token (current-token state)])
-                     (if (equal? (token-type token) 'right-paren)
-                         (values (make-true-pattern) (advance-parser state))
-                         (error "True pattern should have no sub-patterns"))))]
-                
-                [(string=? constructor-name "false")
-                 ;; False pattern: (false)
-                 (let ([state (skip-non-essential state)])
-                   (let ([token (current-token state)])
-                     (if (equal? (token-type token) 'right-paren)
-                         (values (make-false-pattern) (advance-parser state))
-                         (error "False pattern should have no sub-patterns"))))]
-                
                 [else
-                 ;; General constructor pattern
+                 ;; All patterns now use general constructor pattern mechanism
+                 ;; This handles zero, true, false, none, some, successor, etc. uniformly
                  (let-values ([(sub-patterns state) (parse-sub-patterns state)])
                    (values (make-constructor-pattern constructor-name sub-patterns) state))]))
             (error "Expected constructor name in pattern"))))))

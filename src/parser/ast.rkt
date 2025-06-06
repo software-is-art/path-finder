@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require racket/contract
-         racket/string)
+         racket/string
+         "../core/hott-literals-pure.rkt")
 
 (provide (all-defined-out))
 
@@ -47,39 +48,36 @@
 ;; Constructor patterns: (point x y), (some value), (list-with first rest)
 (struct constructor-pattern pattern-node (constructor-name sub-patterns) #:transparent)
 
-;; Special patterns for HoTT inductive types
-(struct zero-pattern pattern-node () #:transparent)
-(struct successor-pattern pattern-node (sub-pattern) #:transparent)
-(struct true-pattern pattern-node () #:transparent)
-(struct false-pattern pattern-node () #:transparent)
+;; Note: All HoTT inductive type patterns now use the general constructor-pattern mechanism
+;; Examples: (zero) -> (constructor-pattern "zero" '())
+;;           (some x) -> (constructor-pattern "some" (list (variable-pattern "x")))
 
 ;; Contracts for AST node types
 (define ast-node/c 
   (or/c symbol-atom? number-atom? boolean-atom? string-atom? sexpr? match-expr?))
 
 (define pattern-node/c
-  (or/c literal-pattern? variable-pattern? wildcard-pattern? constructor-pattern?
-        zero-pattern? successor-pattern? true-pattern? false-pattern?))
+  (or/c literal-pattern? variable-pattern? wildcard-pattern? constructor-pattern?))
 
 ;; Symbol atom creation
 (define/contract (make-symbol-atom value)
   (-> string? symbol-atom?)
   (symbol-atom value))
 
-;; Number atom creation
+;; Number atom creation - converts Racket number to HoTT nat
 (define/contract (make-number-atom value)
-  (-> number? number-atom?)
-  (number-atom value))
+  (-> exact-nonnegative-integer? number-atom?)
+  (number-atom (pure-racket-number->hott-nat value)))
 
-;; Boolean atom creation
+;; Boolean atom creation - converts Racket boolean to HoTT bool
 (define/contract (make-boolean-atom value)
   (-> boolean? boolean-atom?)
-  (boolean-atom value))
+  (boolean-atom (pure-racket-boolean->hott-bool value)))
 
-;; String atom creation
+;; String atom creation - converts Racket string to HoTT string
 (define/contract (make-string-atom value)
   (-> string? string-atom?)
-  (string-atom value))
+  (string-atom (pure-racket-string->hott-string value)))
 
 ;; S-expression creation
 (define/contract (make-sexpr elements)
@@ -123,21 +121,10 @@
   (constructor-pattern name sub-patterns))
 
 ;; HoTT-specific pattern constructors
-(define/contract (make-zero-pattern)
-  (-> zero-pattern?)
-  (zero-pattern))
-
-(define/contract (make-successor-pattern sub-pattern)
-  (-> pattern-node/c successor-pattern?)
-  (successor-pattern sub-pattern))
-
-(define/contract (make-true-pattern)
-  (-> true-pattern?)
-  (true-pattern))
-
-(define/contract (make-false-pattern)
-  (-> false-pattern?)
-  (false-pattern))
+;; All constructor patterns now use make-constructor-pattern
+;; Examples:
+;; (make-constructor-pattern "zero" '()) for (zero)
+;; (make-constructor-pattern "some" (list (variable-pattern "x"))) for (some x)
 
 ;; Utility functions for AST manipulation
 (define/contract (get-atom-value node)
@@ -192,11 +179,8 @@
                                          (map pattern->string (constructor-pattern-sub-patterns pattern)) 
                                          " ")))
                    ")")]
-    [(zero-pattern? pattern) "(zero)"]
-    [(successor-pattern? pattern) 
-     (string-append "(successor " (pattern->string (successor-pattern-sub-pattern pattern)) ")")]
-    [(true-pattern? pattern) "(true)"]
-    [(false-pattern? pattern) "(false)"]))
+    ;; All patterns now use constructor-pattern, no special cases needed
+    [else (error "Unknown pattern type in pattern->string: " pattern)]))
 
 ;; Match case pretty printing
 (define/contract (match-case->string case)
@@ -233,9 +217,5 @@
          [(wildcard-pattern? pattern) #t]
          [(constructor-pattern? pattern) 
           (andmap valid-pattern? (constructor-pattern-sub-patterns pattern))]
-         [(zero-pattern? pattern) #t]
-         [(successor-pattern? pattern) 
-          (valid-pattern? (successor-pattern-sub-pattern pattern))]
-         [(true-pattern? pattern) #t]
-         [(false-pattern? pattern) #t]
+         ;; All special patterns removed - now use constructor-pattern
          [else #f])))

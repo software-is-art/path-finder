@@ -1,0 +1,95 @@
+# Task ID: 23
+# Title: Type Inference and Elaboration Engine
+# Status: pending
+# Dependencies: 4, 10, 11, 17
+# Priority: high
+# Description: Implement a type inference and elaboration engine that automatically deduces dependent type parameters, universe levels, and generates proof obligations. This will simplify type annotations for users, making the HoTT-based language more practical.
+# Details:
+Implement a bidirectional type checking algorithm (synthesis and checking modes) that can infer missing type information, extending the existing type checker (from Task 4 and Task 10). Focus on inferring types for lambda parameters, function application arguments, and let-bindings.
+
+**Dependent Type Inference**:
+- Infer parameters for Π-types and Σ-types. For example, if `f : (Π (A : Type) (x : A) -> A)`, in an application `(f _ y)`, infer the first argument (the type `A`) from the type of `y`.
+- Handle implicit arguments in dependent type constructors and functions.
+
+**Universe Level Inference** (if applicable to the language design):
+- Implement inference for universe levels to ensure consistency (e.g., `Type i`). This might involve collecting constraints on universe levels and solving them.
+
+**Proof Obligation Generation**:
+- When type checking expressions involving propositions (e.g., `Id A x y` from Task 11), if a proof is required but not explicitly provided, the system should generate a proof obligation.
+- These obligations could be represented as new goals for a separate proof assistant component or require the user to provide the proof term.
+
+**Elaboration**:
+- The inference engine should elaborate partially typed Abstract Syntax Trees (ASTs) into fully typed ASTs. This means filling in all inferred types, implicit arguments, and potentially inserting coercions or other type-level constructs.
+- The elaborated AST will be the input for subsequent compilation or evaluation stages.
+
+**Error Reporting**:
+- Provide clear and informative error messages when inference fails or leads to ambiguity. Messages should guide the user on how to resolve the issue (e.g., by adding explicit type annotations).
+
+**Integration**:
+- Integrate the inference engine into the main type checking pipeline.
+- Ensure it works correctly with features from Task 4 (simple types/functions), Task 10 (dependent types), Task 11 (Identity types), and types defined in Task 17 (Standard Library).
+
+# Test Strategy:
+**Unit Tests for Inference Rules**:
+- Test inference of simple function argument types and return types.
+- Test inference of lambda parameter types.
+- Test inference for let-bindings.
+
+**Dependent Type Inference Tests**:
+- Define functions with dependent types (Π-types, Σ-types) where some parameters can be inferred. Test that the engine correctly infers these parameters in various application scenarios.
+- Example: `(define id (lambda (A : Type) (lambda (x : A) x)))`. Test `(id _ 5)` infers `A` as `Nat` (assuming Nat is part of the system from Task 17 or similar).
+- Test inference with types from the standard library (Task 17), e.g., inferring the type parameter for `List` or `Option` in functions like `map` or `flatMap` if their types allow for inference.
+
+**Universe Level Inference Tests** (if applicable):
+- Create scenarios that require universe level constraints and verify that the inference engine correctly assigns or infers consistent universe levels.
+- Test for universe inconsistency errors.
+
+**Proof Obligation Generation Tests**:
+- Create expressions that should logically require a proof (e.g., using an equality that isn't `refl` without providing a proof term for `Id A x y` from Task 11).
+- Verify that the system correctly identifies and generates the appropriate proof obligation.
+
+**Elaboration Tests**:
+- Inspect the elaborated AST to ensure that all inferred types and implicit arguments are correctly inserted.
+- Verify that the elaborated AST is well-typed according to the full, non-inferential type checker.
+
+**Error Reporting Tests**:
+- Create ambiguous type scenarios and verify that the system reports an error rather than inferring an incorrect type.
+- Create unsolvable inference problems and check for clear error messages that guide the user.
+- Test cases where insufficient information is provided for inference, prompting the user for annotations.
+
+**Integration Tests**:
+- Write small programs that heavily rely on type inference for various constructs (functions, data types from Task 17, dependent types from Task 10, identity types from Task 11).
+- Verify that these programs type check correctly and that the inferred types match expectations.
+- Test interaction with `deftype` and Canonical Instantiation Functions (CIFs) (related to Task 5, via Task 17).
+
+# Subtasks:
+## 1. Extend Type Checker with Bidirectional Inference for Basic Constructs [pending]
+### Dependencies: None
+### Description: Modify the existing type checker (from Task 4 & 10) to support bidirectional type checking (synthesis and checking modes). Implement inference for lambda parameters, function application arguments, and types in let-bindings. This forms the foundation for more advanced inference.
+### Details:
+Define two main functions: `infer(context, term)` returning a type, and `check(context, term, type)` verifying the term has the given type. For lambdas `λx. body`, infer parameter type `A` if `x` is unannotated and context allows, or use annotation; then check/infer body. For applications `(f e)`, synthesize type of `f` (e.g., `Π(x:A).B`), check `e` against `A` (or infer `A` if possible), result type is `B[x := e]`. For `let x = e1 in e2`, infer type of `e1` as `A`, then check/infer `e2` in context extended with `x:A`.
+
+## 2. Implement Dependent Type Parameter Inference (Π/Σ-types, Implicit Arguments) [pending]
+### Dependencies: 23.1
+### Description: Extend the bidirectional engine to infer missing parameters for dependent Π-types and Σ-types. Implement handling of implicit arguments in dependent type constructors and functions, allowing users to omit them when they can be deduced from context.
+### Details:
+For Π-type parameter inference (e.g., `f : Π (A : Type) (x : A) -> C` in `(f _ y)`), infer `A` from the type of `y` using unification or constraint-based type matching. For Σ-types, ensure dependent components can be inferred. For implicit arguments (marked in function/constructor definitions), attempt inference based on types of explicit arguments or the expected type of the overall expression. Example: for `Id x y` where `Id : Π {A:Type} (a:A) (b:A) -> Type`, infer `A` from type of `x` or `y`.
+
+## 3. Implement Universe Level Inference [pending]
+### Dependencies: 23.1
+### Description: Develop mechanisms for inferring universe levels (e.g., `Type i`). This involves collecting constraints on universe levels during type checking (e.g., from `Type i : Type j` implying `i < j`, or `Π (A : Type i) -> B : Type j` implying `i <= j`) and solving these constraints to ensure consistency and assign concrete or minimal levels.
+### Details:
+Represent universe levels with variables (e.g., `?u1`). During type checking of type formers (Π, Σ, Type literal, etc.), generate constraints like `?u1 < ?u2` or `?u1 = max(?u2, ?u3)`. Collect all constraints into a system. Implement a solver for these constraints (e.g., based on a directed graph for inequalities, or simple unification for equalities). Report errors for inconsistent universes. Inferred levels become part of the elaborated AST.
+
+## 4. Proof Obligation Generation and AST Elaboration [pending]
+### Dependencies: 23.2, 23.3
+### Description: Implement the generation of proof obligations for propositions (e.g., equality proofs for `Id A x y` from Task 11) when a proof is required but not explicitly provided. Concurrently, elaborate the partially typed Abstract Syntax Tree (AST) into a fully typed AST by filling in all inferred types, implicit arguments, resolved universe levels, and generated proof obligations.
+### Details:
+Proof Obligation Generation: Identify contexts requiring a proof term (e.g., an argument to a function expecting `Id A x y`). If a placeholder `_` is used, generate a proof obligation object containing the goal proposition and current context. These obligations can be special nodes in the AST. AST Elaboration: Define the structure for the fully elaborated AST. As inference proceeds, construct this new AST, populating it with: 1. Explicit type annotations for all variables and sub-expressions. 2. Instantiated implicit arguments. 3. Solved universe levels for all type expressions. 4. Embedded proof obligations. This elaborated AST is the definitive output of the inference phase.
+
+## 5. Integrate Engine, Implement Robust Error Reporting, and Test with Standard Library [pending]
+### Dependencies: 23.4
+### Description: Integrate the complete type inference and elaboration engine into the main type checking pipeline. Implement clear, informative, and actionable error messages for inference failures, ambiguities, or unsatisfiable constraints. Conduct thorough testing with existing language features (Tasks 4, 10, 11) and types/functions from the Standard Library (Task 17).
+### Details:
+Integration: Ensure the inference engine is invoked correctly within the compiler/interpreter, and its output (elaborated AST, proof obligations) is consumed by subsequent stages. Error Reporting: Design error messages to be user-friendly. For type mismatches, show expected vs. actual types. For inference failure, pinpoint the problematic expression and suggest adding annotations. For universe errors, explain the inconsistency. For ambiguities, list potential candidates if possible. Testing: Create comprehensive end-to-end tests using examples from the standard library (e.g., `Vector` operations, `Nat` arithmetic, `Fin` properties) that rely on inference. Test interactions with dependent types, identity types, and simple types. Specifically test error reporting for common mistakes.
+

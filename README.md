@@ -1,30 +1,50 @@
 # PathFinder LISP
 
-A HoTT-based functional programming language with algebraic effects, implemented in Racket.
+> **⚠️ Experimental Research Language**: PathFinder LISP is an active research project exploring advanced type theory concepts. While the core functionality works, expect significant API changes and incomplete features. This is ideal for researchers, PL enthusiasts, and those interested in HoTT foundations.
+
+A revolutionary HoTT-based functional programming language with a 3-tier effect system and distributed proof computation, implemented in Racket.
 
 ## Overview
 
-PathFinder LISP is an experimental functional programming language that combines:
+PathFinder LISP is a groundbreaking functional programming language that combines:
 
-- **Homotopy Type Theory (HoTT)** foundations for advanced type system
-- **Algebraic Effects** for composable and modular effect handling
+- **Homotopy Type Theory (HoTT)** foundations with dependent types and proof-carrying values
+- **3-Tier Effect System** for compile-time, runtime, and distributed computation
+- **Distributed Proof Cache** enabling transparent global mathematical commons
+- **Content-Addressable Computation** where proofs computed anywhere can be reused everywhere
 - **S-Expression Syntax** for homoiconic program representation
-- **Interactive REPL** for exploratory programming
+- **Interactive REPL** for exploratory programming with mathematical guarantees
 
 ## Features
 
-🎯 **Complete HoTT Foundations**
+🎯 **Revolutionary Architecture**
+- **Tier 0**: Distributed proof cache with content-addressable computation
+- **Tier 1**: Compile-time computational proofs with dependent safety
+- **Tier 2**: Algebraic effects for compile-time operations
+- **Tier 3**: Unified runtime effects with capability handlers
+- **Mathematical Commons**: Global network of shared proofs and computations
+
+🧮 **Complete HoTT Foundations**
 - **Path Computation**: Identity types with reflexivity, concatenation, inverse, transport, and congruence
 - **Univalence Axiom**: `(A ≃ B) ≃ (Id Type A B)` with equivalence types and path induction
 - **Universe Hierarchy**: `Type₀ : Type₁ : Type₂ : ...` with proper level management
 - **Dependent Types**: Π-types, Σ-types, sum types, and inductive types
+- **Proof-Carrying Values**: Types that carry computational evidence of safety constraints
 - **Higher Structure**: 2-paths, 3-paths, truncation levels, and h-types
+
+🔧 **Advanced Type System**
+- **Content-Addressable Proofs**: Transparent proof reuse across network boundaries
+- **Dependent Safety**: NonEmptyList, BoundedArray with compile-time guarantees
+- **Type Families**: Adaptive specialization with multi-context effects
+- **Effect-Based Error Handling**: No nullable types, only mathematical guarantees
+- **Generic Effects**: Multi-context handlers (compile-time, runtime, test, universal)
 
 🔧 **Language Implementation**
 - S-expression based syntax with comprehensive parser
-- Complete HoTT-based type system with runtime type checking
+- Complete HoTT-based type system with proof obligations
 - Environment-based evaluator with proper HoTT value representation
 - Interactive Read-Eval-Print Loop (REPL) with mathematical notation
+- MCP server for advanced S-expression manipulation and formatting
 
 🔧 **Development Features**
 - Reproducible development environment with Devbox
@@ -96,7 +116,7 @@ devbox run build       # Check syntax and compile
 devbox run run          # Start PathFinder LISP interpreter  
 devbox run repl         # Start interactive REPL
 devbox run version      # Show version information
-devbox run test         # Run comprehensive test suite (89 tests)
+devbox run test         # Run comprehensive test suite (89+ tests)
 devbox run fmt          # Format all Racket code
 devbox run lint         # Run static analysis
 ```
@@ -105,35 +125,63 @@ devbox run lint         # Run static analysis
 
 ```
 path-finder/
-├── src/                      # Core source code
-│   ├── main.rkt             # Main entry point and CLI
-│   ├── lexer/               # Lexical analysis
-│   │   ├── lexer.rkt        # S-expression tokenizer
-│   │   └── tokens.rkt       # Token definitions
-│   ├── parser/              # Syntax analysis  
-│   │   ├── parser.rkt       # Recursive descent parser
-│   │   └── ast.rkt          # Abstract syntax tree nodes
-│   ├── evaluator/           # Evaluation engine
-│   │   ├── evaluator.rkt    # Environment-based interpreter
-│   │   └── values.rkt       # HoTT runtime values and operations
-│   ├── typecheck/           # Type checking
-│   │   └── typechecker.rkt  # HoTT-based type checker
-│   ├── types/               # Type system
-│   │   └── types.rkt        # Complete HoTT type system with path computation
-│   ├── effects/             # Effect system (planned)
-│   └── stdlib/              # Standard library (planned)
-├── tests/                   # Test suites (89 tests)
-│   ├── lexer-parser-test.rkt    # Lexer and parser tests
-│   ├── evaluator-test.rkt       # Evaluation engine tests
-│   ├── types-test.rkt           # Type system tests
-│   ├── path-univalence-test.rkt # Path computation and univalence tests
-│   └── main-test.rkt            # Integration tests
-├── docs/                    # Documentation
-├── examples/                # Sample programs (planned)
-├── devbox.json             # Environment configuration
-├── Makefile                # Build automation
-├── info.rkt                # Package metadata
-└── README.md               # This file
+├── src/                          # Core source code
+│   ├── main.rkt                 # Main entry point and CLI
+│   ├── lexer/                   # Lexical analysis
+│   │   ├── lexer.rkt            # S-expression tokenizer
+│   │   └── tokens.rkt           # Token definitions
+│   ├── parser/                  # Syntax analysis  
+│   │   ├── parser.rkt           # Recursive descent parser
+│   │   └── ast.rkt              # Abstract syntax tree nodes
+│   ├── evaluator/               # Evaluation engine
+│   │   ├── evaluator.rkt        # Environment-based interpreter
+│   │   └── values.rkt           # HoTT runtime values and operations
+│   ├── typecheck/               # Type checking and effect verification
+│   │   ├── typechecker.rkt      # HoTT-based type checker
+│   │   ├── typechecker-new.rkt  # Enhanced type checker with effect integration
+│   │   ├── effect-checker.rkt   # Multi-tier effect constraint verification
+│   │   └── test-match.rkt       # Pattern matching support
+│   ├── types/                   # Advanced type system
+│   │   ├── types.rkt            # Core HoTT type system with path computation
+│   │   ├── type-families.rkt    # Parameterized types with adaptive specialization
+│   │   ├── dependent-safety.rkt # NonEmptyList and safety infrastructure
+│   │   ├── bounded-arrays.rkt   # Tier 1 compile-time bounds checking
+│   │   ├── list-type.rkt        # Generic list operations
+│   │   └── list-type-generic.rkt # Multi-context list type families
+│   ├── effects/                 # 3-Tier effect system
+│   │   └── generic-effects.rkt  # Multi-context effect handlers
+│   ├── core/                    # HoTT foundation
+│   │   ├── hott-ast.rkt         # HoTT-specific AST extensions
+│   │   ├── hott-evaluator.rkt   # HoTT evaluation semantics
+│   │   ├── hott-literals.rkt    # HoTT literal value handling
+│   │   ├── hott-literals-pure.rkt # Pure HoTT literal operations
+│   │   └── host-bridge.rkt      # Host language integration
+│   └── stdlib/                  # Standard library (in development)
+├── tests/                       # Comprehensive test suite (89+ tests)
+│   ├── lexer-parser-test.rkt        # Lexer and parser tests
+│   ├── evaluator-test.rkt           # Evaluation engine tests
+│   ├── types-test.rkt               # Type system tests
+│   ├── path-univalence-test.rkt     # Path computation and univalence tests
+│   ├── bounded-arrays-test.rkt      # Tier 1 bounds checking tests
+│   ├── dependent-safety-test.rkt    # NonEmptyList and safety tests
+│   ├── generic-effects-test.rkt     # Multi-context effect tests
+│   ├── type-families-test.rkt       # Type family tests
+│   ├── effect-aware-typechecker-test.rkt # Effect-type integration tests
+│   └── main-test.rkt                # Integration tests
+├── examples/                    # Advanced HoTT demonstrations
+│   ├── dependent-safety-demo.rkt    # Proof-carrying value examples
+│   ├── effect-types-demo.rkt        # Multi-tier effect demonstrations
+│   ├── generic-effects-demo.rkt     # Effect handler examples
+│   ├── type-family-examples.rkt     # Adaptive type specialization
+│   ├── unified-effects-demo.rkt     # Cross-tier effect usage
+│   └── values-as-proofs-demo.rkt    # Computational evidence examples
+├── docs/                        # Theoretical documentation
+│   └── values-as-proofs.md      # HoTT foundations and proof-carrying values
+├── scripts/                     # Development utilities
+├── devbox.json                  # Environment configuration
+├── Makefile                     # Build automation
+├── info.rkt                     # Package metadata
+└── README.md                    # This file
 ```
 
 ## Language Design Goals
@@ -158,9 +206,44 @@ path-finder/
 
 ## Development Status
 
-This is an early-stage experimental language. Current implementation status:
+**🚨 Current Status: Early Research Phase**
+- **Core Language**: Basic functionality working (arithmetic, functions, conditionals)
+- **Type System**: HoTT foundations and dependent types implemented
+- **Effect System**: Architecture designed, implementation in progress
+- **Distributed Proofs**: Conceptual design complete, implementation pending
+
+**⚡ What Works Right Now:**
+- Interactive REPL with HoTT natural numbers and booleans
+- Basic arithmetic and comparison operations  
+- Lambda functions with closures
+- Variable definitions and conditional expressions
+- Complete test suite (89+ tests passing)
+
+**🔬 What's Experimental:**
+- Advanced type features (dependent safety, bounded arrays)
+- Multi-tier effect system (partially implemented)
+- HoTT path computation (foundational work complete)
+- Distributed proof cache (design phase)
+
+Current implementation status:
 
 ### Completed Features ✅
+
+#### **3-Tier Effect System Architecture**
+- **Tier 1**: Pure computational proofs with compile-time verification
+- **Tier 2**: Algebraic effects for compile-time operations
+- **Tier 3**: Unified algebraic effects with runtime & capability handlers
+- **Multi-Context Handlers**: Universal, specific contexts, and context lists
+- **Execution Context Switching**: Automatic handler resolution across contexts
+- **Effect-Aware Type Checking**: Integration across all execution environments
+
+#### **Dependent Safety Infrastructure**
+- **Proof-Carrying Values**: Values bundled with computational evidence
+- **NonEmptyList**: Compile-time guaranteed non-empty collections
+- **BoundedArray**: Tier 1 compile-time bounds checking with mathematical proofs
+- **Path-Based Safety**: Provably total operations with termination guarantees
+- **Type Families**: Parameterized types with adaptive specialization
+- **Effect-Based Error Handling**: Mathematical guarantees instead of nullable types
 
 #### **Complete HoTT Implementation**
 - **Path Computation** - Identity types with reflexivity, concatenation, inverse, transport, congruence
@@ -171,12 +254,20 @@ This is an early-stage experimental language. Current implementation status:
 - **Higher Structure** - 2-paths, 3-paths, truncation levels, contractible/proposition/set types
 - **J-eliminator** - Path induction for dependent elimination over identity types
 
+#### **Advanced Type System Implementation**
+- **Tier-Aware Type Families**: Adaptive specialization across execution contexts
+- **Generic Effects**: Multi-context effect handlers with universal/specific resolution
+- **Bounded Arrays**: Compile-time bounds checking with Tier 1 proofs
+- **Dependent Safety**: NonEmptyList with mathematical non-empty guarantees
+- **Effect-Checker**: Verification of effect constraints across all tiers
+- **Proof Construction**: Automatic generation of safety evidence and constraint proofs
+
 #### **Core Language Implementation**
 - **Development Environment** - Devbox setup with Racket toolchain
 - **S-Expression Lexer** - Complete tokenization (parentheses, symbols, numbers, booleans, strings, comments)
 - **S-Expression Parser** - Recursive descent parser building proper AST
 - **HoTT-based Evaluator** - Environment-based interpreter with proper HoTT value representation
-- **Type Checker** - Integration of HoTT type checking with path and equivalence types
+- **Effect-Aware Type Checker** - Integration of HoTT type checking with multi-tier effects
 - **Interactive REPL** - Working Read-Eval-Print Loop with HoTT value display
 - **Built-in Operations** - Arithmetic and comparison with proper HoTT natural numbers and booleans
 - **Lambda Functions** - First-class functions with closures and proper typing
@@ -217,13 +308,26 @@ This is an early-stage experimental language. Current implementation status:
 ;; (ua equiv)                ; Apply univalence axiom
 ```
 
+### In Development 🚧
+
+#### **Tier 0: Distributed Proof Cache (Task 27)**
+The next major milestone is implementing a global mathematical commons - a distributed, content-addressable proof cache that extends our 3-tier architecture:
+
+- **Content-Addressable Proofs**: Proofs identified by their mathematical content, not location
+- **Transparent Network Computation**: Automatic discovery and reuse of proofs computed anywhere
+- **Zero-Configuration Distribution**: No explicit process management or network topology concerns
+- **Mathematical Commons**: Global network of shared mathematical knowledge
+- **Proof Reuse Optimization**: Skip computation if equivalent proofs exist in the distributed cache
+
+This revolutionary feature will make PathFinder the first programming language with a global, shared mathematical foundation where proofs computed by anyone become available to everyone.
+
 ### Future Development 🚧
-- **Effect System** - Algebraic effects runtime with HoTT integration (planned)
-- **Standard Library** - Extended HoTT-based core functions and types (planned)
-- **Advanced Path Syntax** - Direct syntax for path expressions (planned)
-- **Cubical Features** - Computational univalence and higher inductive types (planned)
-- **Error Messages** - Improved error reporting with HoTT type information (planned)
-- **Performance Optimization** - Efficient path computation and normalization (planned)
+- **Effect System Runtime** - Complete algebraic effects implementation with distributed handlers
+- **Standard Library Expansion** - Extended HoTT-based core functions and types
+- **Advanced Path Syntax** - Direct syntax for path expressions and higher groupoid operations
+- **Cubical Features** - Computational univalence and higher inductive types
+- **Enhanced Error Messages** - Context-aware error reporting with proof suggestions
+- **Performance Optimization** - Efficient path computation, normalization, and proof caching
 
 ## Contributing
 

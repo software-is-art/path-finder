@@ -1,6 +1,6 @@
 # Task ID: 4
 # Title: Type Checker for Simple Types and Functions
-# Status: pending
+# Status: done
 # Dependencies: 3
 # Priority: medium
 # Description: Develop a type checker that can validate expressions involving basic types and simple (non-dependent) function definitions and applications. It should infer types where possible and report type errors.
@@ -11,31 +11,31 @@ Implement a type checking algorithm, potentially bidirectional (checking and inf
 Test with well-typed programs (e.g., `(define (add (x Nat) (y Nat)) (+ x y))`, `(add 1 2)`). Test with ill-typed programs (e.g., applying a number as a function, wrong argument types, incorrect return type in function body). Verify correct type inference for simple cases and accurate error reporting for mismatches.
 
 # Subtasks:
-## 1. Implement Type Checking for Literals and Variable References [pending]
+## 1. Implement Type Checking for Literals and Variable References [done]
 ### Dependencies: None
 ### Description: Develop the core logic to determine the types of basic literals (e.g., integers, booleans) and to look up types of variables from a type environment. This forms the foundation for checking more complex expressions.
 ### Details:
 Create a `TypeEnvironment` class/structure to store variable-to-type mappings (scoped, if necessary, for later features like let-bindings or nested functions). Implement a `check(ast_node, environment)` or `infer(ast_node, environment)` method. For literal AST nodes (e.g., `NumberNode`, `BooleanNode`), this method should return their corresponding `Type` objects (e.g., `NumberType`, `BooleanType` from Task 3). For `VariableNode`, it should look up the variable's name in the `TypeEnvironment`. If not found, this is an unbound variable situation (actual error reporting will be refined in a later subtask, but the condition should be detectable).
 
-## 2. Implement Type Checking for `define` Expressions [pending]
+## 2. Implement Type Checking for `define` Expressions [done]
 ### Dependencies: 4.1
 ### Description: Extend the type checker to handle `(define x value)` expressions. This involves inferring the type of the `value` expression and updating the type environment with this new binding for `x`.
 ### Details:
 For a `DefineNode(name, value_expr)`: 1. Recursively call the type checker (e.g., `infer(value_expr, environment)`) on the `value_expr` to determine its type. 2. If `value_expr` type checking fails, propagate the error. 3. Otherwise, update the current `TypeEnvironment` by adding a mapping from `name` (a string) to the inferred type. The `define` expression itself might be considered to have a special `Void` type or the type of the variable being defined; clarify this or focus on the environment side-effect. Ensure the updated environment is used for subsequent expressions at the same scope.
 
-## 3. Implement Type Checking for `lambda` Expressions (Function Definitions) [pending]
+## 3. Implement Type Checking for `lambda` Expressions (Function Definitions) [done]
 ### Dependencies: 4.1
 ### Description: Implement type checking for function definitions `(lambda (param1 param2 ...) body)`. This includes processing parameter type annotations, creating a new scope for the function body, and inferring the function's return type by checking the body. The result is a function type.
 ### Details:
 For a `LambdaNode(params, body_expr)`: 1. Create a new, extended `TypeEnvironment` that inherits from the current environment. 2. For each parameter in `params`: If type annotations are present (e.g., `(x : Int)`), add the parameter name and its annotated type to this new environment. If annotations are absent, for this initial implementation, either require annotations or assume a default 'Unknown/Any' type, or prepare for more complex inference if specified. 3. Recursively call the type checker (e.g., `infer(body_expr, new_environment)`) on `body_expr` to determine its type. This is the function's return type. 4. The type of the `lambda` expression itself is a `FunctionType` (from Task 3) composed of the list of parameter types and the inferred return type.
 
-## 4. Implement Type Checking for Function Applications [pending]
+## 4. Implement Type Checking for Function Applications [done]
 ### Dependencies: 4.1, 4.3
 ### Description: Implement type checking for function application expressions `(f arg1 arg2 ...)`. This involves ensuring `f` evaluates to a function type, the number of arguments matches the function's arity, and each argument's type is compatible with the corresponding parameter type. The type of the application is the function's return type.
 ### Details:
 For an `ApplicationNode(function_expr, arg_exprs)`: 1. Recursively call the type checker on `function_expr` to get its type. Verify this is a `FunctionType`. If not, it's a type error ('not a function'). 2. Compare the number of `arg_exprs` with the arity (number of parameters) of the `FunctionType`. If they don't match, it's an arity mismatch error. 3. For each `arg_expr` and its corresponding parameter type from the `FunctionType`: a. Recursively call the type checker on `arg_expr` to get its type. b. Check if the argument's actual type is assignable to/compatible with the expected parameter type. If not, it's a type mismatch error. 4. If all checks pass, the type of the `ApplicationNode` expression is the return type specified in the `FunctionType` of `function_expr`.
 
-## 5. Implement Clear Type Error Reporting and System Integration [pending]
+## 5. Implement Clear Type Error Reporting and System Integration [done]
 ### Dependencies: 4.1, 4.2, 4.3, 4.4
 ### Description: Develop a robust error reporting mechanism that generates clear, user-friendly messages for all detected type errors (e.g., mismatches, unbound variables, arity errors). Integrate the type checker to operate on a full AST and collect all errors.
 ### Details:

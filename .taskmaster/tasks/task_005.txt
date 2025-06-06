@@ -1,6 +1,6 @@
 # Task ID: 5
 # Title: Canonical Instantiation Functions (CIFs) - Pure Product and Sum Types
-# Status: pending
+# Status: done
 # Dependencies: 4
 # Priority: medium
 # Description: Implement the `deftype` syntax for defining simple product types (struct-like) and sum types (enum-like). Generate and evaluate pure Canonical Instantiation Functions (CIFs) for these types. No effects or complex constraints at this stage.
@@ -11,7 +11,7 @@ Extend parser for `(deftype Name (fields...) ...)` for product types (e.g., `(de
 Define several product and sum types. Instantiate them using their CIFs. Verify that the type checker correctly types these instantiations. Access fields of product types and pattern match (rudimentary, if available, or inspect structure) on sum types. Ensure instantiations are evaluated to correct runtime values.
 
 # Subtasks:
-## 1. Extend Parser for `deftype` Syntax (Product and Sum Types) [pending]
+## 1. Extend Parser for `deftype` Syntax (Product and Sum Types) [done]
 ### Dependencies: None
 ### Description: Modify the parser to recognize and parse the `(deftype Name ...)` syntax for both product types `(deftype Name ((field1 type1) (field2 type2) ...))` and sum types `(deftype Name (Variant1 typeA ...) (Variant2 typeB typeC ...) ...)`. The parser should generate distinct Abstract Syntax Tree (AST) nodes for these definitions.
 ### Details:
@@ -20,7 +20,7 @@ Implement parsing rules for:
 2. Sum types: `(deftype <TypeName> (<VariantName> <fieldType>*)*)`. Example: `(deftype Shape (Circle Nat) (Rectangle Nat Nat))`. The AST node should capture the type name, and a list of (variant name, list of argument type names) pairs.
 Ensure robust error handling for malformed definitions.
 
-## 2. Type Checker: Register User-Defined Product and Sum Types [pending]
+## 2. Type Checker: Register User-Defined Product and Sum Types [done]
 ### Dependencies: 5.1
 ### Description: Enhance the type checker to process `deftype` AST nodes from the parser. It must register these new product and sum types in the type environment, storing their structure (field names and resolved types for products; variant names and their resolved argument types for sums).
 ### Details:
@@ -30,7 +30,7 @@ When a `deftype` AST node is encountered during type checking:
 3. Check for type name collisions within the current scope. Disallow redefinition of existing types or primitive types.
 4. The registered types should be available for subsequent type checking.
 
-## 3. Type Checker: Recognize and Type Check Canonical Instantiation Function (CIF) Calls [pending]
+## 3. Type Checker: Recognize and Type Check Canonical Instantiation Function (CIF) Calls [done]
 ### Dependencies: 5.2
 ### Description: Update the type checker to recognize expressions like `(TypeName arg1 ...)` or `(VariantName arg1 ...)` as Canonical Instantiation Function (CIF) calls. It should type-check these calls against the registered product or sum type definitions, determining the type of the resulting expression.
 ### Details:
@@ -45,7 +45,7 @@ When a `deftype` AST node is encountered during type checking:
    - The type of the entire expression `(Circle arg1 ... argM)` is the parent sum type `S` (e.g., `Shape`).
 CIFs are implicit; no explicit function definition is parsed for them.
 
-## 4. Evaluator: Implement Product Type Instantiation [pending]
+## 4. Evaluator: Implement Product Type Instantiation [done]
 ### Dependencies: 5.3
 ### Description: Modify the evaluator to handle CIF calls for product types. When a type-checked expression like `(Point 1 2)` is evaluated, it should create and return an internal runtime representation of a product type instance (e.g., a record or struct-like object).
 ### Details:
@@ -55,7 +55,7 @@ CIFs are implicit; no explicit function definition is parsed for them.
    - The runtime instance should also be tagged with its type name (e.g., `Point`).
    - Example: `(Point 1 2)` evaluates to a runtime value representing `{ type: 'Point', fields: { x: 1, y: 2 } }` or similar.
 
-## 5. Evaluator: Implement Sum Type Instantiation [pending]
+## 5. Evaluator: Implement Sum Type Instantiation [done]
 ### Dependencies: 5.3
 ### Description: Modify the evaluator to handle CIF calls for sum type variants. When a type-checked expression like `(Circle 5)` (for `deftype Shape (Circle Nat) ...`) is evaluated, it should create and return an internal runtime representation of a sum type instance (e.g., a tagged union).
 ### Details:

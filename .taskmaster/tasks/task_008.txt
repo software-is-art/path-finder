@@ -3,25 +3,25 @@
 # Status: pending
 # Dependencies: 5, 7
 # Priority: medium
-# Description: Introduce the predefined `ConstructionFailure` effect. Modify CIFs for types defined with `(:where ...)` clauses to perform this effect if runtime constraint checks fail.
+# Description: Introduce the predefined `ConstructionFailure` effect as a proper algebraic effect within our 3-tier system. Modify Constructor Invocation Functions (CIFs) for types defined with `(:where ...)` clauses to `perform` this effect if runtime constraint checks fail. This allows construction failures to be managed by context-aware algebraic effect handlers rather than traditional exception handling.
 # Details:
-Predefine the `ConstructionFailure` effect (e.g., `(defeffect ConstructionFailure (fail (message String)) : Nothing)`). Extend `deftype` to parse simple `(:where predicate-expr)` clauses. When a CIF for such a type is called, evaluate the `predicate-expr` after constructing the underlying value. If the predicate is false, `perform (ConstructionFailure.fail "Constraint violated")`. Users should be able to catch this with `(try (MyType ...) (:catch (e : ConstructionFailure) fallback))`. The `:catch` syntax is a specialized handler for exceptions.
+Predefine the `ConstructionFailure` effect (e.g., `(defeffect ConstructionFailure (fail (message String)) : Nothing)`). This will be a Tier 2/3 effect. Extend `deftype` to parse `(:where predicate-expr)` clauses. When a CIF for such a type is called, it will evaluate the `predicate-expr` after constructing the underlying value. If the predicate is false, the CIF will `perform (ConstructionFailure.fail "Constraint violated")`. Users can then manage this effect using the standard algebraic effect handler mechanism (e.g., `with-handler`). This allows for flexible, context-dependent failure management, such as providing a default value, logging the error, or aborting the computation.
 
 # Test Strategy:
-Define a type with a `(:where ...)` constraint (e.g., `(deftype PositiveNat Nat (:where (> self 0)))`). Test instantiation with valid values (should succeed) and invalid values (should perform `ConstructionFailure`). Verify that `try/catch` can intercept `ConstructionFailure` and execute fallback logic.
+Define a type with a `(:where ...)` constraint (e.g., `(deftype PositiveNat Nat (:where (> self 0)))`). Test instantiation with valid values (should succeed) and invalid values (should perform `ConstructionFailure`). Verify that a suitable effect handler (e.g., one defined with `defhandler`) can intercept the `ConstructionFailure` effect and execute custom logic, such as returning a default value or re-raising a different effect.
 
 # Subtasks:
 ## 1. Define Predefined `ConstructionFailure` Effect [pending]
 ### Dependencies: None
 ### Description: Introduce the `ConstructionFailure` effect into the system's core library or prelude. This effect signals failures during type construction when runtime constraints are violated.
 ### Details:
-Implement `(defeffect ConstructionFailure (fail (message String)) : Nothing)` as specified. Ensure it's available globally. The `fail` operation should accept a `String` message. The effect type should indicate no return value (e.g., `: Nothing` or equivalent mechanism if the language uses a different syntax for effect signatures).
+Implement `(defeffect ConstructionFailure (fail (message String)) : Nothing)` as specified. Ensure it's available globally. This should be classified as a Tier 2 (compile-time checkable) and Tier 3 (runtime) effect. The `fail` operation should accept a `String` message. The effect type should indicate no return value (e.g., `: Nothing`), signifying that it does not resume by default.
 
 ## 2. Extend `deftype` to Parse and Store `:where` Clauses [pending]
 ### Dependencies: 8.1
 ### Description: Modify the `deftype` macro or special form to recognize, parse, and store `(:where predicate-expr)` clauses found within type definitions. The predicate expression will be used for runtime validation.
 ### Details:
-Update the `deftype` parser. When a `(:where predicate-expr)` clause is encountered: 1. Parse `predicate-expr`. 2. Store this predicate (e.g., as a lambda, an abstract syntax tree, or a compiled function) in the type's metadata. 3. Define and document a convention for how the value being constructed will be referenced within `predicate-expr` (e.g., a special variable like `%`, `this`, or as the first argument to a lambda).
+Update the `deftype` parser. When a `(:where predicate-expr)` clause is encountered: 1. Parse `predicate-expr`. 2. Store this predicate (e.g., as a lambda, an abstract syntax tree, or a compiled function) in the type's metadata. 3. Define and document a convention for how the value being constructed will be referenced within `predicate-expr` (e.g., a special variable like `self` or `this`).
 
 ## 3. Adapt CIF Generation to Incorporate Constraint Predicates [pending]
 ### Dependencies: 8.2
@@ -35,9 +35,9 @@ Modify the code generation part of `deftype` or the CIF creation mechanism. When
 ### Details:
 In the CIF execution flow for types with constraints: 1. After the base value is constructed and the predicate is called (as set up in Subtask 3), check its return value. 2. If the predicate returns `false` (or any falsey value according to the language's semantics), perform `(ConstructionFailure.fail "Constraint violated")`. The message can be made more specific, e.g., by including the type name or a user-provided message from the `:where` clause if supported.
 
-## 5. Implement `try/:catch` Syntax for `ConstructionFailure` Effect [pending]
+## 5. Enable Handling of `ConstructionFailure` via Algebraic Effect Handlers [pending]
 ### Dependencies: 8.4
-### Description: Implement the `(try expression (:catch (e : ConstructionFailure) handler-expression))` syntax. This allows user code to catch the `ConstructionFailure` effect and execute custom handling logic.
+### Description: Ensure the existing algebraic effect handling mechanism can be used to manage the `ConstructionFailure` effect. This allows user code to define handlers that intercept construction failures and execute custom logic.
 ### Details:
-1. Extend the language parser to recognize the `try ... (:catch (variable : EffectType) handler-expression)` syntax, specifically for `EffectType` being `ConstructionFailure`. 2. Implement the runtime semantics: When `expression` is evaluated, if it (or any function it calls) performs an effect of type `ConstructionFailure`, the evaluation of `expression` is aborted. 3. The `handler-expression` is then evaluated. The `variable` (e.g., `e`) should be bound to the payload of the `ConstructionFailure` effect (i.e., the instance returned by `(ConstructionFailure.fail message)`, which should contain the message). 4. The result of the `try` expression in case of a caught effect is the result of the `handler-expression`. If no matching effect is performed, the result is that of `expression`. Ensure this handler is specific to `ConstructionFailure` as per the specialized nature of `:catch` for exceptions.
+Leverage the language's existing effect handler syntax (e.g., `with-handler` and `defhandler`). When a `ConstructionFailure` is performed within the dynamic scope of a handler: 1. Control is transferred to the appropriate clause in the handler. 2. The handler receives the effect payload (the message) and the continuation. 3. The handler can then choose to: a) Abort the computation and return a fallback value. b) Resume the computation with a default value if the effect signature allowed it (though `ConstructionFailure` shouldn't). c) Perform another effect. This subtask ensures the general handler mechanism works correctly for this specific, newly introduced effect.
 

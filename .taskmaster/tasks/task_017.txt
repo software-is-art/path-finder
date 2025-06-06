@@ -1,18 +1,18 @@
 # Task ID: 17
 # Title: Implement Core Standard Library (Nat, Bool, Option, List)
-# Status: pending
+# Status: in-progress
 # Dependencies: 4, 5
 # Priority: high
-# Description: Define fundamental types Nat, Bool, Option, and List using `deftype`, implement their Canonical Instantiation Functions (CIFs), and provide a set of basic operations and functions for each. This establishes essential building blocks for practical programming in PathFinder LISP.
+# Description: Implement the core standard library types: `Nat`, `Bool`, `List`, and `NonEmptyList`. This task focuses on establishing essential, safe, and robust building blocks for practical programming in PathFinder LISP, aligned with a HoTT/dependent types philosophy. Key aspects include defining types with `deftype`, using the effect system for partial functions (explicitly eliminating the need for `Option` types), and leveraging the proof-carrying `NonEmptyList` type for safe head/tail access.
 # Details:
-This task involves defining the core data types for the PathFinder LISP standard library. These types will be foundational for most programs written in the language.
+This task involves defining the core data types for the PathFinder LISP standard library, with an emphasis on totality and safety.
 
 **General Requirements:**
-- All specified types (Nat, Bool, Option T, List T) must be defined using the `deftype` mechanism (from Task 5).
-- Canonical Instantiation Functions (CIFs) for each type and its variants (e.g., `Some` for `Option`, `Cons` for `List`) should be available as per the `deftype` specification.
+- All specified types (Nat, Bool, List T, NonEmptyList T) must be defined using the `deftype` mechanism (from Task 5).
+- Canonical Instantiation Functions (CIFs) for each type and its variants (e.g., `NECons` for `NonEmptyList`, `Cons` for `List`) should be available as per the `deftype` specification.
 - Operations and functions for these types should be implemented as PathFinder LISP functions and must be type-checked by the system's type checker (from Task 4).
-- These `deftype` definitions for `Nat` and `Bool` will serve as the canonical representations in the standard library, potentially building upon or replacing any primitive notions from Task 3 to ensure they integrate seamlessly with user-defined types and the `deftype` system.
-- The `deftype` mechanism must support parameterized types (e.g., `Option T`, `List T`) and recursive type definitions (e.g., `List T`, Peano `Nat`). This might be a requirement for Task 5 or an aspect to be confirmed during this task's implementation.
+- Partial functions like `subtract` must use the language's effect system for error handling instead of returning an option type.
+- The `deftype` mechanism must support parameterized types (e.g., `List T`) and recursive type definitions (e.g., `List T`, Peano `Nat`).
 
 **Type Definitions and Operations:**
 
@@ -22,45 +22,41 @@ This task involves defining the core data types for the PathFinder LISP standard
     *   Operations:
         *   `isZero?: Nat -> Bool`
         *   `add: Nat Nat -> Nat`
-        *   `subtract: Nat Nat -> Option Nat` (Subtraction is partial)
+        *   `subtract: Nat Nat -> Nat` (This is a partial function. If subtraction results in a negative number, it should trigger a 'DomainError' effect rather than returning a value.)
         *   `equals?: Nat Nat -> Bool`
         *   `lessThan?: Nat Nat -> Bool`
 
 2.  **Bool (Booleans):**
-    *   Definition: `(deftype Bool (PFalse) (PTrue))` (Using PFalse/PTrue to avoid conflict with potential #f/#t literals if they are different entities, or simply `False`/`True` if the naming convention allows).
-    *   CIFs: `PFalse`, `PTrue` (or `False`, `True`).
+    *   Definition: `(deftype Bool (PFalse) (PTrue))`.
+    *   CIFs: `PFalse`, `PTrue`.
     *   Operations:
         *   `and: Bool Bool -> Bool`
         *   `or: Bool Bool -> Bool`
         *   `not: Bool -> Bool`
 
-3.  **Option T (Optional Values):**
-    *   Definition: `(deftype (Option T) (None) (Some T))` (Parameterized sum type).
-    *   CIFs: `None`, `Some`.
-    *   Operations:
-        *   `isSome?: (Option T) -> Bool`
-        *   `isNone?: (Option T) -> Bool`
-        *   `getOrElse: (Option T) T -> T` (Requires default value of type T)
-        *   `mapOption: (Option T) (T -> U) -> (Option U)`
-
-4.  **List T (Lists):**
+3.  **List T (Lists):**
     *   Definition: `(deftype (List T) (Nil) (Cons T (List T)))` (Parameterized, recursive sum type).
     *   CIFs: `Nil`, `Cons`.
     *   Operations:
         *   `isEmpty?: (List T) -> Bool`
-        *   `head: (List T) -> (Option T)`
-        *   `tail: (List T) -> (Option (List T))`
         *   `append: (List T) (List T) -> (List T)`
         *   `length: (List T) -> Nat`
         *   `mapList: (List T) (T -> U) -> (List U)`
         *   `filterList: (List T) (T -> Bool) -> (List T)`
-        *   `foldLeft: (List T) U ((U T) -> U) -> U` (Initial accumulator of type U, function takes accumulator and list element, returns new accumulator)
+        *   `foldLeft: (List T) U ((U T) -> U) -> U`
         *   `reverse: (List T) -> (List T)`
+
+4.  **NonEmptyList T (Proof-Carrying Lists):**
+    *   Definition: `(deftype (NonEmptyList T) (NECons T (List T)))` (A non-empty head followed by a standard list).
+    *   CIFs: `NECons`.
+    *   Operations (These are total functions on `NonEmptyList`):
+        *   `head: (NonEmptyList T) -> T`
+        *   `tail: (NonEmptyList T) -> (List T)`
 
 **Implementation Considerations:**
 -   The definitions should be placed in a standard library module that can be automatically loaded or easily imported.
--   Ensure error handling for partial functions (e.g., `head` on an empty list should return `None`).
--   Performance considerations for list operations, especially for larger lists (though initial implementations can be straightforward recursive versions).
+-   Ensure the effect handling for `subtract` is correctly implemented and can be caught by an appropriate handler.
+-   Programs should be encouraged to pattern match on `List T` to distinguish between the `Nil` case and the `(Cons h t)` case, which can then be used to construct a `(NonEmptyList T)` for safe use with `head` and `tail`.
 
 # Test Strategy:
 Testing will involve unit tests for each type and its operations, focusing on CIFs, functional correctness, type checking, and edge cases.
@@ -68,8 +64,8 @@ Testing will involve unit tests for each type and its operations, focusing on CI
 **1. Nat Tests:**
     - Verify `(Zero)` and `(Succ ...)` create `Nat` values.
     - Test `isZero?` on `Zero` and non-zero numbers.
-    - Test `add` with various combinations (e.g., `(add Zero Zero)`, `(add Zero N)`, `(add N Zero)`, `(add N M)`).
-    - Test `subtract` (e.g., `(subtract N M)` where N > M, N = M, N < M returning `None`).
+    - Test `add` with various combinations.
+    - Test `subtract`: verify correct results for N >= M. For N < M, verify that the appropriate 'DomainError' effect is triggered.
     - Test `equals?` and `lessThan?` with various pairs.
     - Type checking: `(add Zero PTrue)` should be a type error.
 
@@ -78,29 +74,27 @@ Testing will involve unit tests for each type and its operations, focusing on CI
     - Test `and`, `or`, `not` with all input combinations.
     - Type checking: `(and PTrue Zero)` should be a type error.
 
-**3. Option T Tests:**
-    - Verify `(None)` and `(Some val)` (e.g., `(Some 10)`, `(Some PTrue)`) create `Option Nat` and `Option Bool` respectively.
-    - Test `isSome?` and `isNone?` on `(None)` and `(Some val)`.
-    - Test `getOrElse` for both `None` and `Some` cases.
-    - Test `mapOption` with functions transforming the value, and with `None`.
-    - Type checking: `(getOrElse (Some 10) PFalse)` should be a type error if types don't match. `mapOption`'s function argument and return types must be checked.
-
-**4. List T Tests:**
+**3. List T Tests:**
     - Verify `(Nil)` and `(Cons val list)` create `List` values (e.g., `(List Nat)`).
     - Test `isEmpty?` on `(Nil)` and non-empty lists.
-    - Test `head` and `tail` on empty and non-empty lists (expecting `Option` results).
     - Test `append` with empty lists and non-empty lists.
     - Test `length` for various list sizes.
-    - Test `mapList`, `filterList`, `foldLeft`, `reverse` with various inputs: empty lists, single-element lists, multiple-element lists, and functions with different behaviors.
+    - Test `mapList`, `filterList`, `foldLeft`, `reverse` with various inputs: empty lists, single-element lists, multiple-element lists.
     - Type checking: `(Cons 1 (Cons PTrue (Nil)))` should be a type error for a homogeneous list `(List Nat)`. Ensure higher-order functions' arguments are correctly type-checked.
 
+**4. NonEmptyList T Tests:**
+    - Verify `(NECons h t)` creates a `NonEmptyList T` value.
+    - Test `head` on various non-empty lists to ensure it returns the first element.
+    - Test `tail` on various non-empty lists to ensure it returns the rest of the list.
+    - Type checking: `(head (Nil))` should be a type error, as `head` requires a `(NonEmptyList T)`.
+
 **5. Integration Tests:**
-    - Write small programs combining these types, e.g., a function that processes a `(List (Option Nat))`.
-    - Ensure CIFs are correctly evaluated by the evaluation engine.
-    - Verify that all defined functions and operations are correctly type-checked by the type system (Task 4) when used in various expressions.
+    - Write small programs that pattern match on a `(List T)`, and upon finding a `(Cons h t)`, construct a `(NonEmptyList T)` to safely call `head` and `tail`.
+    - Write programs that use `subtract` within an effect handler to catch and manage domain errors.
+    - Verify that all defined functions and operations are correctly type-checked by the type system (Task 4).
 
 # Subtasks:
-## 1. Define `Bool` Type and Implement Core Boolean Operations [pending]
+## 1. Define `Bool` Type and Implement Core Boolean Operations [in-progress]
 ### Dependencies: None
 ### Description: Defines the `Bool` type using `deftype` with `PFalse` and `PTrue` variants. Implements its Canonical Instantiation Functions (CIFs) and the fundamental boolean operations: `and`, `or`, `not`. This subtask establishes the foundational boolean logic for the standard library.
 ### Details:
@@ -126,45 +120,41 @@ Testing will involve unit tests for each type and its operations, focusing on CI
 4. These functions will use the `Bool` type and its CIFs (`PTrue`, `PFalse`) from subtask 1 for their return values.
 5. Ensure all functions are type-checked. Place these definitions in the standard library module.
 
-## 3. Define Parameterized `Option T` Type and Implement Core Operations [pending]
-### Dependencies: 17.1
-### Description: Defines the parameterized `Option T` type using `deftype` with `None` and `Some T` variants: `(deftype (Option T) (None) (Some T))`. Implements its CIFs (`None`, `Some`) and core operations: `isSome?`, `isNone?`, `getOrElse`, `mapOption`. This subtask relies on `deftype` supporting parameterized types.
-### Details:
-1. Define `Option T` using `(deftype (Option T) (None) (Some T))`. Confirm `deftype` (Task 5) supports parameterized types.
-2. Ensure `None` (CIF for the `None` variant, type `(Option T)` for any `T`) and `Some` (CIF for the `Some` variant, type `T -> (Option T)`) are available.
-3. Implement PathFinder LISP functions for:
-   - `isSome?: (Option T) -> Bool`
-   - `isNone?: (Option T) -> Bool`
-   - `getOrElse: (Option T) T -> T` (takes a default value of type T)
-   - `mapOption: (Option T) (T -> U) -> (Option U)` (a higher-order function)
-4. `isSome?` and `isNone?` will use the `Bool` type from subtask 1.
-5. Ensure all functions are type-checked, including correct handling of generic types `T` and `U`. Place in standard library module.
-
-## 4. Implement `Nat` Arithmetic Operations: `add` and `subtract` [pending]
-### Dependencies: 17.2, 17.3
-### Description: Implements the arithmetic operations `add: Nat Nat -> Nat` and `subtract: Nat Nat -> Option Nat` for the `Nat` type defined in subtask 2. The `subtract` operation will utilize the `Option Nat` type (from subtask 3) to correctly handle cases where subtraction would result in a negative number (which is not representable by `Nat`).
-### Details:
-1. Implement PathFinder LISP functions for:
-   - `add: Nat Nat -> Nat` (Implement recursively: `(add Zero n) = n`, `(add (Succ m) n) = (Succ (add m n))`)
-   - `subtract: Nat Nat -> Option Nat` (Implement recursively: `(subtract m Zero) = (Some m)`, `(subtract Zero (Succ n)) = (None)`, `(subtract (Succ m) (Succ n)) = (subtract m n)`)
-2. These functions operate on the `Nat` type (defined in subtask 2) and `subtract` returns an `(Option Nat)` (defined in subtask 3).
-3. Ensure all functions are type-checked. Place in standard library module.
-
-## 5. Define Parameterized `List T` Type and Implement All Associated Operations [pending]
-### Dependencies: 17.1, 17.2, 17.3
-### Description: Defines the parameterized, recursive `List T` type using `deftype`: `(deftype (List T) (Nil) (Cons T (List T)))`. Implements its CIFs (`Nil`, `Cons`) and a comprehensive set of list operations as specified. This subtask relies on `deftype` supporting both parameterized and recursive types.
+## 5. Define Parameterized `List T` Type and Implement Safe Core Operations [pending]
+### Dependencies: 17.1, 17.2
+### Description: Defines the parameterized, recursive `List T` type using `deftype`: `(deftype (List T) (Nil) (Cons T (List T)))`. Implements its CIFs (`Nil`, `Cons`) and a comprehensive set of list operations that are total for all lists. This subtask relies on `deftype` supporting both parameterized and recursive types.
 ### Details:
 1. Define `List T` using `(deftype (List T) (Nil) (Cons T (List T)))`. Confirm `deftype` (Task 5) supports parameterized and recursive types.
 2. Ensure `Nil` (CIF for `Nil` variant, type `(List T)` for any `T`) and `Cons` (CIF for `Cons` variant, type `T (List T) -> (List T)`) are available.
 3. Implement PathFinder LISP functions for:
    - `isEmpty?: (List T) -> Bool` (uses `Bool` from subtask 1)
-   - `head: (List T) -> (Option T)` (uses `Option T` from subtask 3; returns `None` for an empty list)
-   - `tail: (List T) -> (Option (List T))` (uses `Option (List T)` from subtask 3; returns `None` for an empty list)
    - `append: (List T) (List T) -> (List T)`
-   - `length: (List T) -> Nat` (uses `Nat` from subtask 2, specifically `Zero` and `Succ` for a recursive definition: `(length Nil) = Zero`, `(length (Cons _ t)) = (Succ (length t))`)
+   - `length: (List T) -> Nat` (uses `Nat` from subtask 2)
    - `mapList: (List T) (T -> U) -> (List U)`
    - `filterList: (List T) (T -> Bool) -> (List T)` (predicate function uses `Bool` from subtask 1)
    - `foldLeft: (List T) U ((U T) -> U) -> U`
    - `reverse: (List T) -> (List T)` (can be implemented efficiently using `foldLeft`)
-4. Ensure all functions are type-checked, including generic types `T` and `U`. Place in standard library module. Implement functions recursively where appropriate. Initial implementations should focus on correctness; performance can be addressed later if needed.
+4. Ensure all functions are type-checked, including generic types `T` and `U`. Place in standard library module.
+
+## 3. Define `NonEmptyList T` and Implement Safe `head`/`tail` Operations [pending]
+### Dependencies: 17.5
+### Description: Defines the `NonEmptyList T` type to statically guarantee non-emptiness. Implements total functions `head` and `tail` that operate on this type, providing safe, proof-carrying access to list elements.
+### Details:
+1. Define `NonEmptyList T` using `(deftype (NonEmptyList T) (NECons T (List T)))`.
+2. Ensure `NECons` is available as a CIF with the type `T (List T) -> (NonEmptyList T)`.
+3. Implement the following total PathFinder LISP functions:
+   - `head: (NonEmptyList T) -> T`
+   - `tail: (NonEmptyList T) -> (List T)`
+4. These functions are guaranteed to succeed because the type `NonEmptyList T` provides proof that there is at least one element.
+5. Place these definitions in the standard library module.
+
+## 4. Implement `Nat` Arithmetic: `add` and Effectful `subtract` [pending]
+### Dependencies: 17.2
+### Description: Implements the arithmetic operations `add: Nat Nat -> Nat` and `subtract: Nat Nat -> Nat` for the `Nat` type. The `subtract` operation is partial and will use the language's effect system to signal a domain error when subtraction is not possible within `Nat`.
+### Details:
+1. Implement PathFinder LISP functions for:
+   - `add: Nat Nat -> Nat` (Implement recursively: `(add Zero n) = n`, `(add (Succ m) n) = (Succ (add m n))`)
+   - `subtract: Nat Nat -> Nat` (Implement recursively. For `(subtract (Succ m) (Succ n))`, recurse. For `(subtract Zero (Succ n))`, trigger a 'DomainError' effect.)
+2. These functions operate on the `Nat` type defined in subtask 2.
+3. Ensure all functions are type-checked. Place in standard library module.
 
