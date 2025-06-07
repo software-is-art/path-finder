@@ -2,7 +2,8 @@
 
 (require rackunit
          "../src/main.rkt"
-         "../src/evaluator/values.rkt")
+         "../src/evaluator/values.rkt"
+         "../src/core/host-bridge.rkt")
 
 ;; Test suite for Bool type and boolean logical operations
 

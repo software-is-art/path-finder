@@ -75,11 +75,11 @@
 
 ;; Complex integration tests
 (test-case "parse function definition"
-  (let ([ast (parse (tokenize "(define (square x) (* x x))"))])
+  (let ([ast (parse (tokenize "(def (square x) (* x x))"))])
     (check-true (sexpr? ast))
     (check-equal? (length (sexpr-elements ast)) 3)
     (check-true (symbol-atom? (first (sexpr-elements ast))))
-    (check-equal? (atom-value (first (sexpr-elements ast))) "define")))
+    (check-equal? (atom-value (first (sexpr-elements ast))) "def")))
 
 ;; Error handling tests
 (test-case "parse mismatched parentheses"

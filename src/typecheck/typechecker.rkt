@@ -9,7 +9,12 @@
 (provide type-check
          make-type-environment
          make-global-type-environment
-         type-environment?)
+         type-environment?
+         type-env-lookup
+         type-env-define!
+         type-environment
+         type-environment-bindings
+         type-environment-parent)
 
 ;; Type checking environment for HoTT-based PathFinder LISP
 

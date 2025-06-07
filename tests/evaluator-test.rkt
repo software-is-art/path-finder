@@ -5,6 +5,7 @@
          "../src/evaluator/values.rkt"
          "../src/types/types.rkt"
          "../src/parser/ast.rkt"
+         "../src/core/host-bridge.rkt"
          rackunit)
 
 ;; Tests for PathFinder LISP HoTT-based Evaluator
@@ -60,7 +61,7 @@
 ;; Variable definition and lookup
 (test-case "variable definition and lookup"
   (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define x 42)")) env)
+    (evaluate (parse (tokenize "(def x 42)")) env)
     (let ([result (evaluate (parse (tokenize "x")) env)])
       (check-true (nat-value? result))
       (check-equal? (nat-value->racket-number result) 42))))
@@ -76,16 +77,16 @@
   (check-true (eval-string-to-nat "(if (< 3 5) 100 200)" 100)))
 
 ;; Lambda expressions and function calls
-(test-case "lambda creation and application"
+(test-case "function creation and application"
   (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define double (lambda (x) (* x 2)))")) env)
+    (evaluate (parse (tokenize "(def double (fn (x) (* x 2)))")) env)
     (let ([result (evaluate (parse (tokenize "(double 7)")) env)])
       (check-true (nat-value? result))
       (check-equal? (nat-value->racket-number result) 14))))
 
-(test-case "lambda with multiple parameters"
+(test-case "function with multiple parameters"
   (let ([env (make-global-environment)])
-    (evaluate (parse (tokenize "(define add (lambda (x y) (+ x y)))")) env)
+    (evaluate (parse (tokenize "(def add (fn (x y) (+ x y)))")) env)
     (let ([result (evaluate (parse (tokenize "(add 8 5)")) env)])
       (check-true (nat-value? result))
       (check-equal? (nat-value->racket-number result) 13))))
