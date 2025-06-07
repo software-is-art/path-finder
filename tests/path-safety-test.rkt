@@ -4,7 +4,8 @@
          racket/list
          "../src/main.rkt"
          "../src/evaluator/values.rkt"
-         "../src/types/types.rkt")
+         "../src/types/types.rkt"
+         "../src/core/host-bridge.rkt")
 
 ;; Test suite for Path-Based Safety Infrastructure
 

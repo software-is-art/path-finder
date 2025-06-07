@@ -5,6 +5,7 @@
          "../src/parser/ast.rkt"
          "../src/evaluator/evaluator.rkt"
          "../src/evaluator/values.rkt"
+         "../src/core/host-bridge.rkt"
          rackunit)
 
 ;; Simple tests for pattern matching without type checking

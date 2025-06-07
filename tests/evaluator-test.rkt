@@ -5,6 +5,7 @@
          "../src/evaluator/values.rkt"
          "../src/types/types.rkt"
          "../src/parser/ast.rkt"
+         "../src/core/host-bridge.rkt"
          rackunit)
 
 ;; Tests for PathFinder LISP HoTT-based Evaluator
