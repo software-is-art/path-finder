@@ -299,14 +299,14 @@
     (let ([nat-bool (make-function-type Nat Bool)]
           [nat-nat (make-function-type Nat Nat)])
       (env-define! env "is-zero?" (builtin-value "is-zero?" nat-is-zero? nat-bool))
-      (env-define! env "predecessor" (builtin-value "predecessor" nat-predecessor nat-nat)))
+      (env-define! env "previous" (builtin-value "previous" nat-predecessor nat-nat)))
     
     ;; Constructor functions for inductive types
     (let ([unit-nat (make-function-type Unit Nat)]
           [nat-nat (make-function-type Nat Nat)]
           [unit-bool (make-function-type Unit Bool)])
       (env-define! env "zero" (builtin-value "zero" zero-constructor unit-nat))
-      (env-define! env "successor" (builtin-value "successor" successor-constructor nat-nat))
+      (env-define! env "next" (builtin-value "next" successor-constructor nat-nat))
       (env-define! env "true" (builtin-value "true" true-constructor unit-bool))  
       (env-define! env "false" (builtin-value "false" false-constructor unit-bool)))
 
@@ -383,9 +383,9 @@
          (let ([first-elem (first elements)])
            (match first-elem
              ;; Special forms
-             [(symbol-atom "define")
+             [(symbol-atom "def")
               (when (< (length elements) 3)
-                (error "define requires at least 2 arguments"))
+                (error "def requires at least 2 arguments"))
               (let* ([name-elem (second elements)]
                      [value-elem (third elements)])
                 (match name-elem
@@ -393,11 +393,11 @@
                    (let ([value (evaluate value-elem env)])
                      (env-define! env name value)
                      value)]
-                  [_ (error "define expects a symbol as first argument")]))]
+                  [_ (error "def expects a symbol as first argument")]))]
              
-             [(symbol-atom "lambda")
+             [(symbol-atom "fn")
               (when (< (length elements) 3)
-                (error "lambda requires at least 2 arguments"))
+                (error "fn requires at least 2 arguments"))
               (let* ([params-elem (second elements)]
                      [body-elems (drop elements 2)]) ; Multiple body expressions
                 (match params-elem
@@ -405,10 +405,10 @@
                    (let ([params (map (lambda (node)
                                        (match node
                                          [(symbol-atom name) name]
-                                         [_ (error "lambda parameters must be symbols")]))
+                                         [_ (error "fn parameters must be symbols")]))
                                      param-nodes)])
                      (closure-value params body-elems env))]
-                  [_ (error "lambda parameters must be a list")]))]
+                  [_ (error "fn parameters must be a list")]))]
              
              [(symbol-atom "if")
               (when (not (= (length elements) 4))
