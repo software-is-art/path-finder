@@ -110,7 +110,7 @@
 ;; ============================================================================
 
 (test-case "pattern matching in function body"
-  (let* ([input "((lambda (n) (match n ((zero) 42) ((successor x) x))) 3)"]
+  (let* ([input "((fn (n) (match n ((zero) 42) ((next x) x))) 3)"]
          [env (make-global-environment)])
     ;; Test pattern matching within a function - should work now
     (let* ([tokens (tokenize input)]
@@ -120,7 +120,7 @@
       (check-equal? (nat-value->racket-number result) 2))))
 
 (test-case "fibonacci with pattern matching"
-  (let* ([fib-def "(define fib (lambda (n) (match n ((zero) 0) ((successor (zero)) 1) ((successor (successor k)) (+ (fib (successor k)) (fib k))))))"]
+  (let* ([fib-def "(def fib (fn (n) (match n ((zero) 0) ((next (zero)) 1) ((next (next k)) (+ (fib (next k)) (fib k))))))"]
          [fib-call "(fib 4)"]
          [env (make-global-environment)])
     ;; Define fibonacci function
