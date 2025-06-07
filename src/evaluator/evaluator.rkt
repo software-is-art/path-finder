@@ -299,7 +299,7 @@
     (let ([nat-bool (make-function-type Nat Bool)]
           [nat-nat (make-function-type Nat Nat)])
       (env-define! env "is-zero?" (builtin-value "is-zero?" nat-is-zero? nat-bool))
-      (env-define! env "previous" (builtin-value "previous" nat-predecessor nat-nat)))
+      (env-define! env "prior" (builtin-value "prior" nat-predecessor nat-nat)))
     
     ;; Constructor functions for inductive types
     (let ([unit-nat (make-function-type Unit Nat)]
