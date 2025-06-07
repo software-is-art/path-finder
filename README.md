@@ -2,27 +2,27 @@
 
 > **⚠️ Experimental Research Language**: PathFinder LISP is an active research project exploring advanced type theory concepts. While the core functionality works, expect significant API changes and incomplete features. This is ideal for researchers, PL enthusiasts, and those interested in HoTT foundations.
 
-A revolutionary HoTT-based functional programming language with a 3-tier effect system and distributed proof computation, implemented in Racket.
+An experimental functional programming language exploring Homotopy Type Theory (HoTT), dependent types, and a novel 3-tier effect system, implemented in Racket.
 
 ## Overview
 
-PathFinder LISP is a groundbreaking functional programming language that combines:
+PathFinder LISP is an experimental functional programming language that explores:
 
 - **Homotopy Type Theory (HoTT)** foundations with dependent types and proof-carrying values
-- **3-Tier Effect System** for compile-time, runtime, and distributed computation
-- **Distributed Proof Cache** enabling transparent global mathematical commons
-- **Content-Addressable Computation** where proofs computed anywhere can be reused everywhere
+- **3-Tier Effect System** for separating compile-time, algebraic, and runtime effects
+- **Distributed Proof Cache** (planned) for sharing mathematical proofs across systems
+- **Content-Addressable Computation** allowing proof reuse independent of location
 - **S-Expression Syntax** for homoiconic program representation
-- **Interactive REPL** for exploratory programming with mathematical guarantees
+- **Interactive REPL** for exploratory programming with type safety
 
 ## Features
 
-🎯 **Revolutionary Architecture**
-- **Tier 0**: Distributed proof cache with content-addressable computation
+🎯 **3-Tier Effect Architecture**
+- **Tier 0**: Distributed proof cache with content-addressable computation (planned)
 - **Tier 1**: Compile-time computational proofs with dependent safety
 - **Tier 2**: Algebraic effects for compile-time operations
-- **Tier 3**: Unified runtime effects with capability handlers
-- **Mathematical Commons**: Global network of shared proofs and computations
+- **Tier 3**: Runtime effects with capability handlers
+- **Proof Sharing**: Network of shared mathematical proofs and computations
 
 🧮 **Complete HoTT Foundations**
 - **Path Computation**: Identity types with reflexivity, concatenation, inverse, transport, and congruence
@@ -313,7 +313,7 @@ Current implementation status:
   (array-ref arr idx)))  ; Compiler PROVES this never goes out of bounds!
 
 ;; The type system prevents buffer overflows at compile time
-;; No runtime bounds checking needed - it's mathematically impossible to fail
+;; No runtime bounds checking needed - bounds violations are statically ruled out
 ```
 
 ### The 3-Tier Effect System in Action
@@ -411,7 +411,7 @@ Traditional languages catch errors at runtime. PathFinder catches them at compil
 (vector-ref v i)   ; Only compiles if i : (BoundedNat (length v))
 (/ x y)           ; Only compiles if y : (NonZero Nat)
 
-;; The errors are impossible - not just caught, but mathematically excluded
+;; These errors are statically prevented - caught at compile time, not runtime
 ```
 
 ### In Development 🚧
@@ -425,7 +425,7 @@ The next major milestone is implementing a global mathematical commons - a distr
 - **Mathematical Commons**: Global network of shared mathematical knowledge
 - **Proof Reuse Optimization**: Skip computation if equivalent proofs exist in the distributed cache
 
-This revolutionary feature will make PathFinder the first programming language with a global, shared mathematical foundation where proofs computed by anyone become available to everyone.
+This feature aims to create a global commons of mathematical knowledge where proofs computed anywhere become available to everyone.
 
 ### Future Development 🚧
 - **Effect System Runtime** - Complete algebraic effects implementation with distributed handlers
