@@ -88,7 +88,7 @@ devbox run run examples/hello.pf
 pathfinder> (+ 2 3)
 (succ (succ (succ (succ (succ zero)))))
 
-pathfinder> (define x 42)
+pathfinder> (def x 42)
 (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ (succ zero))))))))))))))))))))))))))))))))))))))))))))
 
 pathfinder> (* x 2)
@@ -288,8 +288,8 @@ Current implementation status:
 (= 5 5)                      ; => true
 
 ;; Variables and functions
-(define x 42)
-(define square (lambda (x) (* x x)))
+(def x 42)
+(def square (fn (x) (* x x)))
 (square 5)                   ; => 25
 
 ;; Conditional logic
@@ -301,15 +301,15 @@ Current implementation status:
 
 ```lisp
 ;; NonEmptyList - Lists that can NEVER be empty (compile-time guarantee!)
-(define head-safe (lambda (lst : (NonEmptyList T))
-  (car lst)))  ; This is ALWAYS safe - no runtime checks needed!
+(def head-safe (fn (lst : (NonEmptyList T))
+  (head lst)))  ; This is ALWAYS safe - no runtime checks needed!
 
-;; Compare to traditional Lisp where (car '()) crashes
+;; Compare to traditional languages where (head []) crashes
 ;; In PathFinder, empty lists literally cannot be passed to head-safe
 
 ;; BoundedArray - Arrays with compile-time bounds checking
-(define safe-get (lambda (arr : (BoundedArray T n))
-                         (idx : (BoundedNat n))
+(def safe-get (fn (arr : (BoundedArray T n))
+                  (idx : (BoundedNat n))
   (array-ref arr idx)))  ; Compiler PROVES this never goes out of bounds!
 
 ;; The type system prevents buffer overflows at compile time
@@ -320,19 +320,19 @@ Current implementation status:
 
 ```lisp
 ;; Tier 1: Compile-time proofs (pure computation)
-(define safe-divide (lambda (x : Nat) (y : (NonZero Nat))
+(def safe-divide (fn (x : Nat) (y : (NonZero Nat))
   (/ x y)))  ; Division by zero is impossible - proven at compile time!
 
 ;; Tier 2: Algebraic effects (compile-time managed)
-(with-handlers ([file-error (lambda (e) "default.txt")])
+(with-handlers ([file-error (fn (e) "default.txt")])
   (read-file "config.txt"))  ; Effects are tracked in types
 
 ;; Tier 3: Runtime effects with handlers
-(define fetch-user-data (lambda (id : Nat)
+(def fetch-user-data (fn (id : Nat)
   (perform 'db-query (list 'user id))))  ; Effect is part of function's type
 
 ;; Effects compose beautifully
-(define process-user (lambda (id : Nat)
+(def process-user (fn (id : Nat)
   (let ([data (fetch-user-data id)])       ; db-query effect
     (write-file "log.txt" data)            ; file-write effect
     (send-email "admin@example.com" data)  ; network effect
@@ -344,30 +344,30 @@ Current implementation status:
 
 ```lisp
 ;; In PathFinder, equality is a path between values
-(define proof-2+2=4 : (Id Nat (+ 2 2) 4)
+(def proof-2+2=4 : (Id Nat (+ 2 2) 4)
   (refl 4))  ; Reflexivity: 4 equals itself
 
 ;; Transport values along equality paths
-(define double-equals (lambda (n : Nat) (p : (Id Nat n 4))
-  (transport (lambda (x) (= (* 2 x) 8)) p true)))
+(def double-equals (fn (n : Nat) (p : (Id Nat n 4))
+  (transport (fn (x) (= (* 2 x) 8)) p true)))
 ;; If n = 4, then 2*n = 8 (proven via path transport)
 
 ;; Function equality (functions are equal if they produce equal outputs)
-(define fn-equal : (Id (Nat -> Nat) 
-                      (lambda (x) (+ x 2))
-                      (lambda (y) (+ 2 y)))
-  (funext (lambda (n) (+-commutative n 2))))  ; Uses commutativity proof
+(def fn-equal : (Id (Nat -> Nat) 
+                    (fn (x) (+ x 2))
+                    (fn (y) (+ 2 y)))
+  (funext (fn (n) (+-commutative n 2))))  ; Uses commutativity proof
 ```
 
 ### Advanced: Distributed Proof Cache (Coming Soon)
 
 ```lisp
 ;; Imagine expensive proofs computed once, shared globally
-(define huge-prime? : (Id Bool (is-prime? 2^89-1) true)
+(def huge-prime? : (Id Bool (is-prime? 2^89-1) true)
   (compute-proof))  ; Takes 10 minutes first time
 
 ;; On another machine, same proof needed:
-(define mersenne-89 : (Id Bool (is-prime? 2^89-1) true)
+(def mersenne-89 : (Id Bool (is-prime? 2^89-1) true)
   (compute-proof))  ; Instant! Retrieved from global proof cache
 
 ;; The distributed system recognizes these are the same proof
@@ -378,15 +378,15 @@ Current implementation status:
 
 ```lisp
 ;; Type-safe routing with compile-time guarantees
-(define-handler GET "/user/:id" 
-  (lambda (req : Request) (id : (BoundedNat 1000000))
+(def-handler GET "/user/:id" 
+  (fn (req : Request) (id : (BoundedNat 1000000))
     ;; id is guaranteed to be valid user ID at compile time
     (with-effects (['db-read 'cache-read])
       (let ([user (get-user-by-id id)])
         (respond 200 (user->json user))))))
 
 ;; SQL injection impossible - query is type-checked
-(define get-user-by-id (lambda (id : (BoundedNat 1000000))
+(def get-user-by-id (fn (id : (BoundedNat 1000000))
   (perform 'db-query 
     (sql-query "SELECT * FROM users WHERE id = ?" [id]))))
 ;; The type system ensures 'id' is always a number, never a string
@@ -402,12 +402,12 @@ Traditional languages catch errors at runtime. PathFinder catches them at compil
 
 ```lisp
 ;; Traditional approach (runtime failure possible):
-;; (car '())          => ERROR: car: contract violation
+;; (head [])          => ERROR: empty list
 ;; (vector-ref v 10)  => ERROR: index out of bounds  
 ;; (/ x 0)           => ERROR: division by zero
 
 ;; PathFinder approach (compile-time safety):
-(car lst)          ; Only compiles if lst : (NonEmptyList T)
+(head lst)         ; Only compiles if lst : (NonEmptyList T)
 (vector-ref v i)   ; Only compiles if i : (BoundedNat (length v))
 (/ x y)           ; Only compiles if y : (NonZero Nat)
 
