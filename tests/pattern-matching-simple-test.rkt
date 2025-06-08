@@ -18,8 +18,8 @@
     (check-true (nat-value? result))
     (check-equal? (nat-value->racket-number result) 999)))
 
-(test-case "pattern matching with successor"
-  (let* ([input "(match 3 ((zero) 0) ((successor n) (+ n 1)))"]
+(test-case "pattern matching with next"
+  (let* ([input "(match 3 ((zero) 0) ((next n) (+ n 1)))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [result (evaluate ast)])

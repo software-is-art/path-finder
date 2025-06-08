@@ -48,7 +48,7 @@
     
     ;; Complex expressions should union all effects
     (let ([complex-effects (infer-effects 
-                            (string->ast "(if (> (comp-add 1 2) 0) (effect-read-file \"a.txt\") (effect-compute-hash \"data\"))")
+                            (string->ast "(if (> (+ 1 2) 0) (effect-read-file \"a.txt\") (effect-compute-hash \"data\"))")
                             env)])
       (check-false (effect-empty? complex-effects)
                    "Complex expression with effects should require effects"))))
@@ -64,7 +64,7 @@
                    "Should track file I/O effects"))
     
     ;; Check that pure computations don't require effects
-    (let ([result (effect-type-check (string->ast "(comp-add 5 3)") env)])
+    (let ([result (effect-type-check (string->ast "(+ 5 3)") env)])
       (check-true (effect-check-result? result)
                   "Should return effect check result")
       (check-true (effect-empty? (effect-check-result-effects result))
@@ -157,15 +157,15 @@
   ;; Test that effects force compile-time resolution
   (let ([env (make-effect-environment)])
     
-    ;; Tier 1: Pure computational CIFs should require no effects
-    (let ([comp-result (effect-type-check (string->ast "(comp-add 3 4)") env)])
+    ;; Tier 1: Pure computational functions should require no effects
+    (let ([comp-result (effect-type-check (string->ast "(+ 3 4)") env)])
       (check-true (effect-empty? (effect-check-result-effects comp-result))
-                  "Computational CIFs should be effect-free"))
+                  "Computational functions should be effect-free"))
     
-    ;; Tier 2: Effect CIFs should require build-time effects
+    ;; Tier 2: Effect functions should require build-time effects
     (let ([effect-result (effect-type-check (string->ast "(effect-read-file \"config.json\")") env)])
       (check-false (effect-empty? (effect-check-result-effects effect-result))
-                   "Effect CIFs should require effects"))
+                   "Effect functions should require effects"))
     
     ;; The type system should prevent unhandled effects from reaching runtime
     (let ([unhandled-check (effect-check (string->ast "(effect-read-file \"missing.txt\")") env)])
@@ -178,8 +178,8 @@
   (match str
     ["42" (number-atom 42)]
     ["(+ 1 2)" (sexpr (list (symbol-atom "+") (number-atom 1) (number-atom 2)))]
-    ["(comp-add 3 4)" (sexpr (list (symbol-atom "comp-add") (number-atom 3) (number-atom 4)))]
-    ["(comp-add 5 3)" (sexpr (list (symbol-atom "comp-add") (number-atom 5) (number-atom 3)))]
+    ["(+ 3 4)" (sexpr (list (symbol-atom "+") (number-atom 3) (number-atom 4)))]
+    ["(+ 5 3)" (sexpr (list (symbol-atom "+") (number-atom 5) (number-atom 3)))]
     ["(effect-read-file \"test.txt\")" (sexpr (list (symbol-atom "effect-read-file") (string-atom "test.txt")))]
     ["(effect-file-exists \"test.txt\")" (sexpr (list (symbol-atom "effect-file-exists") (string-atom "test.txt")))]
     ["(effect-read-file \"config.json\")" (sexpr (list (symbol-atom "effect-read-file") (string-atom "config.json")))]

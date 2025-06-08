@@ -51,14 +51,14 @@ The typing judgment `a : A` can be understood as:
 
 ## The "No Direct Terms" Philosophy Vindicated
 
-Our CIF (Canonical Instantiation Functions) approach aligns perfectly with HoTT:
+Our approach where all operations produce constructor values aligns perfectly with HoTT:
 
 ```racket
-;; We don't have "direct terms" - only proof constructors
-(define (zero-constructor unit-arg)  ; CIF: Unit → Nat
+;; We don't have "direct terms" - only constructor-producing operations
+(define (zero-constructor unit-arg)  ; Data constructor: Unit → Nat
   zero-value)  ; Computational evidence that Nat is inhabited
 
-(define (succ-constructor n)         ; CIF: Nat → Nat  
+(define (succ-constructor n)         ; Data constructor: Nat → Nat  
   (succ-value n))  ; Proof transformation: if Nat is inhabited, it's inhabited differently
 ```
 
@@ -134,8 +134,8 @@ Building values through constructors is performing computation, which is constru
 ### 3. Type Checking IS Proof Checking  
 Verifying `a : A` is checking that the computational evidence is valid.
 
-### 4. Our CIFs ARE Proof Constructors
-Functions that build values are really building computational evidence.
+### 4. Our Operations ARE Proof Constructors
+Functions that build constructor values are really building computational evidence.
 
 ### 5. Pattern Matching IS Proof Analysis
 When we pattern match on values, we're analyzing the structure of proofs.

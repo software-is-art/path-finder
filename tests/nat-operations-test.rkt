@@ -26,10 +26,10 @@
   ;; Test constructors
   (check-true (test-nat-expr "(zero)" 0)
               "zero constructor should create 0")
-  (check-true (test-nat-expr "(successor (zero))" 1)
-              "successor of zero should be 1")
-  (check-true (test-nat-expr "(successor (successor (zero)))" 2)
-              "nested successors should work")
+  (check-true (test-nat-expr "(next (zero))" 1)
+              "next of zero should be 1")
+  (check-true (test-nat-expr "(next (next (zero)))" 2)
+              "nested nexts should work")
   
   ;; Test arithmetic operations
   (check-true (test-nat-expr "(+ 2 3)" 5)
@@ -43,15 +43,15 @@
 
 (test-case "Natural number query operations"
   
-  ;; Test is-zero? operation
-  (check-true (test-bool-expr "(is-zero? (zero))" #t)
+  ;; Test zero? operation
+  (check-true (test-bool-expr "(zero? (zero))" #t)
               "zero should be identified as zero")
-  (check-true (test-bool-expr "(is-zero? 0)" #t)
+  (check-true (test-bool-expr "(zero? 0)" #t)
               "literal 0 should be identified as zero")
-  (check-true (test-bool-expr "(is-zero? 5)" #f)
+  (check-true (test-bool-expr "(zero? 5)" #f)
               "5 should not be identified as zero")
-  (check-true (test-bool-expr "(is-zero? (successor (zero)))" #f)
-              "successor of zero should not be zero")
+  (check-true (test-bool-expr "(zero? (next (zero)))" #f)
+              "next of zero should not be zero")
   
   ;; Test predecessor operation
   (check-true (test-nat-expr "(predecessor 5)" 4)
@@ -60,7 +60,7 @@
               "predecessor of 1 should be 0")
   (check-true (test-nat-expr "(predecessor 0)" 0)
               "predecessor of 0 should be 0 (base case)")
-  (check-true (test-nat-expr "(predecessor (successor (successor (zero))))" 1)
+  (check-true (test-nat-expr "(predecessor (next (next (zero))))" 1)
               "predecessor should work with constructor notation"))
 
 (test-case "Natural number comparison operations"
@@ -108,23 +108,23 @@
   ;; Test combining operations
   (check-true (test-bool-expr "(< (+ 2 3) (* 2 3))" #t)
               "2+3 should be less than 2*3")
-  (check-true (test-bool-expr "(is-zero? (- 5 5))" #t)
+  (check-true (test-bool-expr "(zero? (- 5 5))" #t)
               "5-5 should be zero")
   (check-true (test-nat-expr "(predecessor (+ 3 2))" 4)
               "predecessor of 3+2 should be 4")
   
   ;; Test with constructors
-  (check-true (test-bool-expr "(= (successor (zero)) 1)" #t)
-              "successor of zero should equal 1")
-  (check-true (test-bool-expr "(> (successor (successor (zero))) (zero))" #t)
+  (check-true (test-bool-expr "(= (next (zero)) 1)" #t)
+              "next of zero should equal 1")
+  (check-true (test-bool-expr "(> (next (next (zero))) (zero))" #t)
               "2 should be greater than 0"))
 
 (test-case "Natural number pattern matching integration"
   
   ;; Test pattern matching with query results
-  (let ([result (evaluate-string "(match (is-zero? 0) ((true) 42) ((false) 0))")])
+  (let ([result (evaluate-string "(match (zero? 0) ((true) 42) ((false) 0))")])
     (check-equal? (nat-value->racket-number result) 42
-                  "Pattern matching on is-zero? result should work"))
+                  "Pattern matching on zero? result should work"))
   
   (let ([result (evaluate-string "(match (< 3 7) ((true) 1) ((false) 0))")])
     (check-equal? (nat-value->racket-number result) 1

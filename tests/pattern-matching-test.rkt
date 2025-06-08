@@ -16,7 +16,7 @@
 ;; ============================================================================
 
 (test-case "parse simple match expression"
-  (let* ([input "(match x ((zero) 0) ((successor n) (+ n 1)))"]
+  (let* ([input "(match x ((zero) 0) ((next n) (+ n 1)))"]
          [tokens (tokenize input)]
          [ast (parse tokens)])
     (check-true (match-expr? ast))
@@ -55,8 +55,8 @@
     (check-true (nat-value? result))
     (check-equal? (nat-value->racket-number result) 999)))
 
-(test-case "successor pattern matching with variable binding"
-  (let* ([input "(match 3 ((zero) 0) ((successor n) (+ n 1)))"]
+(test-case "next pattern matching with variable binding"
+  (let* ([input "(match 3 ((zero) 0) ((next n) (+ n 1)))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [result (evaluate ast)])
@@ -92,14 +92,14 @@
     (check-equal? (nat-value->racket-number result) 999)))
 
 (test-case "pattern order matters - first match wins"
-  (let* ([input "(match 5 (_ 111) ((successor n) 222))"]
+  (let* ([input "(match 5 (_ 111) ((next n) 222))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [result (evaluate ast)])
     (check-equal? (nat-value->racket-number result) 111)))
 
-(test-case "nested successor patterns"
-  (let* ([input "(match 2 ((zero) 0) ((successor (zero)) 1) ((successor (successor n)) (+ n 2)))"]
+(test-case "nested next patterns"
+  (let* ([input "(match 2 ((zero) 0) ((next (zero)) 1) ((next (next n)) (+ n 2)))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [result (evaluate ast)])
@@ -139,7 +139,7 @@
 ;; ============================================================================
 
 (test-case "non-exhaustive pattern matching throws error"
-  (let* ([input "(match 5 ((zero) 0))"] ; Missing case for successor
+  (let* ([input "(match 5 ((zero) 0))"] ; Missing case for next
          [tokens (tokenize input)]
          [ast (parse tokens)])
     (check-exn exn:fail? (lambda () (evaluate ast)))))

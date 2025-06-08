@@ -52,7 +52,7 @@
 
 (define/contract (succ-value n)
   (-> value/c constructor-value?)
-  (constructor-value "succ" (list n) Nat))
+  (constructor-value "next" (list n) Nat))
 
 ;; Boolean values  
 (define true-value (constructor-value "true" '() Bool))
@@ -124,7 +124,7 @@
   (-> value/c boolean?)
   (and (constructor-value? val)
        (let ([name (constructor-value-constructor-name val)])
-         (or (string=? name "zero") (string=? name "succ")))))
+         (or (string=? name "zero") (string=? name "next")))))
 
 ;; Check if value is a boolean
 (define/contract (bool-value? val)

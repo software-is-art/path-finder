@@ -47,7 +47,7 @@
     (let ([length (hott-list-length two-item)])
       (check-true (constructor-value? length))
       ;; Should be succ(succ(zero))
-      (check-equal? (constructor-value-constructor-name length) "succ"))))
+      (check-equal? (constructor-value-constructor-name length) "next"))))
 
 (test-case "List concatenation"
   ;; Test concatenating empty lists
@@ -64,7 +64,7 @@
       (check-equal? (constructor-value-constructor-name result) "cons")
       ;; Result should have length 2
       (let ([length (hott-list-length result)])
-        (check-equal? (constructor-value-constructor-name length) "succ")))))
+        (check-equal? (constructor-value-constructor-name length) "next")))))
 
 (test-case "List map operation"
   ;; Test mapping over empty list
@@ -72,14 +72,14 @@
     (let ([result (hott-list-map (lambda (x) (succ-value x)) empty-list Nat Nat)])
       (check-equal? (constructor-value-constructor-name result) "nil")))
   
-  ;; Test mapping successor over nat list
+  ;; Test mapping next over nat list
   (let* ([empty (hott-list-nil Nat)]
          [list-with-zero (hott-list-cons zero-value empty Nat)])
     (let ([result (hott-list-map (lambda (x) (succ-value x)) list-with-zero Nat Nat)])
       (check-equal? (constructor-value-constructor-name result) "cons")
       ;; First element should be succ(zero)
       (let ([first-elem (car (constructor-value-args result))])
-        (check-equal? (constructor-value-constructor-name first-elem) "succ")))))
+        (check-equal? (constructor-value-constructor-name first-elem) "next")))))
 
 (test-case "List fold operation"
   ;; Test folding empty list
@@ -115,7 +115,7 @@
       (check-true (not (eq? proof #f)))  ; Should be able to construct proof
       (when proof
         (let ([head (hott-list-safe-head non-empty proof)])
-          (check-equal? (constructor-value-constructor-name head) "succ")))))
+          (check-equal? (constructor-value-constructor-name head) "next")))))
   
   ;; Test that empty list cannot be proven non-empty
   (let ([empty (hott-list-nil Nat)])
@@ -148,7 +148,7 @@
     (let ([hott-list (hott-values->list values Nat)])
       (check-equal? (constructor-value-constructor-name hott-list) "cons")
       (let ([length (hott-list-length hott-list)])
-        (check-equal? (constructor-value-constructor-name length) "succ"))))
+        (check-equal? (constructor-value-constructor-name length) "next"))))
   
   ;; Test converting list to values
   (let* ([empty (hott-list-nil Nat)]

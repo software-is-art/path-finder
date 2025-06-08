@@ -45,28 +45,28 @@
     (check-false proof
                  "Should not construct proof that 5 is in bounds [0, 5)")))
 
-(test-case "Auto-safe division with proof construction"
+(test-case "Safe division with proof construction"
   
   ;; Test successful safe division
-  (check-true (test-nat-expr "(auto-safe-divide 10 2)" 5)
+  (check-true (test-nat-expr "(/ 10 2)" 5)
               "10 ÷ 2 should be 5")
   
-  (check-true (test-nat-expr "(auto-safe-divide 15 3)" 5)
+  (check-true (test-nat-expr "(/ 15 3)" 5)
               "15 ÷ 3 should be 5")
   
-  (check-true (test-nat-expr "(auto-safe-divide 20 4)" 5)
+  (check-true (test-nat-expr "(/ 20 4)" 5)
               "20 ÷ 4 should be 5")
   
-  (check-true (test-nat-expr "(auto-safe-divide 7 1)" 7)
+  (check-true (test-nat-expr "(/ 7 1)" 7)
               "7 ÷ 1 should be 7")
   
   ;; Test division by zero prevention
   (check-exn exn:fail?
-             (lambda () (evaluate-string "(auto-safe-divide 10 0)"))
+             (lambda () (evaluate-string "(/ 10 0)"))
              "Division by zero should be prevented by proof system")
   
   (check-exn exn:fail?
-             (lambda () (evaluate-string "(auto-safe-divide 5 0)"))
+             (lambda () (evaluate-string "(/ 5 0)"))
              "Another division by zero should be prevented"))
 
 (test-case "Path-based safety concepts"
@@ -97,10 +97,10 @@
                 "Should create reflexivity path"))
   
   ;; Test proof construction with computed values
-  (check-true (test-nat-expr "(auto-safe-divide (+ 8 2) (+ 1 1))" 5)
+  (check-true (test-nat-expr "(/ (+ 8 2) (+ 1 1))" 5)
               "Safe division should work with computed divisors: (8+2) ÷ (1+1) = 5")
   
-  (check-true (test-nat-expr "(auto-safe-divide (* 3 4) (+ 2 1))" 4)
+  (check-true (test-nat-expr "(/ (* 3 4) (+ 2 1))" 4)
               "Safe division should work with complex expressions: (3*4) ÷ (2+1) = 4"))
 
 (test-case "Error messages and debugging"
@@ -108,16 +108,16 @@
   ;; Test that error messages are clear
   (let ([error-message 
          (with-handlers ([exn:fail? exn-message])
-           (evaluate-string "(auto-safe-divide 7 0)")
+           (evaluate-string "(/ 7 0)")
            "no error")])
     (check-true (regexp-match? #rx"Cannot prove" error-message)
                 "Error message should mention proof failure"))
   
   ;; Test edge cases
-  (check-true (test-nat-expr "(auto-safe-divide 0 1)" 0)
+  (check-true (test-nat-expr "(/ 0 1)" 0)
               "0 ÷ 1 should be 0")
   
-  (check-true (test-nat-expr "(auto-safe-divide 1 1)" 1)
+  (check-true (test-nat-expr "(/ 1 1)" 1)
               "1 ÷ 1 should be 1"))
 
 ;; Run the tests

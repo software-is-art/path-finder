@@ -21,8 +21,8 @@
   ;; Addition via Peano arithmetic
   (match* (n1 n2)
     [((constructor-value "zero" '() _) n) n]
-    [((constructor-value "succ" (list pred) _) n)
-     (constructor-value "succ" 
+    [((constructor-value "next" (list pred) _) n)
+     (constructor-value "next" 
                        (list (hott-add pred n))
                        Nat)]))
 
@@ -31,7 +31,7 @@
   ;; Multiplication via repeated addition
   (match* (n1 n2)
     [((constructor-value "zero" '() _) _) zero-value]
-    [((constructor-value "succ" (list pred) _) n)
+    [((constructor-value "next" (list pred) _) n)
      (hott-add n (hott-mult pred n))]))
 
 (define/contract (hott-pred n)
@@ -39,7 +39,7 @@
   ;; Predecessor (safe, returns zero for zero)
   (match n
     [(constructor-value "zero" '() _) zero-value]
-    [(constructor-value "succ" (list pred) _) pred]))
+    [(constructor-value "next" (list pred) _) pred]))
 
 (define/contract (hott-sub n1 n2)
   (-> constructor-value? constructor-value? constructor-value?)
@@ -47,7 +47,7 @@
   (match* (n1 n2)
     [(n (constructor-value "zero" '() _)) n]
     [((constructor-value "zero" '() _) _) zero-value]
-    [((constructor-value "succ" (list p1) _) (constructor-value "succ" (list p2) _))
+    [((constructor-value "next" (list p1) _) (constructor-value "next" (list p2) _))
      (hott-sub p1 p2)]))
 
 (define/contract (hott-equal? n1 n2)
@@ -56,7 +56,7 @@
   (match* (n1 n2)
     [((constructor-value "zero" '() _) (constructor-value "zero" '() _))
      true-value]
-    [((constructor-value "succ" (list p1) _) (constructor-value "succ" (list p2) _))
+    [((constructor-value "next" (list p1) _) (constructor-value "next" (list p2) _))
      (hott-equal? p1 p2)]
     [(_ _) false-value]))
 
@@ -66,11 +66,11 @@
   (match* (n1 n2)
     [((constructor-value "zero" '() _) (constructor-value "zero" '() _))
      false-value]
-    [((constructor-value "zero" '() _) (constructor-value "succ" _ _))
+    [((constructor-value "zero" '() _) (constructor-value "next" _ _))
      true-value]
-    [((constructor-value "succ" _ _) (constructor-value "zero" '() _))
+    [((constructor-value "next" _ _) (constructor-value "zero" '() _))
      false-value]
-    [((constructor-value "succ" (list p1) _) (constructor-value "succ" (list p2) _))
+    [((constructor-value "next" (list p1) _) (constructor-value "next" (list p2) _))
      (hott-less? p1 p2)]))
 
 ;; ============================================================================
@@ -157,7 +157,7 @@
     
     ;; Constructors
     (hash-set! env "zero" (lambda () zero-value))
-    (hash-set! env "succ" (lambda (n) (succ-value n)))
+    (hash-set! env "next" (lambda (n) (succ-value n)))
     (hash-set! env "true" (lambda () true-value))
     (hash-set! env "false" (lambda () false-value))
     
@@ -174,7 +174,7 @@
   (match val
     [(constructor-value "zero" '() _) 
      (make-hott-string "0")]
-    [(constructor-value "succ" _ _)
+    [(constructor-value "next" _ _)
      (make-hott-string (number->string (hott-nat->number val)))]
     [(constructor-value "true" '() _)
      (make-hott-string "true")]
@@ -204,7 +204,7 @@
   (-> constructor-value? exact-nonnegative-integer?)
   (match n
     [(constructor-value "zero" '() _) 0]
-    [(constructor-value "succ" (list pred) _)
+    [(constructor-value "next" (list pred) _)
      (+ 1 (hott-nat->number pred))]))
 
 ;; ============================================================================

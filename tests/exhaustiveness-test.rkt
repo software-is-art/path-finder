@@ -58,11 +58,11 @@
 ;; ============================================================================
 
 (test-case "nat exhaustiveness - complete match"
-  (let* ([input "(match 5 ((zero) 0) ((successor n) (+ n 1)))"]
+  (let* ([input "(match 5 ((zero) 0) ((next n) (+ n 1)))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [env (make-global-type-environment)])
-    ;; Should type check successfully - covers zero and successor
+    ;; Should type check successfully - covers zero and next
     (check-not-exn (lambda () (type-check ast env)))))
 
 (test-case "nat exhaustiveness - wildcard"
@@ -74,19 +74,19 @@
     (check-not-exn (lambda () (type-check ast env)))))
 
 (test-case "nat exhaustiveness - missing zero case"
-  (let* ([input "(match 5 ((successor n) (+ n 1)))"]
+  (let* ([input "(match 5 ((next n) (+ n 1)))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [env (make-global-type-environment)])
     ;; Should fail - missing zero case
     (check-exn exn:fail? (lambda () (type-check ast env)))))
 
-(test-case "nat exhaustiveness - missing successor case"
+(test-case "nat exhaustiveness - missing next case"
   (let* ([input "(match 5 ((zero) 0))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [env (make-global-type-environment)])
-    ;; Should fail - missing successor case
+    ;; Should fail - missing next case
     (check-exn exn:fail? (lambda () (type-check ast env)))))
 
 ;; ============================================================================
@@ -118,7 +118,7 @@
     (check-exn exn:fail? (lambda () (type-check ast env)))))
 
 (test-case "unreachability - duplicate constructor patterns"
-  (let* ([input "(match 0 ((zero) 1) ((zero) 2) ((successor n) 3))"]
+  (let* ([input "(match 0 ((zero) 1) ((zero) 2) ((next n) 3))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [env (make-global-type-environment)])

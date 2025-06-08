@@ -3,11 +3,14 @@
 (require racket/contract
          racket/match
          racket/file
+         racket/hash
          "../types/types.rkt"
          "../evaluator/values.rkt"
          "../effects/generic-effects.rkt"
          "hott-literals.rkt"
-         "hott-evaluator.rkt")
+         "hott-evaluator.rkt"
+         (prefix-in hott-cache: "hott-cache.rkt")
+         "hott-cache-persistence.rkt")
 
 (provide (all-defined-out))
 
@@ -84,7 +87,7 @@
   (-> constructor-value? exact-nonnegative-integer?)
   (match val
     [(constructor-value "zero" '() _) 0]
-    [(constructor-value "succ" (list pred) _) 
+    [(constructor-value "next" (list pred) _) 
      (+ 1 (nat-value->racket-number pred))]
     [_ (error "Not a natural number value: " val)]))
 
@@ -138,7 +141,7 @@
   (-> constructor-value? exact-nonnegative-integer?)
   (match n
     [(constructor-value "zero" '() _) 0]
-    [(constructor-value "succ" (list pred) _)
+    [(constructor-value "next" (list pred) _)
      (+ 1 (hott-nat->racket-number pred))]))
 
 ;; Convert Racket number to HoTT nat
@@ -230,6 +233,85 @@
   'program-result)
 
 ;; ============================================================================
+;; COMPUTATIONAL CACHE PERSISTENCE (Host-specific)
+;; ============================================================================
+
+;; Global cache instance (host-managed) - using HoTT cache
+(define global-computation-cache (hott-cache:make-empty-cache))
+
+;; Cache file path (host-specific location)
+(define cache-file-path ".pathfinder-cache.rkt")
+
+;; Save cache to host filesystem - using HoTT cache persistence
+(define/contract (save-cache-to-host cache [file-path cache-file-path])
+  (->* (constructor-value?) (string?) void?)
+  (save-hott-cache-to-host cache))
+
+;; Load cache from host filesystem - using HoTT cache persistence
+(define/contract (load-cache-from-host [file-path cache-file-path])
+  (->* () (string?) constructor-value?)
+  (load-hott-cache-from-host))
+
+;; Serialize cache to host-compatible format - delegated to HoTT cache
+(define/contract (serialize-cache cache)
+  (-> constructor-value? hash?)
+  (serialize-hott-cache cache))
+
+;; Deserialize cache from host format - delegated to HoTT cache
+(define/contract (deserialize-cache cache-data)
+  (-> hash? constructor-value?)
+  (deserialize-hott-cache cache-data))
+
+;; Get file modification time (host-specific)
+(define/contract (host-file-mtime file-path)
+  (-> string? (or/c exact-nonnegative-integer? #f))
+  (if (file-exists? file-path)
+      (file-or-directory-modify-seconds file-path)
+      #f))
+
+;; Check if file has changed since cached (host-specific dependency tracking)
+(define/contract (file-dependency-valid? file-path cached-mtime)
+  (-> string? exact-nonnegative-integer? boolean?)
+  (let ([current-mtime (host-file-mtime file-path)])
+    (and current-mtime (<= current-mtime cached-mtime))))
+
+;; ============================================================================
+;; CACHE-AWARE EFFECT HANDLERS
+;; ============================================================================
+
+;; Enhanced file reading with caching using HoTT cache
+(define/contract (cached-read-file hott-path determinism [ttl #f])
+  (->* (value/c symbol?) ((or/c exact-nonnegative-integer? #f)) value/c)
+  (let* ([racket-path (hott-string->racket-string hott-path)]
+         [cache-key (hott-cache:compute-content-address (inductive-type "String" '()) hott-path)])
+    ;; Try HoTT cache lookup first
+    (match (hott-cache:hott-cache-lookup cache-key global-computation-cache)
+      [(constructor-value "some" (list cached-value) _)
+       ;; Cache hit - validate file dependency if deterministic
+       (if (and (eq? determinism 'deterministic)
+                (let ([file-mtime (host-file-mtime racket-path)])
+                  (and file-mtime #t))) ; Simplified validation for now
+           cached-value
+           ;; File changed - re-read (simplified)
+           (perform-and-cache-file-read racket-path hott-path cache-key determinism ttl))]
+      [_
+       ;; Cache miss - perform operation and cache result
+       (perform-and-cache-file-read racket-path hott-path cache-key determinism ttl)])))
+
+;; Helper: Perform file read and cache the result using HoTT cache
+(define/contract (perform-and-cache-file-read racket-path hott-path cache-key determinism ttl)
+  (-> string? value/c constructor-value? symbol? (or/c exact-nonnegative-integer? #f) value/c)
+  (if (file-exists? racket-path)
+      (let* ([content (file->string racket-path)]
+             [result (racket-string->hott-string content)])
+        ;; Cache the result if deterministic
+        (when (eq? determinism 'deterministic)
+          (set! global-computation-cache
+                (hott-cache:hott-cache-insert cache-key result global-computation-cache)))
+        result)
+      (error "File not found: " racket-path)))
+
+;; ============================================================================
 ;; VALUE CONVERSION FOR EFFECTS (Isolated to host bridge)
 ;; ============================================================================
 
@@ -241,7 +323,7 @@
     [(constructor-value "true" '() _) #t]
     [(constructor-value "false" '() _) #f]
     [(constructor-value "zero" '() _) 0]
-    [(constructor-value "succ" (list pred) _) (+ 1 (value->racket-value pred))]
+    [(constructor-value "next" (list pred) _) (+ 1 (value->racket-value pred))]
     [(unit-value) 'unit]
     [_ val]))
 

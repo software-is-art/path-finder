@@ -28,7 +28,7 @@
      ;; In a fully self-hosted system, we'd parse digits directly to HoTT
      (build-succ-chain n zero-value)]))
 
-;; Helper to build successor chain
+;; Helper to build next chain
 (define (build-succ-chain count base)
   (if (= count 0)
       base

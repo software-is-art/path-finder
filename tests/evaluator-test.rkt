@@ -103,6 +103,6 @@
 ;; Pretty printing for HoTT values
 (test-case "value pretty printing"
   (check-equal? (value->string zero-value) "zero")
-  (check-equal? (value->string (succ-value zero-value)) "(succ zero)")
+  (check-equal? (value->string (succ-value zero-value)) "(next zero)")
   (check-equal? (value->string true-value) "true")
   (check-equal? (value->string false-value) "false"))

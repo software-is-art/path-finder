@@ -57,12 +57,12 @@
       (type-env-define! env "is-zero?" nat-bool)
       (type-env-define! env "predecessor" nat-nat))
     
-    ;; Constructor functions for inductive types (CIFs)
+    ;; Constructor functions for inductive types (data constructors and constructor-producing functions)
     (let ([unit-nat (make-function-type Unit Nat)]
           [nat-nat (make-function-type Nat Nat)]
           [unit-bool (make-function-type Unit Bool)])
       (type-env-define! env "zero" unit-nat)
-      (type-env-define! env "successor" nat-nat)
+      (type-env-define! env "next" nat-nat)
       (type-env-define! env "true" unit-bool)
       (type-env-define! env "false" unit-bool))
 
@@ -78,7 +78,7 @@
     (let ([nat-nat-nat (make-function-type (make-product-type Nat Nat) Nat)])
       (type-env-define! env "auto-safe-divide" nat-nat-nat))
 
-    ;; Tier 1: Computational CIFs (Mathematical operations with compile-time computation)
+    ;; Tier 1: Computational functions (Mathematical operations that produce constructor values with compile-time computation)
     (let ([nat-nat-nat (make-function-type (make-product-type Nat Nat) Nat)])
       (type-env-define! env "comp-add" nat-nat-nat)
       (type-env-define! env "comp-mult" nat-nat-nat)
@@ -245,7 +245,7 @@
        env)]
     
     ;; All HoTT patterns now use general constructor pattern mechanism
-    ;; This handles zero, true, false, none, some, successor, etc. uniformly
+    ;; This handles zero, true, false, none, some, next, etc. uniformly
     [(constructor-pattern constructor-name sub-patterns)
      ;; For now, just check that all sub-patterns type check
      ;; Full constructor type checking will be implemented later
@@ -291,7 +291,7 @@
     [(hott-type-equal? scrutinee-type Bool)
      (check-boolean-exhaustiveness patterns)]
     
-    ;; Natural number exhaustiveness: need zero and successor cases, or wildcard
+    ;; Natural number exhaustiveness: need zero and next cases, or wildcard
     [(hott-type-equal? scrutinee-type Nat)
      (check-nat-exhaustiveness patterns)]
     
@@ -316,13 +316,13 @@
 (define/contract (check-nat-exhaustiveness patterns)
   (-> (listof pattern-node/c) void?)
   (let ([has-zero? (has-pattern-covering-zero? patterns)]
-        [has-successor? (has-pattern-covering-successor? patterns)]
+        [has-next? (has-pattern-covering-next? patterns)]
         [has-wildcard? (has-wildcard-or-variable? patterns)])
-    (unless (or has-wildcard? (and has-zero? has-successor?))
+    (unless (or has-wildcard? (and has-zero? has-next?))
       (error "Non-exhaustive natural number match: missing cases for"
              (cond
                [(not has-zero?) "zero"]
-               [(not has-successor?) "successor"]
+               [(not has-next?) "next"]
                [else "unknown"])))))
 
 ;; Check if patterns contain wildcard or variable pattern
@@ -363,12 +363,12 @@
                     (eqv? (literal-pattern-value p) 0))))
          patterns))
 
-;; Check if patterns cover successor case
-(define/contract (has-pattern-covering-successor? patterns)
+;; Check if patterns cover next case
+(define/contract (has-pattern-covering-next? patterns)
   (-> (listof pattern-node/c) boolean?)
   (ormap (lambda (p)
            (and (constructor-pattern? p)
-                (string=? (constructor-pattern-constructor-name p) "successor")))
+                (string=? (constructor-pattern-constructor-name p) "next")))
          patterns))
 
 ;; Check for unreachable patterns
@@ -407,7 +407,7 @@
          [(string=? constructor-name "zero") (has-pattern-covering-zero? preceding-patterns)]
          [(string=? constructor-name "true") (has-pattern-covering-true? preceding-patterns)]
          [(string=? constructor-name "false") (has-pattern-covering-false? preceding-patterns)]
-         [(string=? constructor-name "successor") (has-pattern-covering-successor? preceding-patterns)]
+         [(string=? constructor-name "next") (has-pattern-covering-next? preceding-patterns)]
          ;; For other constructors, check if same constructor name already covered
          [else (ormap (lambda (p)
                        (and (constructor-pattern? p)

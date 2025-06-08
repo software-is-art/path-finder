@@ -296,7 +296,7 @@
   (-> constructor-value? exact-nonnegative-integer?)
   (match nat-val
     [(constructor-value "zero" '() _) 0]
-    [(constructor-value "succ" (list pred) _) 
+    [(constructor-value "next" (list pred) _) 
      (+ 1 (hott-nat->racket-number pred))]
     [_ (error "Not a natural number: " nat-val)]))
 
