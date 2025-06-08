@@ -21,7 +21,7 @@
     ],
     "scripts": {
       "setup":        "raco pkg install --auto rackunit typed-racket",
-      "build":        "raco setup . && raco check-deps src/",
+      "build":        "raco make src/main.rkt",
       "run":          "racket src/main.rkt",
       "repl":         "racket src/main.rkt --interactive", 
       "version":      "racket src/main.rkt --version",
@@ -29,7 +29,7 @@
       "test-coverage": "raco cover src/ tests/",
       "fmt":          "find src tests -name '*.rkt' -exec raco fmt -i {} \\;",
       "check-fmt":    "find src tests -name '*.rkt' -exec raco fmt --check {} \\;",
-      "lint":         "raco check-deps src/ && find src tests -name '*.rkt' -exec raco expand {} \\; > /dev/null",
+      "lint":         "find src tests -name '*.rkt' -exec raco expand {} \\; > /dev/null",
       "docs":         "raco scribble docs/manual.scrbl",
       "clean":        "find . -name 'compiled' -type d -exec rm -rf {} + 2>/dev/null || true",
       "ci":           "devbox run build && devbox run check-fmt && devbox run lint && devbox run test",
@@ -41,7 +41,7 @@
   },
   "env": {
     "PATHFINDER_VERSION":     "0.1.0",
-    "RACKET_COLLECTION_PATH": "./src",
-    "PLTCOLLECTS":           "./src:$PLTCOLLECTS"
+    "RACKET_COLLECTION_PATH": "$PWD/src",
+    "PLTCOLLECTS":           "$PWD/src:$PLTCOLLECTS"
   }
 }

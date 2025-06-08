@@ -22,7 +22,11 @@
          environment?
          env-lookup
          initialize-evaluator-cache
-         shutdown-evaluator-cache)
+         shutdown-evaluator-cache
+         global-hott-cache
+         compute-operation-cache-key
+         zero-value
+         reset-global-cache!)
 
 ;; Environment for lexical scoping
 (struct environment (bindings parent) #:transparent)
@@ -45,6 +49,11 @@
   (-> void?)
   (shutdown-persistent-cache global-hott-cache)
   (printf "Evaluator cache shutdown complete.~n"))
+
+;; Reset global cache to empty state (for demos/testing)
+(define/contract (reset-global-cache!)
+  (-> void?)
+  (set! global-hott-cache (make-empty-cache)))
 
 ;; Cache-aware evaluation wrapper
 (define/contract (evaluate-with-cache operation args env evaluation-thunk)
@@ -74,7 +83,7 @@
   ;; Create a composite key from operation name and arguments
   (let ([op-addr (compute-content-address 
                    (inductive-type "String" '()) 
-                   (string-value operation))]
+                   (pure-racket-string->hott-string operation))]
         [args-addr (compute-content-address
                      (inductive-type "List" '())
                      (list-from-racket-list args))])
@@ -87,7 +96,7 @@
 ;; Check if operation should be cached
 (define/contract (operation-cacheable? operation)
   (-> string? boolean?)
-  (member operation '("+" "-" "*" "/" "<" ">" "=" "read-file" "parse-json")))
+  (not (not (member operation '("+" "-" "*" "/" "<" ">" "=" "read-file" "parse-json")))))
 
 ;; Convert Racket list to HoTT list value
 (define/contract (list-from-racket-list racket-list)

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require "../src/core/hott-cache.rkt"
+(require racket/match
+         "../src/core/hott-cache.rkt"
          "../src/evaluator/values.rkt"
          "../src/types/types.rkt"
          "../src/core/hott-evaluator.rkt")
