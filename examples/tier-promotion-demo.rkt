@@ -1,9 +1,13 @@
 #lang racket/base
 
-(require "../src/main.rkt"
+(require racket/match
+         "../src/main.rkt"
          "../src/evaluator/evaluator.rkt"
+         "../src/evaluator/values.rkt"
+         "../src/types/types.rkt"
          "../src/core/hott-cache.rkt"
-         "../src/core/hott-cache-persistence.rkt")
+         "../src/core/hott-cache-persistence.rkt"
+         "../src/core/hott-literals-pure.rkt")
 
 ;; ============================================================================
 ;; TIER PROMOTION DEMONSTRATION
@@ -17,7 +21,7 @@
 (printf "Step 1: Initialize Cache System~n")
 (printf "---------------------------------------~n")
 (initialize-evaluator-cache)
-(set! global-hott-cache (make-empty-cache))  ; Start completely fresh
+(reset-global-cache!)  ; Start completely fresh
 (printf "✓ Fresh cache initialized~n")
 (printf "✓ Cache size: ~a~n~n" (hott-cache-size global-hott-cache))
 
@@ -55,8 +59,8 @@
 
 ;; Check what's in cache
 (let* ([mult-key (compute-operation-cache-key "*" 
-                   (list (constructor-value "next" (list (constructor-value "next" (list (constructor-value "next" (list zero-value))))) Nat)
-                         (constructor-value "next" (list (constructor-value "next" (list (constructor-value "next" (list (constructor-value "next" (list zero-value))))))) Nat)))]
+                   (list (pure-racket-number->hott-nat 3)
+                         (pure-racket-number->hott-nat 4)))]
        [mult-result (hott-cache-lookup mult-key global-hott-cache)])
   
   (match mult-result

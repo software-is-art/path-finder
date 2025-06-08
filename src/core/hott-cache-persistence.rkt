@@ -18,7 +18,8 @@
          auto-save-cache
          auto-load-cache
          initialize-persistent-cache
-         shutdown-persistent-cache)
+         shutdown-persistent-cache
+         validate-cache-integrity)
 
 ;; ============================================================================
 ;; PURE HOTT CACHE PERSISTENCE BRIDGE
