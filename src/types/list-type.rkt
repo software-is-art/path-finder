@@ -23,15 +23,15 @@
 (define List-String (make-list-type (inductive-type "String" '())))
 
 ;; ============================================================================
-;; LIST CONSTRUCTORS (CIFs)
+;; LIST CONSTRUCTORS (Data Constructors)
 ;; ============================================================================
 
-;; Empty list constructor - CIF: Unit → List T
+;; Empty list constructor - Data constructor: Unit → List T
 (define/contract (hott-list-nil element-type)
   (-> extended-hott-type/c constructor-value?)
   (constructor-value "nil" '() (make-list-type element-type)))
 
-;; Cons constructor - CIF: T × List T → List T  
+;; Cons constructor - Data constructor: T × List T → List T  
 (define/contract (hott-list-cons element tail-list element-type)
   (-> constructor-value? constructor-value? extended-hott-type/c constructor-value?)
   (constructor-value "cons" 

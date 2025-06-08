@@ -240,7 +240,7 @@
                          tier3-list-length))
 
 ;; ============================================================================
-;; ADAPTIVE LIST CONSTRUCTORS (CIFs)
+;; ADAPTIVE LIST CONSTRUCTORS (Context-Aware Constructor Functions)
 ;; ============================================================================
 
 ;; Tier 1: Compile-time list construction

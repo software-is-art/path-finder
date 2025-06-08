@@ -18,7 +18,7 @@
     (check-exn exn:fail? (lambda () (type-check ast env)))))
 
 (test-case "match expression type checking - natural numbers"
-  (let* ([input "(match 42 ((zero) 0) ((successor n) (+ n 1)))"]
+  (let* ([input "(match 42 ((zero) 0) ((next n) (+ n 1)))"]
          [tokens (tokenize input)]
          [ast (parse tokens)]
          [env (make-global-type-environment)])

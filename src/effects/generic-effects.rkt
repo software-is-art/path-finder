@@ -8,13 +8,17 @@
 (provide defeffect-syntax
          defhandler-syntax
          perform
+         perform-deterministic
+         perform-non-deterministic
          handle
          with-handler
          with-execution-context
          current-execution-context
          resolve-handler
          register-multi-context-handler!
-         global-effect-registry)
+         global-effect-registry
+         effect-determinism
+         set-effect-determinism!)
 
 ;; Global effect registry for the system
 (define global-effect-registry (make-effect-registry))
@@ -231,3 +235,94 @@
 ;; Handling at runtime:
 (handle (process-config) 'runtime-file-handler)
 |#
+
+;; ============================================================================
+;; EFFECT DETERMINISM SUPPORT
+;; ============================================================================
+
+;; Effect determinism registry - tracks which effects are deterministic
+(define effect-determinism-registry (make-hash))
+
+;; Get determinism status of an effect
+(define/contract (effect-determinism effect-name operation)
+  (-> symbol? symbol? symbol?)
+  (let ([key (cons effect-name operation)])
+    (hash-ref effect-determinism-registry key 'non-deterministic)))
+
+;; Set determinism status of an effect operation
+(define/contract (set-effect-determinism! effect-name operation determinism)
+  (-> symbol? symbol? symbol? void?)
+  (let ([key (cons effect-name operation)])
+    (hash-set! effect-determinism-registry key determinism)))
+
+;; Perform an effect with explicit deterministic annotation
+(define/contract (perform-deterministic effect-name operation . args)
+  (->* (symbol? symbol?) () #:rest (listof any/c) any/c)
+  ;; Mark this operation as deterministic for caching
+  (set-effect-determinism! effect-name operation 'deterministic)
+  (apply perform effect-name operation args))
+
+;; Perform an effect with explicit non-deterministic annotation
+(define/contract (perform-non-deterministic effect-name operation . args)
+  (->* (symbol? symbol?) () #:rest (listof any/c) any/c)
+  ;; Mark this operation as non-deterministic (no caching)
+  (set-effect-determinism! effect-name operation 'non-deterministic)
+  (apply perform effect-name operation args))
+
+;; Enhanced perform that checks determinism for caching decisions
+(define/contract (perform-with-determinism effect-name operation determinism . args)
+  (->* (symbol? symbol? symbol?) () #:rest (listof any/c) any/c)
+  ;; Set determinism for this operation
+  (set-effect-determinism! effect-name operation determinism)
+  ;; Perform the effect
+  (apply perform effect-name operation args))
+
+;; ============================================================================
+;; CACHE-AWARE EFFECT PERFORMANCE HELPERS
+;; ============================================================================
+
+;; Check if an effect operation should be cached
+(define/contract (effect-cacheable? effect-name operation)
+  (-> symbol? symbol? boolean?)
+  (eq? (effect-determinism effect-name operation) 'deterministic))
+
+;; Register common deterministic effects
+(define/contract (register-deterministic-effects!)
+  (-> void?)
+  ;; File operations that depend on file content (deterministic if file doesn't change)
+  (set-effect-determinism! 'FileIO 'read-file 'deterministic)
+  (set-effect-determinism! 'FileIO 'file-exists 'deterministic)
+  
+  ;; Configuration and environment (deterministic within execution session)
+  (set-effect-determinism! 'Environment 'get-env 'deterministic)
+  (set-effect-determinism! 'Config 'read-config 'deterministic)
+  
+  ;; Network operations (potentially deterministic with TTL)
+  (set-effect-determinism! 'Network 'http-get 'deterministic)  ; With TTL
+  
+  ;; Computation operations (always deterministic)
+  (set-effect-determinism! 'Compute 'hash 'deterministic)
+  (set-effect-determinism! 'Compute 'compress 'deterministic))
+
+;; Register common non-deterministic effects
+(define/contract (register-non-deterministic-effects!)
+  (-> void?)
+  ;; Time-based operations
+  (set-effect-determinism! 'Time 'current-timestamp 'non-deterministic)
+  (set-effect-determinism! 'Time 'current-time 'non-deterministic)
+  
+  ;; Random operations
+  (set-effect-determinism! 'Random 'random-number 'non-deterministic)
+  (set-effect-determinism! 'Random 'uuid 'non-deterministic)
+  
+  ;; User interaction
+  (set-effect-determinism! 'User 'prompt 'non-deterministic)
+  (set-effect-determinism! 'User 'read-input 'non-deterministic)
+  
+  ;; File modification operations
+  (set-effect-determinism! 'FileIO 'write-file 'non-deterministic)
+  (set-effect-determinism! 'FileIO 'delete-file 'non-deterministic))
+
+;; Initialize effect determinism registry with common patterns
+(register-deterministic-effects!)
+(register-non-deterministic-effects!)

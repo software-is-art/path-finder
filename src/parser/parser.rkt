@@ -186,7 +186,7 @@
               (cond
                 [else
                  ;; All patterns now use general constructor pattern mechanism
-                 ;; This handles zero, true, false, none, some, successor, etc. uniformly
+                 ;; This handles zero, true, false, none, some, next, etc. uniformly
                  (let-values ([(sub-patterns state) (parse-sub-patterns state)])
                    (values (make-constructor-pattern constructor-name sub-patterns) state))]))
             (error "Expected constructor name in pattern"))))))

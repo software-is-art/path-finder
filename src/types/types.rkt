@@ -134,10 +134,10 @@
 
 ;; Inductive type definitions
 
-;; Natural numbers: Nat with constructors zero and succ
+;; Natural numbers: Nat with constructors zero and next
 (define Nat-constructors
   (list (type-constructor "zero" '() 'Nat)
-        (type-constructor "succ" '(Nat) 'Nat)))
+        (type-constructor "next" '(Nat) 'Nat)))
 
 (define Nat (inductive-type "Nat" Nat-constructors))
 
@@ -402,7 +402,7 @@
 (struct non-empty-proof (container length-evidence) #:transparent)
 
 ;; ============================================================================
-;; TIER 1: COMPUTATIONAL PROOFS (Mathematical CIFs)
+;; TIER 1: COMPUTATIONAL PROOFS (Mathematical Constructor-Producing Functions)
 ;; ============================================================================
 ;; In HoTT, proofs ARE computations. These structures contain both the proof
 ;; and the computed result, enabling compile-time computation injection.
@@ -444,13 +444,11 @@
 ;; handler-type can be: symbol (single context), list (multiple contexts), or 'universal
 (struct effect-handler (effect-name handler-type implementations) #:transparent)
 
-;; Effect composition and sequencing (operates on effect instances)
-(struct effect-sequence (effects) #:transparent)
-(struct effect-choice (alternatives) #:transparent)
-(struct effect-parallel (effects) #:transparent)
+;; Effect composition is now handled by pure HoTT effects system
+;; See: src/effects/pure-hott-effects.rkt
 
-;; Generic effect result
-(struct effect-result (status value metadata) #:transparent)
+;; Effect result handling moved to pure HoTT effects system
+;; See: src/effects/effect-executor.rkt
 
 ;; Effect registry for tracking user-defined effects
 (struct effect-registry (effects handlers) #:transparent)
@@ -521,14 +519,8 @@
   (values 'success 'failure 'pending))
 
 
-;; Create effect results
-(define/contract (make-effect-success value [metadata '()])
-  (->* (any/c) ((listof any/c)) effect-result?)
-  (effect-result EFFECT-SUCCESS value metadata))
-
-(define/contract (make-effect-failure error-type [metadata '()])
-  (->* (symbol?) ((listof any/c)) effect-result?)
-  (effect-result EFFECT-FAILURE error-type metadata))
+;; Effect result creation moved to pure HoTT effects system
+;; See: src/effects/effect-executor.rkt
 
 ;; Effect capabilities with permissions
 (define/contract (make-effect-capability name permissions [context '()] [constraints '()])
@@ -713,11 +705,7 @@
     [(arithmetic-computation-proof _ _ result) result]
     [(bounds-computation-proof _ _ _ result) result]
     [(computational-proof _ _ result _) result]
-    ;; Tier 2: Effect results
-    [(effect-result 'success value _) value]
-    ;; Effect failures
-    [(effect-result 'failure error-type _) 
-     (error (format "Effect failed: ~a" error-type))]
+    ;; Effect results now handled by pure HoTT effects system
     ;; Direct effects (should be handled, but provide fallback)
     [(effect-instance effect-name op-name args)
      (error (format "Unhandled effect: ~a.~a" effect-name op-name))]

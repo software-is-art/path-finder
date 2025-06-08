@@ -121,7 +121,7 @@
                 "Effect should have correct type"))
   
   ;; Test effect composition with computational proofs
-  (let ([comp-result (evaluate-string "(comp-add 3 4)")]
+  (let ([comp-result (evaluate-string "(+ 3 4)")]
         [effect-result (evaluate-string "(effect-compute-hash \"test\")")])
     (check-true (nat-value? comp-result)
                 "Computational proof should work alongside effects")

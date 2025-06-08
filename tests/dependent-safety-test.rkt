@@ -51,7 +51,7 @@
     (let ([lst (proof-carrying-value-value nel)])
       (check-equal? (constructor-value-constructor-name lst) "cons")
       (let ([length (list-length Nat lst)])
-        (check-equal? (constructor-value-constructor-name length) "succ"))))
+        (check-equal? (constructor-value-constructor-name length) "next"))))
   
   ;; Test with single element
   (let ([single (nonempty-list-cons Nat (succ-value zero-value))])
@@ -73,7 +73,7 @@
   ;; Test safe head operation
   (let* ([nel (nonempty-list-singleton Nat (succ-value zero-value))]
          [head (nonempty-list-head nel)])
-    (check-equal? (constructor-value-constructor-name head) "succ"))
+    (check-equal? (constructor-value-constructor-name head) "next"))
   
   ;; Test safe tail operation
   (let* ([nel (nonempty-list-cons Nat zero-value (succ-value zero-value))]
@@ -83,7 +83,7 @@
   ;; Test length computation
   (let* ([nel (nonempty-list-cons Nat zero-value (succ-value zero-value))]
          [length (nonempty-list-length nel)])
-    (check-equal? (constructor-value-constructor-name length) "succ")))
+    (check-equal? (constructor-value-constructor-name length) "next")))
 
 (test-case "BoundedArray type family registration"
   ;; Test that BoundedArray is properly registered
@@ -109,7 +109,7 @@
     
     ;; Verify length
     (let ([length (bounded-array-length ba)])
-      (check-equal? (constructor-value-constructor-name length) "succ")))
+      (check-equal? (constructor-value-constructor-name length) "next")))
   
   ;; Test length mismatch error
   (check-exn exn:fail? 
@@ -137,7 +137,7 @@
          [elem0 (bounded-array-get ba zero-value)]
          [elem1 (bounded-array-get ba (succ-value zero-value))])
     (check-equal? (constructor-value-constructor-name elem0) "zero")
-    (check-equal? (constructor-value-constructor-name elem1) "succ"))
+    (check-equal? (constructor-value-constructor-name elem1) "next"))
   
   ;; Test bounds checking
   (let ([ba (make-bounded-array Nat (succ-value zero-value) zero-value)])
@@ -150,7 +150,7 @@
          [updated (bounded-array-set ba zero-value (succ-value (succ-value zero-value)))]
          [new-elem (bounded-array-get updated zero-value)])
     (check-true (proof-carrying-value? updated))
-    (check-equal? (constructor-value-constructor-name new-elem) "succ")))
+    (check-equal? (constructor-value-constructor-name new-elem) "next")))
 
 (test-case "Utility functions"
   ;; Test HoTT Nat to Racket number conversion
@@ -165,13 +165,13 @@
     (let ([elem0 (list-nth lst zero-value)]
           [elem1 (list-nth lst (succ-value zero-value))])
       (check-equal? (constructor-value-constructor-name elem0) "zero")
-      (check-equal? (constructor-value-constructor-name elem1) "succ")))
+      (check-equal? (constructor-value-constructor-name elem1) "next")))
   
   ;; Test list update
   (let* ([lst (list-cons Nat zero-value (list-nil Nat))]
          [updated (list-update lst zero-value (succ-value zero-value))]
          [new-elem (list-nth updated zero-value)])
-    (check-equal? (constructor-value-constructor-name new-elem) "succ")))
+    (check-equal? (constructor-value-constructor-name new-elem) "next")))
 
 (test-case "Adaptive dependent verification"
   ;; Test tier-aware verification
@@ -207,7 +207,7 @@
   ;; Test length extraction from bounded types
   (let* ([ba-type (BoundedArray Nat (succ-value (succ-value zero-value)))]
          [length (extract-length-from-bounded ba-type)])
-    (check-equal? (constructor-value-constructor-name length) "succ")))
+    (check-equal? (constructor-value-constructor-name length) "next")))
 
 ;; Run the tests
 (printf "Running Dependent Safety tests...~n")

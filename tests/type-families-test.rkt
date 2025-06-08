@@ -78,7 +78,7 @@
          [two-items (list-cons Nat zero-value one-item)])
     (let ([length (list-length Nat two-items)])
       (check-true (constructor-value? length))
-      (check-equal? (constructor-value-constructor-name length) "succ"))))
+      (check-equal? (constructor-value-constructor-name length) "next"))))
 
 (test-case "Type family caching"
   ;; Test that repeated instantiations return equivalent types

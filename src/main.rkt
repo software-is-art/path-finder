@@ -8,7 +8,8 @@
          "parser/parser.rkt"
          "evaluator/evaluator.rkt"
          "evaluator/values.rkt"
-         "typecheck/typechecker.rkt")
+         "typecheck/typechecker.rkt"
+         "core/primitive-effects.rkt")
 
 ;; PathFinder LISP - Main Entry Point
 ;; A HoTT-based functional programming language with algebraic effects
@@ -80,31 +81,49 @@
 ;; Command line interface
 (define (main . args)
   "Main entry point for command line usage"
-  (command-line
-   #:program "pathfinder"
-   #:once-each
-   [("-v" "--version") "Show version information"
-    (displayln (string-append "PathFinder LISP v" pathfinder-version))
-    (exit 0)]
-   [("-i" "--interactive") "Start interactive REPL"
-    (start-repl)
-    (exit 0)]
-   #:args filename
-   (cond
-     [(null? filename) (start-repl)]
-     [(= (length filename) 1)
-      (with-handlers ([exn:fail:filesystem? 
-                      (lambda (e) 
-                        (displayln (string-append "Error: Cannot read file " (car filename)))
-                        (exit 1))]
-                     [exn:fail? 
-                      (lambda (e)
-                        (displayln (string-append "Error: " (exn-message e)))
-                        (exit 1))])
-        (evaluate-file (car filename)))]
-     [else
-      (displayln "Error: Too many arguments")
-      (exit 1)])))
+  ;; Initialize cache system
+  (initialize-evaluator-cache)
+  
+  ;; Initialize primitive effects
+  (register-primitive-effects!)
+  
+  ;; Set up shutdown handler to save cache
+  (with-handlers ([exn:break? (lambda (e) 
+                                (shutdown-evaluator-cache)
+                                (raise e))])
+    (command-line
+     #:program "pathfinder"
+     #:once-each
+     [("-v" "--version") "Show version information"
+      (displayln (string-append "PathFinder LISP v" pathfinder-version))
+      (shutdown-evaluator-cache)
+      (exit 0)]
+     [("-i" "--interactive") "Start interactive REPL"
+      (start-repl)
+      (shutdown-evaluator-cache)
+      (exit 0)]
+     #:args filename
+     (cond
+       [(null? filename) 
+        (start-repl)
+        (shutdown-evaluator-cache)]
+       [(= (length filename) 1)
+        (with-handlers ([exn:fail:filesystem? 
+                        (lambda (e) 
+                          (displayln (string-append "Error: Cannot read file " (car filename)))
+                          (shutdown-evaluator-cache)
+                          (exit 1))]
+                       [exn:fail? 
+                        (lambda (e)
+                          (displayln (string-append "Error: " (exn-message e)))
+                          (shutdown-evaluator-cache)
+                          (exit 1))])
+          (evaluate-file (car filename))
+          (shutdown-evaluator-cache))]
+       [else
+        (displayln "Error: Too many arguments")
+        (shutdown-evaluator-cache)
+        (exit 1)]))))
 
 ;; If run directly, start main
 (module+ main

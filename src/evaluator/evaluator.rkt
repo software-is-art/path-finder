@@ -6,21 +6,98 @@
          racket/string
          "../parser/ast.rkt"
          "../types/types.rkt"
-         "../effects/generic-effects.rkt"
+         "../effects/pure-hott-effects.rkt"
+         "../effects/effect-executor.rkt"
          "values.rkt"
          "../core/hott-ast.rkt"
          "../core/hott-evaluator.rkt"
          "../core/hott-literals-pure.rkt"
-         "../core/host-bridge.rkt")
+         "../core/host-bridge.rkt"
+         "../core/hott-cache.rkt"
+         "../core/hott-cache-persistence.rkt")
 
 (provide evaluate
          make-environment
          make-global-environment
          environment?
-         env-lookup)
+         env-lookup
+         initialize-evaluator-cache
+         shutdown-evaluator-cache)
 
 ;; Environment for lexical scoping
 (struct environment (bindings parent) #:transparent)
+
+;; ============================================================================
+;; TRANSPARENT CACHE INTEGRATION
+;; ============================================================================
+
+;; Global computation cache (pure HoTT) - initialized from persistence
+(define global-hott-cache (make-empty-cache))
+
+;; Initialize cache system with persistent storage
+(define/contract (initialize-evaluator-cache)
+  (-> void?)
+  (set! global-hott-cache (initialize-persistent-cache))
+  (printf "Evaluator cache initialized with persistence.~n"))
+
+;; Shutdown cache system and save to persistent storage
+(define/contract (shutdown-evaluator-cache)
+  (-> void?)
+  (shutdown-persistent-cache global-hott-cache)
+  (printf "Evaluator cache shutdown complete.~n"))
+
+;; Cache-aware evaluation wrapper
+(define/contract (evaluate-with-cache operation args env evaluation-thunk)
+  (-> string? (listof value/c) environment? (-> value/c) value/c)
+  ;; Try cache lookup first
+  (let* ([cache-key (compute-operation-cache-key operation args)]
+         [cached-result (hott-cache-lookup cache-key global-hott-cache)])
+    (match cached-result
+      [(constructor-value "some" (list value) _)
+       ;; Cache hit - return cached value (Tier promotion!)
+       value]
+      [(constructor-value "none" _ _)
+       ;; Cache miss - evaluate and cache result
+       (let ([result (evaluation-thunk)])
+         ;; Cache the result if it's deterministic
+         (when (operation-cacheable? operation)
+           (set! global-hott-cache 
+                 (hott-cache-insert cache-key result global-hott-cache)))
+         result)]
+      [_ 
+       ;; Fallback to normal evaluation
+       (evaluation-thunk)])))
+
+;; Compute cache key for an operation
+(define/contract (compute-operation-cache-key operation args)
+  (-> string? (listof value/c) constructor-value?)
+  ;; Create a composite key from operation name and arguments
+  (let ([op-addr (compute-content-address 
+                   (inductive-type "String" '()) 
+                   (string-value operation))]
+        [args-addr (compute-content-address
+                     (inductive-type "List" '())
+                     (list-from-racket-list args))])
+    ;; Combine into a single content address
+    (compute-content-address 
+      (inductive-type "OperationKey" '())
+      (constructor-value "operation-key" (list op-addr args-addr) 
+                        (inductive-type "OperationKey" '())))))
+
+;; Check if operation should be cached
+(define/contract (operation-cacheable? operation)
+  (-> string? boolean?)
+  (member operation '("+" "-" "*" "/" "<" ">" "=" "read-file" "parse-json")))
+
+;; Convert Racket list to HoTT list value
+(define/contract (list-from-racket-list racket-list)
+  (-> (listof value/c) constructor-value?)
+  (if (null? racket-list)
+      (constructor-value "nil" '() (inductive-type "List" '()))
+      (constructor-value "cons" 
+                        (list (first racket-list)
+                              (list-from-racket-list (rest racket-list)))
+                        (inductive-type "List" '()))))
 
 ;; Environment operations
 (define/contract (make-environment [parent #f])
@@ -44,18 +121,21 @@
       (env-define! new-env param arg))
     new-env))
 
-;; HoTT-native arithmetic functions (delegating to hott-evaluator)
+;; HoTT-native arithmetic functions with transparent caching
 (define/contract (nat-add a b)
   (-> value/c value/c value/c)
-  (hott-add a b))
+  (evaluate-with-cache "+" (list a b) (make-environment)
+                      (lambda () (hott-add a b))))
 
 (define/contract (nat-mult a b)
   (-> value/c value/c value/c)
-  (hott-mult a b))
+  (evaluate-with-cache "*" (list a b) (make-environment)
+                      (lambda () (hott-mult a b))))
 
 (define/contract (nat-sub a b)
   (-> value/c value/c value/c)
-  (hott-sub a b))
+  (evaluate-with-cache "-" (list a b) (make-environment)
+                      (lambda () (hott-sub a b))))
 
 (define/contract (nat-equal? a b)
   (-> value/c value/c value/c)
@@ -136,12 +216,12 @@
         (error "Cannot prove divisor is non-zero"))))
 
 ;; ============================================================================
-;; TIER 1: COMPUTATIONAL CIFs (Mathematical Operations)
+;; TIER 1: COMPUTATIONAL FUNCTIONS (Mathematical Operations)
 ;; ============================================================================
-;; These CIFs use computational proofs where proof construction IS computation
+;; These constructor-producing functions use computational proofs where proof construction IS computation
 ;; Results are computed at compile time and injected at runtime
 
-;; Computational division CIF - HoTT-native safe division
+;; Computational division function - HoTT-native safe division that produces constructor values
 (define/contract (computational-divide dividend divisor)
   (-> value/c value/c value/c)
   ;; Use the auto-safe-divide that checks for zero divisor
@@ -152,40 +232,29 @@
 ;; ============================================================================
 ;; The evaluator doesn't know about specific effects - only how to handle them
 
-;; Perform a generic effect operation (Pure HoTT)
+;; Perform effect operation using Pure HoTT Effects
 (define/contract (perform-effect-operation effect-name-value op-name-value . arg-values)
   (->* (value/c value/c) () #:rest (listof value/c) value/c)
-  (unless (and (string-value? effect-name-value) (string-value? op-name-value))
-    (error "perform-effect requires string effect and operation names"))
-  (let ([effect-name (string->symbol (string-value-content effect-name-value))]
-        [op-name (string->symbol (string-value-content op-name-value))])
-    ;; Pass pure HoTT values directly to effects - no conversion!
-    (effect-value (perform effect-name op-name arg-values))))
+  (unless (and (constructor-value? effect-name-value) (constructor-value? op-name-value))
+    (error "perform-effect requires HoTT constructor values for effect and operation names"))
+  ;; Create and execute pure HoTT effect description
+  (let ([effect-desc (io-effect-description effect-name-value op-name-value arg-values 'deterministic)])
+    ;; Execute effect with cache integration
+    (let ([result (cached-effect-executor effect-desc global-hott-cache)])
+      ;; Update global cache and return value
+      (set! global-hott-cache (effect-result-cache result))
+      (effect-result-value result))))
 
-;; Value conversion functions moved to host-bridge.rkt for self-hosting
-;; Effects should eventually work with pure HoTT values
-
-;; Handle an effect with a specific handler (Pure HoTT)
-(define/contract (handle-effect-operation effect-value-arg [handler-context (current-execution-context)])
-  (->* (value/c) (symbol?) value/c)
-  (unless (effect-value? effect-value-arg)
-    (error "handle-effect requires effect value"))
-  (let ([effect-instance (effect-value-effect effect-value-arg)])
-    ;; Use context-aware handler resolution, return HoTT values directly
-    (let ([result (handle effect-instance handler-context)])
-      (if (value/c result) 
-          result
-          ;; If handler returns non-value, wrap in unit or convert
-          unit))))
+;; Pure HoTT Effects System - old generic effects system removed
+;; All effects are now pure mathematical descriptions executed through host bridge
 
 
 ;; ============================================================================
-;; GENERIC EFFECT SYSTEM INTEGRATION
+;; ARITHMETIC OPERATIONS (Tier 1 Computational Functions)
 ;; ============================================================================
-;; All effects are now user-defined through the generic effect system
 
-;; Computational arithmetic CIFs - using HoTT arithmetic directly 
-;; (proof construction IS computation in HoTT)
+;; Computational arithmetic functions - using HoTT arithmetic directly 
+;; (proof construction IS computation in HoTT, all produce constructor values)
 (define/contract (computational-add a b)
   (-> value/c value/c value/c)
   ;; In HoTT, computation IS proof construction
@@ -249,7 +318,7 @@
   (-> value/c value/c)
   zero-value)
 
-(define/contract (successor-constructor n)
+(define/contract (next-constructor n)
   (-> value/c value/c)
   (succ-value n))
 
@@ -298,7 +367,7 @@
     ;; Natural number query and unary operations
     (let ([nat-bool (make-function-type Nat Bool)]
           [nat-nat (make-function-type Nat Nat)])
-      (env-define! env "is-zero?" (builtin-value "is-zero?" nat-is-zero? nat-bool))
+      (env-define! env "zero?" (builtin-value "zero?" nat-is-zero? nat-bool))
       (env-define! env "prior" (builtin-value "prior" nat-predecessor nat-nat)))
     
     ;; Constructor functions for inductive types
@@ -306,7 +375,7 @@
           [nat-nat (make-function-type Nat Nat)]
           [unit-bool (make-function-type Unit Bool)])
       (env-define! env "zero" (builtin-value "zero" zero-constructor unit-nat))
-      (env-define! env "next" (builtin-value "next" successor-constructor nat-nat))
+      (env-define! env "next" (builtin-value "next" next-constructor nat-nat))
       (env-define! env "true" (builtin-value "true" true-constructor unit-bool))  
       (env-define! env "false" (builtin-value "false" false-constructor unit-bool)))
 
@@ -318,37 +387,35 @@
       (env-define! env "not" (builtin-value "not" bool-not bool-bool)))
 
 
-    ;; Proof-aware safe operations (demonstrating path-based safety)
+    ;; Division with automatic safety proofs (integrated Tier 1/2 safety)
     (let ([nat-nat-nat (make-function-type (make-product-type Nat Nat) Nat)])
-      (env-define! env "auto-safe-divide" (builtin-value "auto-safe-divide" auto-safe-divide nat-nat-nat)))
+      (env-define! env "/" (builtin-value "/" auto-safe-divide nat-nat-nat)))
 
-    ;; Tier 1: Computational CIFs (Mathematical operations with compile-time computation)
-    (let ([nat-nat-nat (make-function-type (make-product-type Nat Nat) Nat)])
-      (env-define! env "comp-add" (builtin-value "comp-add" computational-add nat-nat-nat))
-      (env-define! env "comp-mult" (builtin-value "comp-mult" computational-mult nat-nat-nat))
-      (env-define! env "comp-sub" (builtin-value "comp-sub" computational-sub nat-nat-nat))
-      (env-define! env "comp-divide" (builtin-value "comp-divide" computational-divide nat-nat-nat)))
+    ;; Note: Tier 1 computational operations are now integrated into the main +, -, *, / operators
+    ;; The 3-tier system works transparently - users don't need separate function names
 
-    ;; Generic effect system (no specific effects!)
+    ;; Pure HoTT Effects - direct effect construction functions
     (let ([string-type (inductive-type "String" '())]
-          [effect-type (inductive-type "Effect" '())])
-      ;; Only generic effect operations - users define specific effects
-      (env-define! env "perform" 
-                   (builtin-value "perform" perform-effect-operation 
+          [effect-type (inductive-type "EffectDescription" '())])
+      ;; Effect construction functions (pure HoTT)
+      (env-define! env "file-read" 
+                   (builtin-value "file-read" file-read-effect 
                                  (make-function-type string-type effect-type)))
-      (env-define! env "handle" 
-                   (builtin-value "handle" handle-effect-operation
-                                 (make-function-type (make-product-type effect-type string-type) 
-                                                   Unit))))
+      (env-define! env "console-print" 
+                   (builtin-value "console-print" console-print-effect
+                                 (make-function-type string-type effect-type)))
+      (env-define! env "environment-get" 
+                   (builtin-value "environment-get" environment-get-effect
+                                 (make-function-type string-type effect-type))))
     
     ;; Path and equivalence operations - simplified types for now
     (let ([path-type (make-function-type Nat Nat)]) ; Simplified
-      (env-define! env "refl" (builtin-value "refl" make-refl-builtin path-type))
+      (env-define! env "reflexivity" (builtin-value "reflexivity" make-refl-builtin path-type))
       (env-define! env "path-concat" (builtin-value "path-concat" path-concat-builtin path-type))
       (env-define! env "path-inverse" (builtin-value "path-inverse" path-inverse-builtin path-type))
       (env-define! env "transport" (builtin-value "transport" transport-builtin path-type))
-      (env-define! env "cong" (builtin-value "cong" cong-builtin path-type))
-      (env-define! env "ua" (builtin-value "ua" univalence-builtin path-type)))
+      (env-define! env "congruence" (builtin-value "congruence" cong-builtin path-type))
+      (env-define! env "univalence" (builtin-value "univalence" univalence-builtin path-type)))
     env))
 
 ;; Create a new environment that extends the builtin environment
@@ -445,9 +512,9 @@
                   [(builtin-value name proc _)
                    ;; Handle various argument counts for built-in functions
                    (cond
-                     ;; Zero-argument CIFs: automatically inject unit to maintain "no direct terms" philosophy
-                     ;; This allows syntax like (true) while preserving the CIF abstraction Unit → Bool
-                     [(= (length args) 0) (proc unit)]  ; Pass unit for zero-argument CIFs
+                     ;; Zero-argument constructors: automatically inject unit to maintain "no direct terms" philosophy
+                     ;; This allows syntax like (true) while preserving the constructor abstraction Unit → Bool
+                     [(= (length args) 0) (proc unit)]  ; Pass unit for zero-argument constructors
                      [(= (length args) 1) (proc (first args))]  ; Unary functions/constructors  
                      [(= (length args) 2) (proc (first args) (second args))]  ; Binary operations
                      [else (error "Built-in function" name "expects 0-2 arguments, got" (length args))])]
@@ -504,7 +571,7 @@
          #f)]
     
     ;; All HoTT inductive type patterns now use general constructor patterns
-    ;; This handles zero, true, false, none, some, successor, etc. uniformly
+    ;; This handles zero, true, false, none, some, next, etc. uniformly
     [(constructor-pattern constructor-name sub-patterns)
      (if (constructor-value? value)
          (let ([value-constructor (constructor-value-constructor-name value)]

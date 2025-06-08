@@ -33,4 +33,4 @@
 (test-case "evaluator works with HoTT values"
   (let ([result (evaluate-string "(+ 1 2)")])
     (check-true (constructor-value? result))
-    (check-equal? (constructor-value-constructor-name result) "succ")))
+    (check-equal? (constructor-value-constructor-name result) "next")))

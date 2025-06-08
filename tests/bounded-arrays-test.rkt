@@ -171,7 +171,7 @@
   (let* ([arr (make-bounded-array Nat (succ-value (succ-value (succ-value zero-value)))
                                  (succ-value zero-value) (succ-value zero-value) (succ-value zero-value))]
          [sum (bounded-array-fold arr zero-value hott-add)])
-    (check-equal? (constructor-value-constructor-name sum) "succ")))  ; Should be 3
+    (check-equal? (constructor-value-constructor-name sum) "next")))  ; Should be 3
 
 (test-case "Array equality with bounds verification"
   ;; Test equal arrays

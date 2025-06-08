@@ -194,9 +194,9 @@
        (error "Zero pattern can only match Nat type"))
      env]
     
-    [(successor-pattern sub-pattern)
+    [(next-pattern sub-pattern)
      (unless (hott-type-equal? expected-type Nat)
-       (error "Successor pattern can only match Nat type"))
+       (error "Next pattern can only match Nat type"))
      ;; The sub-pattern must also match Nat type
      (type-check-pattern sub-pattern Nat env)]
     
@@ -251,7 +251,7 @@
   (-> hott-type/c (set/c symbol?))
   (cond
     [(hott-type-equal? type Nat)
-     (set 'zero 'successor)]
+     (set 'zero 'next)]
     [(hott-type-equal? type Bool)
      (set 'true 'false)]
     [else
@@ -268,16 +268,16 @@
 (define/contract (pattern-to-pattern-set pattern)
   (-> pattern-node/c (set/c symbol?))
   (match pattern
-    [(wildcard-pattern) (set 'any 'zero 'successor 'true 'false)] ; Wildcard covers everything
-    [(variable-pattern _) (set 'any 'zero 'successor 'true 'false)] ; Variable covers everything
+    [(wildcard-pattern) (set 'any 'zero 'next 'true 'false)] ; Wildcard covers everything
+    [(variable-pattern _) (set 'any 'zero 'next 'true 'false)] ; Variable covers everything
     [(zero-pattern) (set 'zero)]
-    [(successor-pattern _) (set 'successor)]
+    [(next-pattern _) (set 'next)]
     [(true-pattern) (set 'true)]
     [(false-pattern) (set 'false)]
     [(literal-pattern value)
      (cond
        [(and (number? value) (= value 0)) (set 'zero)]
-       [(number? value) (set 'successor)] ; Non-zero numbers are successors
+       [(number? value) (set 'next)] ; Non-zero numbers are next
        [(eq? value #t) (set 'true)]
        [(eq? value #f) (set 'false)]
        [else (set)])]

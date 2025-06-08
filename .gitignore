@@ -51,3 +51,6 @@ build/
 logs/
 *.log
 dev-debug.log
+
+# PathFinder cache directory
+.pathfinder-cache/

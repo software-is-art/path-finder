@@ -3,7 +3,7 @@ Version: 0.4
 Date: 2025-06-01  
 Author: Gemini AI & User  
 1\. Introduction  
-PathFinder LISP is a statically-typed, functional programming language with a LISP-based syntax, specifically drawing inspiration from the Scheme philosophy of minimalism and powerful, hygienic metaprogramming. It is designed to bring the power and safety of Homotopy Type Theory (HoTT) to practical software development and facilitate deep conceptual exploration of HoTT in a programmable context. PathFinder LISP aims to provide exceptionally strong compile-time guarantees by treating types not just as classifications of data, but as mathematical spaces with inherent notions of equality (paths) and equivalence. A core design principle is that each type definition inherently specifies a single, canonical way to construct an instance of that type (its Canonical Instantiation Function \- CIF), represented by the type name itself acting as a constructor. The act of type construction via a CIF is a computational effect, potentially failing or invoking other declared effects, managed through an algebraic effect system. The Scheme-like LISP syntax is chosen to maximize ease of parsing, accelerate prototyping of HoTT concepts, and leverage hygienic macros for robust language extension and experimentation.  
+PathFinder LISP is a statically-typed, functional programming language with a LISP-based syntax, specifically drawing inspiration from the Scheme philosophy of minimalism and powerful, hygienic metaprogramming. It is designed to bring the power and safety of Homotopy Type Theory (HoTT) to practical software development and facilitate deep conceptual exploration of HoTT in a programmable context. PathFinder LISP aims to provide exceptionally strong compile-time guarantees by treating types not just as classifications of data, but as mathematical spaces with inherent notions of equality (paths) and equivalence. A core design principle is that all operations produce constructor values - data constructors create fundamental type instances while constructor-producing functions build complex values with computational evidence. Every type has canonical data constructors (like zero, next for Nat) and operations that produce constructor values (like addition, which builds Nat constructor values with arithmetic proofs). The Scheme-like LISP syntax is chosen to maximize ease of parsing, accelerate prototyping of HoTT concepts, and leverage hygienic macros for robust language extension and experimentation.  
 2\. Vision  
 To empower developers and researchers to build robust, verifiable, and highly abstract software by leveraging the deep connections between type theory and homotopy theory. PathFinder LISP aims to make advanced concepts of program structure and equivalence an integral part of the programming experience, encouraging a clean separation between effectful construction logic and pure computational logic, all within an extensible, conceptually transparent, and minimalist LISP environment.  
 **3\. Goals**
@@ -11,12 +11,12 @@ To empower developers and researchers to build robust, verifiable, and highly ab
 * **Strong Static Guarantees:** Leverage HoTT to catch a wide range of errors at compile-time.  
 * **Expressive Type System:** Directly support dependent types, universes, product types, sum types, and identity types, with syntax amenable to Scheme-like LISP's structure.  
 * **Intrinsic Equality:** Make the HoTT concept of "equality as paths" a first-class citizen, allowing reasoning about program equivalence.  
-* **Canonical Construction (CIF):** Every type has exactly one primary way to be instantiated, invoked by using the type name as a constructor function.  
-* **Effectful Type Construction:** Type instantiation via CIFs is a computation that can perform effects, including a standard ConstructionFailure effect if constraints are violated. These effects are managed by an algebraic effect system.  
+* **Constructor Values:** Every operation produces constructor values with computational evidence. Data constructors build fundamental instances, while constructor-producing functions build complex values with proofs.  
+* **Evidence-Carrying Values:** All values carry mathematical proofs of their properties and construction history, ensuring safety through computational evidence rather than runtime checks.  
 * **Metaprogrammatic Power & Extensibility:** Utilize LISP's homoiconicity and a Scheme-like hygienic macro system to allow for powerful syntactic abstractions, experimentation with new HoTT-related language features, and definition of domain-specific constructs.  
 * **Conceptual Clarity & Rapid Prototyping:** The minimalist LISP syntax should aid in directly representing, manipulating, and rapidly iterating on type-theoretic constructs during language development and advanced use.  
 * **Modularity:** Provide mechanisms for organizing code into reusable modules/packages, typical of Scheme-like LISP systems.  
-* **Encourage Sound Design:** The effect system for CIFs should encourage developers to handle construction logic upstream, separating it from core, potentially pure, business logic.
+* **Encourage Sound Design:** The effect system should encourage developers to handle construction logic upstream, separating it from core, potentially pure, business logic.
 
 **4\. Non-Goals**
 
@@ -24,7 +24,7 @@ To empower developers and researchers to build robust, verifiable, and highly ab
 * Extensive Concurrency Model (Initial Version).  
 * Direct Interoperability with Existing Mainstream Languages (Initial Version).  
 * Beginner-Friendliness for Programmers Unfamiliar with LISP or Type Theory: A learning curve is expected and embraced for the conceptual exploration phase.  
-* Comprehensive Standard Library (Initial Version): A core library will be provided, with foundational types defined from first principles using CIFs.  
+* Comprehensive Standard Library (Initial Version): A core library will be provided, with foundational types defined from first principles using data constructors and constructor-producing functions.  
 * Highly Optimized Compiler (Initial Version): Focus is on implementing the core HoTT semantics within the LISP framework.
 
 **5\. Target Audience**
