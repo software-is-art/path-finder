@@ -1,6 +1,6 @@
 # Task ID: 23
 # Title: Type Inference and Elaboration Engine
-# Status: pending
+# Status: in-progress
 # Dependencies: 4, 10, 11, 17
 # Priority: high
 # Description: Implement a type inference and elaboration engine that automatically deduces dependent type parameters, universe levels, and generates proof obligations. This will simplify type annotations for users, making the HoTT-based language more practical.
@@ -63,19 +63,19 @@ Implement a bidirectional type checking algorithm (synthesis and checking modes)
 - Test interaction with `deftype` and Canonical Instantiation Functions (CIFs) (related to Task 5, via Task 17).
 
 # Subtasks:
-## 1. Extend Type Checker with Bidirectional Inference for Basic Constructs [pending]
+## 1. Extend Type Checker with Bidirectional Inference for Basic Constructs [done]
 ### Dependencies: None
 ### Description: Modify the existing type checker (from Task 4 & 10) to support bidirectional type checking (synthesis and checking modes). Implement inference for lambda parameters, function application arguments, and types in let-bindings. This forms the foundation for more advanced inference.
 ### Details:
 Define two main functions: `infer(context, term)` returning a type, and `check(context, term, type)` verifying the term has the given type. For lambdas `λx. body`, infer parameter type `A` if `x` is unannotated and context allows, or use annotation; then check/infer body. For applications `(f e)`, synthesize type of `f` (e.g., `Π(x:A).B`), check `e` against `A` (or infer `A` if possible), result type is `B[x := e]`. For `let x = e1 in e2`, infer type of `e1` as `A`, then check/infer `e2` in context extended with `x:A`.
 
-## 2. Implement Dependent Type Parameter Inference (Π/Σ-types, Implicit Arguments) [pending]
+## 2. Implement Dependent Type Parameter Inference (Π/Σ-types, Implicit Arguments) [done]
 ### Dependencies: 23.1
 ### Description: Extend the bidirectional engine to infer missing parameters for dependent Π-types and Σ-types. Implement handling of implicit arguments in dependent type constructors and functions, allowing users to omit them when they can be deduced from context.
 ### Details:
 For Π-type parameter inference (e.g., `f : Π (A : Type) (x : A) -> C` in `(f _ y)`), infer `A` from the type of `y` using unification or constraint-based type matching. For Σ-types, ensure dependent components can be inferred. For implicit arguments (marked in function/constructor definitions), attempt inference based on types of explicit arguments or the expected type of the overall expression. Example: for `Id x y` where `Id : Π {A:Type} (a:A) (b:A) -> Type`, infer `A` from type of `x` or `y`.
 
-## 3. Implement Universe Level Inference [pending]
+## 3. Implement Universe Level Inference [in-progress]
 ### Dependencies: 23.1
 ### Description: Develop mechanisms for inferring universe levels (e.g., `Type i`). This involves collecting constraints on universe levels during type checking (e.g., from `Type i : Type j` implying `i < j`, or `Π (A : Type i) -> B : Type j` implying `i <= j`) and solving these constraints to ensure consistency and assign concrete or minimal levels.
 ### Details:

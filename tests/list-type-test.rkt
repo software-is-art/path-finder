@@ -142,6 +142,54 @@
     (let ([equal? (hott-list-equal? list1 list2 hott-equal?)])
       (check-equal? (constructor-value-constructor-name equal?) "true"))))
 
+(test-case "List filter operation"
+  ;; Test filtering empty list
+  (let ([empty-list (hott-list-nil Nat)])
+    (let ([result (hott-list-filter (lambda (x) true-value) empty-list Nat)])
+      (check-equal? (constructor-value-constructor-name result) "nil")))
+  
+  ;; Test filtering with predicate that accepts all
+  (let* ([empty (hott-list-nil Nat)]
+         [list-with-items (hott-list-cons zero-value 
+                                         (hott-list-cons (succ-value zero-value) empty Nat) 
+                                         Nat)])
+    (let ([result (hott-list-filter (lambda (x) true-value) list-with-items Nat)])
+      (check-equal? (constructor-value-constructor-name result) "cons")
+      (let ([length (hott-list-length result)])
+        (check-equal? (constructor-value-constructor-name length) "next"))))
+  
+  ;; Test filtering with predicate that rejects all
+  (let* ([empty (hott-list-nil Nat)]
+         [list-with-items (hott-list-cons zero-value empty Nat)])
+    (let ([result (hott-list-filter (lambda (x) false-value) list-with-items Nat)])
+      (check-equal? (constructor-value-constructor-name result) "nil"))))
+
+(test-case "List reverse operation"
+  ;; Test reversing empty list
+  (let ([empty-list (hott-list-nil Nat)])
+    (let ([result (hott-list-reverse empty-list)])
+      (check-equal? (constructor-value-constructor-name result) "nil")))
+  
+  ;; Test reversing single-element list
+  (let* ([empty (hott-list-nil Nat)]
+         [single-item (hott-list-cons zero-value empty Nat)])
+    (let ([result (hott-list-reverse single-item)])
+      (check-equal? (constructor-value-constructor-name result) "cons")
+      (let ([values (hott-list->values result)])
+        (check-equal? (length values) 1))))
+  
+  ;; Test reversing multi-element list
+  (let* ([empty (hott-list-nil Nat)]
+         [one (succ-value zero-value)]
+         [two (succ-value one)]
+         [list-1-2 (hott-list-cons one (hott-list-cons two empty Nat) Nat)])
+    (let ([result (hott-list-reverse list-1-2)])
+      (check-equal? (constructor-value-constructor-name result) "cons")
+      (let ([values (hott-list->values result)])
+        (check-equal? (length values) 2)
+        ;; First element should be two (was last)
+        (check-equal? (constructor-value-constructor-name (car values)) "next")))))
+
 (test-case "Utility functions"
   ;; Test converting values to list
   (let ([values (list zero-value (succ-value zero-value))])

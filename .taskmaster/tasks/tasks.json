@@ -419,7 +419,7 @@
       "dependencies": [
         2
       ],
-      "status": "pending",
+      "status": "done",
       "subtasks": [
         {
           "id": 1,
@@ -427,7 +427,7 @@
           "description": "Parse `(defeffect EffectName (operation (params) : ReturnType) ...)` syntax. Store effect definitions, including their operations, parameters, and return types, in a central registry accessible by the runtime.",
           "dependencies": [],
           "details": "Modify the language parser to recognize the `defeffect` keyword and its structure (EffectName, list of operations, each with parameters and an optional ReturnType). Create data structures to represent `EffectDefinition` and `OperationSignature`. Implement a global or module-scoped registry (e.g., a hash map) to store these definitions, keyed by `EffectName`. Each `EffectName` would map to an object/struct containing its defined operations and their signatures. Ensure validation of effect and operation names (e.g., uniqueness, valid identifiers).",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Define several effects with varying numbers of operations, different parameter lists, and with/without return types. Verify that they are parsed correctly and stored in the registry with the expected structure. Test error handling for malformed `defeffect` expressions (e.g., duplicate effect names, invalid operation syntax)."
         },
         {
@@ -438,7 +438,7 @@
             1
           ],
           "details": "Add `perform` as a built-in function or special form. It should look up `EffectName.operation` in the registry (from subtask 1) to validate the operation and arity of `args`. Create a unique, identifiable object (e.g., an \"EffectInstance\" or a special throwable object) that encapsulates the specific effect operation being performed and its arguments. The evaluator must be modified to recognize this signal and halt normal execution flow, propagating this signal upwards. This signal will later be caught by a `try/handle` block.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test `perform` with valid effect/operation names and correct arguments. Verify that performing an effect interrupts the normal flow and propagates an EffectInstance object. Test error conditions: unknown effect/operation, incorrect number of arguments. If no handler is present, this might result in an unhandled effect error."
         },
         {
@@ -449,7 +449,7 @@
             1
           ],
           "details": "Extend the parser to support the `try` special form and its `:handle` clauses. Each `:handle` clause specifies an `EffectName`, an `operation` name (`op`), a continuation parameter (`k`), an argument parameter (`arg`), and a `handler-body`. When a `try` expression is evaluated, push a new frame onto a runtime \"handler stack\". This frame should store a mapping from `(EffectName, operationName)` pairs to their corresponding handler functions (closures created from `handler-body` capturing `k` and `arg` parameters and the lexical environment). The `body-expr` is then evaluated within this scope. Upon normal completion or an effect being handled and resumed out of the `try` block, this handler frame should be popped.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Parse various `try/handle` expressions with single and multiple `:handle` clauses. Verify that the handler scope is correctly established on the handler stack during `body-expr` evaluation and torn down afterwards. Test evaluation of `body-expr` within a `try` block that does not perform any effects, ensuring it executes normally."
         },
         {
@@ -461,7 +461,7 @@
             3
           ],
           "details": "Modify the evaluator's response to the \"EffectInstance\" signal. When an effect is signaled, the evaluator should search the current handler stack (from subtask 3) for a handler matching the `EffectName` and `operationName` from the EffectInstance. If a handler is found: 1. Capture the current state of computation as a \"continuation\" object/function. This continuation, when invoked later with a value, should resume execution as if the `perform` call returned that value. 2. Invoke the matched handler function, passing it the captured continuation (`k`) and the arguments from the `perform` call (bound to `arg`). If no handler is found, the effect signal should continue propagating upwards.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Create test cases where `perform` is called inside a `try/handle` block with a matching handler. Verify that the correct handler is invoked. Verify that the continuation object and effect arguments are correctly passed to the handler. Initially, the handler might just print arguments or return a fixed value without using `resume`. Test unhandled effects propagating out of a `try` block."
         },
         {
@@ -472,7 +472,7 @@
             4
           ],
           "details": "Add `resume` as a built-in function or primitive. It expects a continuation object (as created in subtask 4) and a result value. Invoking `(resume k value)` should: 1. Restore the evaluation context (e.g., stack, relevant parts of the environment) associated with the continuation. 2. Make the original `perform` call (that was suspended) evaluate to `value`. 3. Ensure that the handler stack is correctly managed; the handler that called `resume` is typically no longer active for the resumed computation unless it re-establishes handlers. The control flow returns to the point after the `perform` call.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test handlers that use `(resume k some-value)`. Verify that the computation resumes correctly from the point of `perform` and that the `perform` expression effectively returns `some-value`. Test scenarios with multiple `perform` calls for the same effect handled by the same handler instance (if the handler design allows re-entry or multiple resumptions). Test resuming with different types of values. Ensure that after resumption, the execution context is correct."
         }
       ]
@@ -1096,7 +1096,7 @@
       "id": 17,
       "title": "Implement Core Standard Library (Nat, Bool, Option, List)",
       "description": "Implement the core standard library types: `Nat`, `Bool`, `List`, and `NonEmptyList`. This task focuses on establishing essential, safe, and robust building blocks for practical programming in PathFinder LISP, aligned with a HoTT/dependent types philosophy. Key aspects include defining types with `deftype`, using the effect system for partial functions (explicitly eliminating the need for `Option` types), and leveraging the proof-carrying `NonEmptyList` type for safe head/tail access.",
-      "status": "in-progress",
+      "status": "done",
       "dependencies": [
         4,
         5
@@ -1111,7 +1111,7 @@
           "description": "Defines the `Bool` type using `deftype` with `PFalse` and `PTrue` variants. Implements its Canonical Instantiation Functions (CIFs) and the fundamental boolean operations: `and`, `or`, `not`. This subtask establishes the foundational boolean logic for the standard library.",
           "dependencies": [],
           "details": "1. Define `Bool` using `(deftype Bool (PFalse) (PTrue))`.\n2. Ensure `deftype` (from Task 5) generates `PFalse` and `PTrue` as CIFs.\n3. Implement PathFinder LISP functions for:\n   - `and: Bool Bool -> Bool`\n   - `or: Bool Bool -> Bool`\n   - `not: Bool -> Bool`\n4. Ensure all functions are type-checked by the system's type checker (from Task 4).\n5. Place these definitions in the standard library module for automatic loading or easy import.",
-          "status": "in-progress",
+          "status": "done",
           "testStrategy": "Unit test `PFalse` and `PTrue` CIFs. Test `and`, `or`, `not` operations with all possible boolean input combinations (e.g., `(and PTrue PFalse)`, `(or PFalse PFalse)`, `(not PTrue)`) to verify correctness."
         },
         {
@@ -1122,7 +1122,7 @@
             1
           ],
           "details": "1. Define `Nat` using `(deftype Nat (Zero) (Succ Nat))`. Confirm `deftype` (Task 5) supports recursive definitions as this is a recursive type.\n2. Ensure `Zero` (CIF for the `Zero` variant) and `Succ` (CIF for the `Succ` variant, taking a `Nat`) are available as per `deftype` specification.\n3. Implement PathFinder LISP functions for:\n   - `isZero?: Nat -> Bool`\n   - `equals?: Nat Nat -> Bool` (e.g., implement recursively by comparing structures: `(equals? Zero Zero)` is `PTrue`, `(equals? (Succ m) (Succ n))` is `(equals? m n)`, other cases `PFalse`)\n   - `lessThan?: Nat Nat -> Bool` (e.g., implement recursively: `(lessThan? Zero (Succ n))` is `PTrue`, `(lessThan? (Succ m) (Succ n))` is `(lessThan? m n)`, other cases `PFalse`)\n4. These functions will use the `Bool` type and its CIFs (`PTrue`, `PFalse`) from subtask 1 for their return values.\n5. Ensure all functions are type-checked. Place these definitions in the standard library module.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test `Zero` and `Succ` CIFs (e.g., `(Zero)` creates a Nat, `(Succ (Zero))` creates a Nat). Test `isZero?` on `Zero` and non-Zero `Nat`s (e.g., `(Succ Zero)`). Test `equals?` with identical and different `Nat`s. Test `lessThan?` with various pairs of `Nat`s (e.g., `(lessThan? Zero (Succ Zero))`, `(lessThan? (Succ Zero) Zero)`)."
         },
         {
@@ -1134,7 +1134,7 @@
             2
           ],
           "details": "1. Define `List T` using `(deftype (List T) (Nil) (Cons T (List T)))`. Confirm `deftype` (Task 5) supports parameterized and recursive types.\n2. Ensure `Nil` (CIF for `Nil` variant, type `(List T)` for any `T`) and `Cons` (CIF for `Cons` variant, type `T (List T) -> (List T)`) are available.\n3. Implement PathFinder LISP functions for:\n   - `isEmpty?: (List T) -> Bool` (uses `Bool` from subtask 1)\n   - `append: (List T) (List T) -> (List T)`\n   - `length: (List T) -> Nat` (uses `Nat` from subtask 2)\n   - `mapList: (List T) (T -> U) -> (List U)`\n   - `filterList: (List T) (T -> Bool) -> (List T)` (predicate function uses `Bool` from subtask 1)\n   - `foldLeft: (List T) U ((U T) -> U) -> U`\n   - `reverse: (List T) -> (List T)` (can be implemented efficiently using `foldLeft`)\n4. Ensure all functions are type-checked, including generic types `T` and `U`. Place in standard library module.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test `Nil` and `Cons` CIFs. Test `isEmpty?` on `Nil` and non-empty lists. Test `append` with various list combinations. Test `length` on empty and non-empty lists. Test `mapList`, `filterList`, `foldLeft`, and `reverse` with various inputs and functions to ensure correctness."
         },
         {
@@ -1145,7 +1145,7 @@
             5
           ],
           "details": "1. Define `NonEmptyList T` using `(deftype (NonEmptyList T) (NECons T (List T)))`.\n2. Ensure `NECons` is available as a CIF with the type `T (List T) -> (NonEmptyList T)`.\n3. Implement the following total PathFinder LISP functions:\n   - `head: (NonEmptyList T) -> T`\n   - `tail: (NonEmptyList T) -> (List T)`\n4. These functions are guaranteed to succeed because the type `NonEmptyList T` provides proof that there is at least one element.\n5. Place these definitions in the standard library module.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test the `NECons` CIF to ensure it creates `NonEmptyList` values. For a given `(NECons h t)`, verify that `(head (NECons h t))` returns `h` and `(tail (NECons h t))` returns `t`. Test with various types for `T`."
         },
         {
@@ -1156,7 +1156,7 @@
             2
           ],
           "details": "1. Implement PathFinder LISP functions for:\n   - `add: Nat Nat -> Nat` (Implement recursively: `(add Zero n) = n`, `(add (Succ m) n) = (Succ (add m n))`)\n   - `subtract: Nat Nat -> Nat` (Implement recursively. For `(subtract (Succ m) (Succ n))`, recurse. For `(subtract Zero (Succ n))`, trigger a 'DomainError' effect.)\n2. These functions operate on the `Nat` type defined in subtask 2.\n3. Ensure all functions are type-checked. Place in standard library module.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test `add` with various `Nat` inputs. Test `subtract` for successful cases (e.g., 5-3, 3-0, 3-3) to ensure the correct `Nat` is returned. Test failure cases (e.g., 3-5, 0-3) to ensure that the 'DomainError' effect is triggered and can be handled."
         }
       ]
@@ -1517,7 +1517,7 @@
       "description": "Implement a type inference and elaboration engine that automatically deduces dependent type parameters, universe levels, and generates proof obligations. This will simplify type annotations for users, making the HoTT-based language more practical.",
       "details": "Implement a bidirectional type checking algorithm (synthesis and checking modes) that can infer missing type information, extending the existing type checker (from Task 4 and Task 10). Focus on inferring types for lambda parameters, function application arguments, and let-bindings.\n\n**Dependent Type Inference**:\n- Infer parameters for Π-types and Σ-types. For example, if `f : (Π (A : Type) (x : A) -> A)`, in an application `(f _ y)`, infer the first argument (the type `A`) from the type of `y`.\n- Handle implicit arguments in dependent type constructors and functions.\n\n**Universe Level Inference** (if applicable to the language design):\n- Implement inference for universe levels to ensure consistency (e.g., `Type i`). This might involve collecting constraints on universe levels and solving them.\n\n**Proof Obligation Generation**:\n- When type checking expressions involving propositions (e.g., `Id A x y` from Task 11), if a proof is required but not explicitly provided, the system should generate a proof obligation.\n- These obligations could be represented as new goals for a separate proof assistant component or require the user to provide the proof term.\n\n**Elaboration**:\n- The inference engine should elaborate partially typed Abstract Syntax Trees (ASTs) into fully typed ASTs. This means filling in all inferred types, implicit arguments, and potentially inserting coercions or other type-level constructs.\n- The elaborated AST will be the input for subsequent compilation or evaluation stages.\n\n**Error Reporting**:\n- Provide clear and informative error messages when inference fails or leads to ambiguity. Messages should guide the user on how to resolve the issue (e.g., by adding explicit type annotations).\n\n**Integration**:\n- Integrate the inference engine into the main type checking pipeline.\n- Ensure it works correctly with features from Task 4 (simple types/functions), Task 10 (dependent types), Task 11 (Identity types), and types defined in Task 17 (Standard Library).",
       "testStrategy": "**Unit Tests for Inference Rules**:\n- Test inference of simple function argument types and return types.\n- Test inference of lambda parameter types.\n- Test inference for let-bindings.\n\n**Dependent Type Inference Tests**:\n- Define functions with dependent types (Π-types, Σ-types) where some parameters can be inferred. Test that the engine correctly infers these parameters in various application scenarios.\n- Example: `(define id (lambda (A : Type) (lambda (x : A) x)))`. Test `(id _ 5)` infers `A` as `Nat` (assuming Nat is part of the system from Task 17 or similar).\n- Test inference with types from the standard library (Task 17), e.g., inferring the type parameter for `List` or `Option` in functions like `map` or `flatMap` if their types allow for inference.\n\n**Universe Level Inference Tests** (if applicable):\n- Create scenarios that require universe level constraints and verify that the inference engine correctly assigns or infers consistent universe levels.\n- Test for universe inconsistency errors.\n\n**Proof Obligation Generation Tests**:\n- Create expressions that should logically require a proof (e.g., using an equality that isn't `refl` without providing a proof term for `Id A x y` from Task 11).\n- Verify that the system correctly identifies and generates the appropriate proof obligation.\n\n**Elaboration Tests**:\n- Inspect the elaborated AST to ensure that all inferred types and implicit arguments are correctly inserted.\n- Verify that the elaborated AST is well-typed according to the full, non-inferential type checker.\n\n**Error Reporting Tests**:\n- Create ambiguous type scenarios and verify that the system reports an error rather than inferring an incorrect type.\n- Create unsolvable inference problems and check for clear error messages that guide the user.\n- Test cases where insufficient information is provided for inference, prompting the user for annotations.\n\n**Integration Tests**:\n- Write small programs that heavily rely on type inference for various constructs (functions, data types from Task 17, dependent types from Task 10, identity types from Task 11).\n- Verify that these programs type check correctly and that the inferred types match expectations.\n- Test interaction with `deftype` and Canonical Instantiation Functions (CIFs) (related to Task 5, via Task 17).",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": [
         4,
         10,
@@ -1532,7 +1532,7 @@
           "description": "Modify the existing type checker (from Task 4 & 10) to support bidirectional type checking (synthesis and checking modes). Implement inference for lambda parameters, function application arguments, and types in let-bindings. This forms the foundation for more advanced inference.",
           "dependencies": [],
           "details": "Define two main functions: `infer(context, term)` returning a type, and `check(context, term, type)` verifying the term has the given type. For lambdas `λx. body`, infer parameter type `A` if `x` is unannotated and context allows, or use annotation; then check/infer body. For applications `(f e)`, synthesize type of `f` (e.g., `Π(x:A).B`), check `e` against `A` (or infer `A` if possible), result type is `B[x := e]`. For `let x = e1 in e2`, infer type of `e1` as `A`, then check/infer `e2` in context extended with `x:A`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit tests for inferring types of simple lambdas (annotated and unannotated parameters where inferable), applications (argument type checking and polymorphic function instantiation), and let-bindings (inferring binding's type). Test cases where type annotations are missing and can be inferred, and cases where they are essential and omission leads to an error (to be handled better in Subtask 5)."
         },
         {
@@ -1543,7 +1543,7 @@
             1
           ],
           "details": "For Π-type parameter inference (e.g., `f : Π (A : Type) (x : A) -> C` in `(f _ y)`), infer `A` from the type of `y` using unification or constraint-based type matching. For Σ-types, ensure dependent components can be inferred. For implicit arguments (marked in function/constructor definitions), attempt inference based on types of explicit arguments or the expected type of the overall expression. Example: for `Id x y` where `Id : Π {A:Type} (a:A) (b:A) -> Type`, infer `A` from type of `x` or `y`.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test cases for functions and constructors (e.g., `Vec`, `Id` from Task 11) with dependent types where some type arguments are placeholders (`_`) or implicit and should be inferred. Verify inference for parameters in Π-binders and Σ-pair components."
         },
         {
@@ -1554,7 +1554,7 @@
             1
           ],
           "details": "Represent universe levels with variables (e.g., `?u1`). During type checking of type formers (Π, Σ, Type literal, etc.), generate constraints like `?u1 < ?u2` or `?u1 = max(?u2, ?u3)`. Collect all constraints into a system. Implement a solver for these constraints (e.g., based on a directed graph for inequalities, or simple unification for equalities). Report errors for inconsistent universes. Inferred levels become part of the elaborated AST.",
-          "status": "pending",
+          "status": "in-progress",
           "testStrategy": "Unit tests for expressions that generate universe constraints (e.g., `(Type i) : Type (i+1)`, `Π (A:Type i) (x:A) -> B x` where `B x : Type i`). Test scenarios with solvable constraints, minimally solvable constraints, and unsolvable (inconsistent) constraints, ensuring correct level assignment or error reporting."
         },
         {
@@ -1588,7 +1588,7 @@
       "description": "Implement syntactic sugar for common programming patterns such as list literals, optional chaining (maybe-monad syntax like `x?.field`), and threading macros. These constructs will desugar into core HoTT-based language expressions, enhancing developer experience and code readability while preserving mathematical rigor.",
       "details": "Implementations should extend the parser (from Task 1) to recognize new syntactic forms and then transform these forms into equivalent core Abstract Syntax Tree (AST) structures (from Task 2) before type checking (Task 4) and evaluation (Task 2).\n\n**1. List Literals:**\n   - Syntax: `[elem1 elem2 ... elemN]` (e.g., `[1 2 3]`, `[]`).\n   - Parser Extension: Lexer to recognize `[` and `]`. Parser to construct an internal representation for list literals.\n   - Desugaring: Transform into a sequence of `List.cons` calls and `List.nil` from the standard library (Task 17). \n     - Example: `[1 2 3]` desugars to `(List.cons 1 (List.cons 2 (List.cons 3 List.nil)))`.\n     - Example: `[]` desugars to `List.nil`.\n\n**2. Maybe-Monad Syntax (Optional Chaining for `Option` types):**\n   - Syntax: `expr?.field` for field access, and `expr?.(function-call arg ...)` for safe method/function calls on an optional value.\n   - Prerequisites: `Option` type and its operations (`Option.map`, `Option.bind`, `Option.pure`, `None`) from Task 17. Product types (structs/records) from Task 5 for field access, and a mechanism like `(get-field instance 'fieldName')`.\n   - Desugaring for field access (`expr?.field`):\n     - Transforms to an expression that checks if `expr` is `Some`. If so, accesses `field` from the wrapped value and returns `(Some fieldValue)`; otherwise, returns `None`.\n     - Example: `myOption?.data` could desugar to `(Option.map myOption (lambda (value) (get-field value 'data')))`. The result type would be `(Option FieldType)`.\n   - Desugaring for function call (`expr?.(f arg)`):\n     - Transforms to an expression that checks if `expr` is `Some`. If so, applies the function to the wrapped value and arguments; otherwise, returns `None`.\n     - Example: `optVal?.(processItem \"arg2\")` could desugar to `(Option.bind optVal (lambda (v) (processItem v \"arg2\")))` if `processItem` returns an `Option`, or `(Option.map optVal (lambda (v) (processItem v \"arg2\")))` if `processItem` returns a plain value to be wrapped in `Some`.\n\n**3. Threading Macro (e.g., Thread-First `->`):**\n   - Syntax: `(-> initial-expr form1 form2 ...)`\n   - Purpose: Reduces nesting for sequential function applications.\n   - Desugaring: The `initial-expr` is passed as the first argument to `form1`. The result of that is passed as the first argument to `form2`, and so on.\n     - If a `form` is a symbol `s`, it becomes `(s threaded-value)`.\n     - If a `form` is a list `(op arg1 ...)` it becomes `(op threaded-value arg1 ...)`.\n   - Example: `(-> \"hello\" (string-append \" world\") string-upcase)` desugars to `(string-upcase (string-append \"hello\" \" world\"))` (assuming `string-append` and `string-upcase` are available, potentially from an extended standard library).\n   - Parser Extension: Recognize `->` as a special form/macro triggering this transformation.\n\n**General Considerations:**\n- All desugared expressions must be valid core language ASTs.\n- The desugaring process should happen after parsing and before type checking.\n- Error reporting for malformed sugar syntax should be clear.",
       "testStrategy": "Each syntactic sugar feature requires thorough testing:\n\n**1. List Literals:**\n   - Parse and desugar `[]`. Verify it becomes `List.nil`. Check type and evaluation.\n   - Parse and desugar `[1 2 3]`. Verify desugaring to `(List.cons 1 (List.cons 2 (List.cons 3 List.nil)))`. Check type `(List Nat)` and evaluate to the correct list structure.\n   - Test with lists of other types (e.g., `Bool`, `String` if available) and empty lists of specific types if supported.\n   - Test nested list literals: `[[1] [2 3]]`.\n   - Test parsing errors for malformed list literals, e.g., `[1 2`. \n\n**2. Maybe-Monad Syntax (`?.`):**\n   - Setup: Define a product type (e.g., `(deftype User ((id Nat) (name String)))`) and an `Option User` variable.\n   - Field Access:\n     - Test `optionUser?.id` when `optionUser` is `(Some (User 1 \"Alice\"))`. Expected: `(Some 1)`.\n     - Test `optionUser?.id` when `optionUser` is `None`. Expected: `None`.\n     - Verify type of the result is `(Option Nat)`.\n   - Function Call:\n     - Define a function `(define (format-user u) (string-append \"ID: \" (nat-to-string (get-field u 'id))))` which returns a `String`.\n     - Test `optionUser?.(format-user)` (if `format-user` is adapted or `Option.map` is used for non-Option returning functions). Expected: `(Some \"ID: 1\")` or `None`.\n     - Test with functions that themselves return `Option` using `Option.bind` desugaring.\n     - Verify type correctness of desugared expressions.\n   - Test parsing errors for malformed `?.` syntax.\n\n**3. Threading Macro (`->`):**\n   - Test simple case: `(-> 10 (add 5) (multiply 2))` (assuming `add` and `multiply` exist and take first arg as input). Expected desugaring: `(multiply (add 10 5) 2)`. Evaluate to `30`.\n   - Test with symbol forms: `(-> \"data\" process-step1 process-step2)` where `process-step1` and `process-step2` are functions. Expected: `(process-step2 (process-step1 \"data\"))`.\n   - Test with more complex forms and multiple arguments in steps: `(-> initial-value (funcA \"param1\") (funcB \"param2\" \"param3\"))`.\n   - Verify type checking of the desugared forms.\n   - Test parsing errors for malformed `->` expressions.\n\n**General Tests:**\n- Ensure that the introduction of syntactic sugar does not break existing parsing or evaluation of core language forms.\n- Verify that error messages from the type checker (Task 4) for type errors within desugared code are clear and map back to the original sugared syntax if possible (stretch goal).",
-      "status": "pending",
+      "status": "cancelled",
       "dependencies": [
         1,
         2,
@@ -1821,6 +1821,77 @@
           "testStrategy": "Set up three nodes (A, B, C). Node A has a valid proof. Node C has an invalid proof for the same hash. Node B requests the proof. Test that B can receive, verify, and use the proof from A. Then, test that if B receives the proof from C, it fails verification, discards it, and falls back to other resolution methods."
         }
       ]
+    },
+    {
+      "id": 28,
+      "title": "Minimize Racket Dependencies by Replacing Host-Language Features",
+      "description": "Replace Racket-specific features like contracts, pattern matching, and mutable data structures with their HoTT-native equivalents. This task is a major step towards making the language self-hosting and reducing reliance on the Racket ecosystem.",
+      "details": "This task involves a systematic refactoring of the existing codebase to eliminate dependencies on Racket-specific functionalities, replacing them with features native to the HoTT-based language.\n\n1.  **Replace Racket Contracts with Dependent Types**: Identify all uses of Racket's contract system (`provide/contract`, `contract-out`). These runtime checks must be replaced with compile-time proofs. For function signatures, this involves using dependent function types (Π-types, from Task 10). For data structures, this means using `deftype` with `:where` clauses to define invariants that are enforced upon construction (from Task 8).\n\n2.  **Replace Racket Pattern Matching with Eliminators**: All instances of Racket's `match` syntax must be removed. For each sum type defined in the language, an eliminator (or \"induction principle\") function should be generated. The logic previously implemented with `match` will be refactored to use these eliminators, ensuring that data is deconstructed in a type-safe, principled manner that is native to the core language.\n\n3.  **Replace Mutable Data Structures with Persistent Ones**: Scan the codebase for any use of mutable data structures, such as those created with `vector`, `hash`, or modified with `set!`. These must be replaced with the language's own persistent data structures, such as the `List` and `NonEmptyList` types defined in Task 17. This change is critical for aligning the implementation with a purely functional, provable paradigm.",
+      "testStrategy": "1.  **Static Analysis**: Before starting, run a static analysis tool across the codebase to find and catalog all occurrences of Racket-specific forms (`contract-out`, `match`, `set!`, mutable data structure constructors). The primary success metric is the reduction of this count to zero.\n2.  **Regression Testing**: Ensure the existing comprehensive test suite passes before and after the refactoring. This guarantees that the logical behavior of the system remains unchanged.\n3.  **Contract Replacement Tests**: For each contract that is removed, write a corresponding negative test that attempts to violate the invariant. This test should now fail at type-checking time, demonstrating the successful migration from a runtime check to a compile-time proof.\n4.  **Eliminator Tests**: Write specific unit tests for the generated eliminator functions for each sum type, verifying they correctly deconstruct values and apply the provided functions.\n5.  **Persistence Tests**: Write tests to confirm that the new persistent data structures are used correctly and that no side-effects or mutations are present in the refactored code sections.",
+      "status": "pending",
+      "dependencies": [
+        8,
+        10,
+        17,
+        21
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Refactor Racket Contracts to Compile-Time Dependent Types",
+          "description": "Systematically identify and replace all runtime Racket contracts (`provide/contract`, `contract-out`) with the language's native compile-time dependent types. This enforces invariants statically rather than at runtime, a key step in leveraging the HoTT-based type system.",
+          "dependencies": [],
+          "details": "Use static analysis or text search to locate all occurrences of Racket's contract forms. For function contracts, rewrite the signatures using dependent function types (Π-types). For data structure contracts, refactor the `deftype` definitions to include `:where` clauses that specify the required invariants, which will be checked at construction time. Remove the now-redundant Racket contract definitions.",
+          "status": "pending",
+          "testStrategy": "Ensure all existing tests pass. Add new tests that specifically attempt to violate the new type-level invariants; these should now fail at compile time instead of runtime, confirming the successful migration from runtime checks to static proofs."
+        },
+        {
+          "id": 2,
+          "title": "Implement Automatic Generation of Eliminators for Sum Types",
+          "description": "Enhance the language's `deftype` macro to automatically generate a principled eliminator function (also known as an induction principle) for every sum type defined. This provides the foundational mechanism for replacing Racket's `match` with a native, type-safe construct.",
+          "dependencies": [],
+          "details": "Modify the macro or compiler pass that handles `deftype`. For any sum type `(deftype T :is (sum (C1 A1 ...) (C2 B1 ...) ...))`, the macro should generate a corresponding eliminator function. The eliminator's signature should be of the form `(T-elim : (-> T (-> (A1 ...) P) (-> (B1 ...) P) ... P))`, where `P` is a polymorphic return type. The generated function will take an instance of `T` and one function for each constructor, applying the correct function to the deconstructed value.",
+          "status": "pending",
+          "testStrategy": "For each core sum type in the language, write a unit test that verifies the generated eliminator exists and functions correctly. Test with both simple and polymorphic return types (`P`) to ensure correctness and generality."
+        },
+        {
+          "id": 3,
+          "title": "Replace Racket `match` Expressions with Generated Eliminators",
+          "description": "With the eliminator generation in place, refactor the entire codebase to replace all instances of Racket's `match` syntax with calls to the corresponding native, type-safe eliminator functions generated in the previous subtask.",
+          "dependencies": [
+            2
+          ],
+          "details": "Search the codebase for all `(match ...)` expressions. For each `match` expression over a sum type `T`, replace it with a call to `(T-elim ...)`. The clauses of the `match` expression will be converted into lambda functions passed as arguments to the eliminator. Pay close attention to nested patterns and guards, which may require more complex lambda bodies or nested eliminator calls.",
+          "status": "pending",
+          "testStrategy": "The primary testing strategy is regression testing. The entire existing test suite must pass after this large-scale refactoring. Code review is critical to ensure the logic of the original `match` is preserved in the new eliminator-based implementation."
+        },
+        {
+          "id": 4,
+          "title": "Replace Mutable Racket Data Structures with Persistent Equivalents",
+          "description": "Eradicate the use of mutable data structures from the Racket host language, such as vectors and hash tables, and replace them with the language's own purely functional, persistent data structures like `List` and `NonEmptyList`.",
+          "dependencies": [],
+          "details": "Identify all uses of mutable data structures and operations: `vector`, `vector-set!`, `hash`, `hash-set!`, `box`, `set-box!`, and the general `set!`. Replace uses of mutable vectors and lists with the language's native `List` or `NonEmptyList` types. Refactor algorithms that rely on mutation to use a functional style, such as using recursion and passing updated state as arguments instead of modifying it in place.",
+          "status": "pending",
+          "testStrategy": "All existing tests must pass. Performance testing may be necessary to identify any significant regressions introduced by the switch to persistent data structures, which can then be addressed with targeted optimizations if needed."
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Implement Native Host Bridge for Primitive Operations",
+      "description": "Design and implement a native host bridge using Rust, Zig, or C++ to replace Racket for primitive operations. This change targets a 10-100x performance increase by eliminating runtime contract overhead while maintaining strict HoTT semantics.",
+      "details": "This task involves creating a Foreign Function Interface (FFI) to a native library (preferably Rust, in line with Task #26) to offload performance-critical primitive operations.\n\n1.  **FFI and Bridge Design:**\n    *   Define a stable FFI between the Racket-based runtime and the native library.\n    *   Specify the data marshalling process for converting language-level data (like numbers, strings, and simple data structures) into native representations and back.\n    *   The bridge should be designed to be lightweight, introducing minimal overhead.\n\n2.  **Native Implementation (Rust):**\n    *   Set up a Rust crate and integrate its compilation into the main project's build system (extending the work from Task #21).\n    *   Identify a core set of primitive operations currently handled by Racket to be ported first (e.g., integer arithmetic, floating-point math, string manipulations).\n    *   Re-implement these primitives in Rust. The native functions must be pure and their behavior must be identical to the Racket versions to preserve HoTT semantics.\n\n3.  **Runtime Integration:**\n    *   Modify the core evaluator (from Task #2) to reroute calls for these primitive operations through the FFI to the native library.\n    *   Initially, keep the existing Racket-based conversion and utility functions, focusing the native implementation purely on raw computational primitives to gain the most performance benefit.",
+      "testStrategy": "1.  **Unit Testing:** Create a comprehensive suite of unit tests for the native Rust functions in isolation to verify their correctness.\n2.  **Integration Testing:** Develop specific tests for the FFI bridge itself. These tests will involve calling native functions from Racket and asserting that data is marshalled and returned correctly without corruption.\n3.  **Regression Testing:** Run the entire existing language test suite. The behavior and output must be identical to the pure Racket implementation, ensuring that this performance optimization does not introduce functional regressions.\n4.  **Benchmark Analysis:** Create a dedicated performance benchmark suite that measures the execution time of tight loops and computationally-intensive operations. Compare the performance of the new native implementation against the baseline Racket implementation to validate the 10-100x performance goal.",
+      "status": "pending",
+      "dependencies": [
+        28,
+        26,
+        21,
+        2
+      ],
+      "priority": "low",
+      "subtasks": []
     }
   ]
 }

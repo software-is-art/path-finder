@@ -1,6 +1,6 @@
 # Task ID: 17
 # Title: Implement Core Standard Library (Nat, Bool, Option, List)
-# Status: in-progress
+# Status: done
 # Dependencies: 4, 5
 # Priority: high
 # Description: Implement the core standard library types: `Nat`, `Bool`, `List`, and `NonEmptyList`. This task focuses on establishing essential, safe, and robust building blocks for practical programming in PathFinder LISP, aligned with a HoTT/dependent types philosophy. Key aspects include defining types with `deftype`, using the effect system for partial functions (explicitly eliminating the need for `Option` types), and leveraging the proof-carrying `NonEmptyList` type for safe head/tail access.
@@ -94,7 +94,7 @@ Testing will involve unit tests for each type and its operations, focusing on CI
     - Verify that all defined functions and operations are correctly type-checked by the type system (Task 4).
 
 # Subtasks:
-## 1. Define `Bool` Type and Implement Core Boolean Operations [in-progress]
+## 1. Define `Bool` Type and Implement Core Boolean Operations [done]
 ### Dependencies: None
 ### Description: Defines the `Bool` type using `deftype` with `PFalse` and `PTrue` variants. Implements its Canonical Instantiation Functions (CIFs) and the fundamental boolean operations: `and`, `or`, `not`. This subtask establishes the foundational boolean logic for the standard library.
 ### Details:
@@ -107,7 +107,7 @@ Testing will involve unit tests for each type and its operations, focusing on CI
 4. Ensure all functions are type-checked by the system's type checker (from Task 4).
 5. Place these definitions in the standard library module for automatic loading or easy import.
 
-## 2. Define `Nat` Type and Implement Basic Query and Comparison Operations [pending]
+## 2. Define `Nat` Type and Implement Basic Query and Comparison Operations [done]
 ### Dependencies: 17.1
 ### Description: Defines the `Nat` (Natural Numbers) type using Peano representation `(deftype Nat (Zero) (Succ Nat))` via `deftype`. Implements its CIFs (`Zero`, `Succ`) and basic operations that query state or compare `Nat` values, returning `Bool`: `isZero?`, `equals?`, `lessThan?`. This subtask relies on `deftype` supporting recursive type definitions.
 ### Details:
@@ -120,7 +120,7 @@ Testing will involve unit tests for each type and its operations, focusing on CI
 4. These functions will use the `Bool` type and its CIFs (`PTrue`, `PFalse`) from subtask 1 for their return values.
 5. Ensure all functions are type-checked. Place these definitions in the standard library module.
 
-## 5. Define Parameterized `List T` Type and Implement Safe Core Operations [pending]
+## 5. Define Parameterized `List T` Type and Implement Safe Core Operations [done]
 ### Dependencies: 17.1, 17.2
 ### Description: Defines the parameterized, recursive `List T` type using `deftype`: `(deftype (List T) (Nil) (Cons T (List T)))`. Implements its CIFs (`Nil`, `Cons`) and a comprehensive set of list operations that are total for all lists. This subtask relies on `deftype` supporting both parameterized and recursive types.
 ### Details:
@@ -136,7 +136,7 @@ Testing will involve unit tests for each type and its operations, focusing on CI
    - `reverse: (List T) -> (List T)` (can be implemented efficiently using `foldLeft`)
 4. Ensure all functions are type-checked, including generic types `T` and `U`. Place in standard library module.
 
-## 3. Define `NonEmptyList T` and Implement Safe `head`/`tail` Operations [pending]
+## 3. Define `NonEmptyList T` and Implement Safe `head`/`tail` Operations [done]
 ### Dependencies: 17.5
 ### Description: Defines the `NonEmptyList T` type to statically guarantee non-emptiness. Implements total functions `head` and `tail` that operate on this type, providing safe, proof-carrying access to list elements.
 ### Details:
@@ -148,7 +148,7 @@ Testing will involve unit tests for each type and its operations, focusing on CI
 4. These functions are guaranteed to succeed because the type `NonEmptyList T` provides proof that there is at least one element.
 5. Place these definitions in the standard library module.
 
-## 4. Implement `Nat` Arithmetic: `add` and Effectful `subtract` [pending]
+## 4. Implement `Nat` Arithmetic: `add` and Effectful `subtract` [done]
 ### Dependencies: 17.2
 ### Description: Implements the arithmetic operations `add: Nat Nat -> Nat` and `subtract: Nat Nat -> Nat` for the `Nat` type. The `subtract` operation is partial and will use the language's effect system to signal a domain error when subtraction is not possible within `Nat`.
 ### Details:

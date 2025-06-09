@@ -4,7 +4,7 @@
          racket/match
          "../types/types.rkt"
          "../evaluator/values.rkt"
-         "hott-evaluator.rkt")
+)
 
 (provide (except-out (all-defined-out) unit))
 
@@ -13,6 +13,31 @@
 ;; ============================================================================
 ;; Cache implemented as HoTT inductive types with mathematical operations
 ;; This is a native HoTT data structure, not external infrastructure
+
+;; ============================================================================
+;; HELPER FUNCTIONS
+;; ============================================================================
+
+;; Simple natural number addition
+(define/contract (nat-add n1 n2)
+  (-> constructor-value? constructor-value? constructor-value?)
+  (match n1
+    [(constructor-value "zero" '() _) n2]
+    [(constructor-value "next" (list pred) _)
+     (succ-value (nat-add pred n2))]))
+
+;; Simple natural number comparison (less than)
+(define/contract (nat-less? n1 n2)
+  (-> constructor-value? constructor-value? constructor-value?)
+  (match (list n1 n2)
+    [(list (constructor-value "zero" '() _) (constructor-value "zero" '() _))
+     false-value]
+    [(list (constructor-value "zero" '() _) (constructor-value "next" _ _))
+     true-value]
+    [(list (constructor-value "next" _ _) (constructor-value "zero" '() _))
+     false-value]
+    [(list (constructor-value "next" (list pred1) _) (constructor-value "next" (list pred2) _))
+     (nat-less? pred1 pred2)]))
 
 ;; ============================================================================
 ;; CONTENT-ADDRESSABLE COMPUTATION IN HOTT
@@ -189,8 +214,7 @@
   (match cache
     [(constructor-value "empty-cache" _ _) zero-value]
     [(constructor-value "cache-entry" (list _ _ _ _ rest) _)
-     (hott-add (constructor-value "next" (list zero-value) Nat)
-               (hott-cache-size rest))]))
+     (succ-value (hott-cache-size rest))]))
 
 ;; ============================================================================
 ;; CACHE PROOF SYSTEM
@@ -234,8 +258,8 @@
   (match entry
     [(list _ _ _ timestamp)
      ;; Check if timestamp + ttl > current-time
-     (let ([expiry (hott-add timestamp ttl)])
-       (constructor-value-is-true? (hott-less? current-time expiry)))]
+     (let ([expiry (nat-add timestamp ttl)])
+       (constructor-value-is-true? (nat-less? current-time expiry)))]
     [_ #f]))
 
 ;; Check if constructor value represents true

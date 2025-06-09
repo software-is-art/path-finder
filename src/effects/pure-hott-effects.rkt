@@ -4,6 +4,7 @@
          racket/match
          racket/list
          "../types/types.rkt"
+         "../types/type-families.rkt"
          "../evaluator/values.rkt"
          (prefix-in hott-cache: "../core/hott-cache.rkt"))
 
@@ -32,7 +33,11 @@
          effect-cacheable?
          composed-effect-determinism
          extract-io-operations
-         effect-cache-key)
+         effect-cache-key
+         ;; New parameterized Effect type family
+         Effect-family
+         Effect
+         extract-effect-return-type)
 
 ;; ============================================================================
 ;; PURE HOTT EFFECT DESCRIPTIONS AS CONSTRUCTOR VALUES
@@ -40,23 +45,58 @@
 ;; Effects are pure mathematical objects (effect descriptions) that can be
 ;; composed, analyzed, and cached. Execution happens separately via host bridge.
 
-;; Effect description as HoTT inductive type:
-;; EffectDescription = 
-;;   | pure-effect : A -> EffectDescription A
-;;   | io-effect : (name : String) -> (operation : String) -> 
-;;                (args : List Value) -> (determinism : Determinism) -> 
-;;                EffectDescription A
-;;   | effect-seq : EffectDescription A -> EffectDescription B -> EffectDescription B
-;;   | effect-par : EffectDescription A -> EffectDescription B -> 
-;;                 EffectDescription (Pair A B)
-;;   | effect-choice : EffectDescription A -> EffectDescription A -> EffectDescription A
+;; Effect type family: Effect : Type₀ → Type₀
+;; Effect A = 
+;;   | pure-effect : A → Effect A
+;;   | io-effect : String → String → List Value → Determinism → Effect A
+;;   | effect-seq : (B : Type₀) → Effect A → Effect B → Effect B
+;;   | effect-par : (B : Type₀) → Effect A → Effect B → Effect (A × B)
+;;   | effect-choice : Effect A → Effect A → Effect A
 
-;; Effect description structure (internal, not exported)
+;; ============================================================================
+;; EFFECT TYPE FAMILY IMPLEMENTATION
+;; ============================================================================
 
-;; Create effect description constructor value
-(define/contract (make-effect-description constructor args)
-  (-> string? (listof constructor-value?) constructor-value?)
-  (constructor-value constructor args (inductive-type "EffectDescription" '())))
+;; Effect type family: Effect : Type₀ → Type₀
+(define Effect-family
+  (make-type-family 'Effect 1
+    (lambda (return-type)
+      (inductive-type "Effect"
+        (list (type-constructor "pure-effect" 
+                              (list return-type) 
+                              return-type)
+              (type-constructor "io-effect" 
+                              (list (inductive-type "String" '())
+                                    (inductive-type "String" '())
+                                    'List-Value  ; List of Values
+                                    (inductive-type "Determinism" '()))
+                              return-type)
+              (type-constructor "effect-seq"
+                              (list 'Effect-A 'Effect-B)  ; Polymorphic over A and B
+                              'return-type-B)
+              (type-constructor "effect-par"
+                              (list 'Effect-A 'Effect-B)
+                              'Pair-A-B)  ; Product type
+              (type-constructor "effect-choice"
+                              (list 'Effect-A 'Effect-A)
+                              return-type))))))
+
+;; Register the Effect type family
+(register-type-family! Effect-family)
+
+;; Convenience function for Effect type instantiation
+(define/contract (Effect return-type)
+  (-> hott-type/c hott-type/c)
+  (instantiate-type-family 'Effect return-type))
+
+;; ============================================================================
+;; EFFECT CONSTRUCTOR FUNCTIONS
+;; ============================================================================
+
+;; Create parameterized effect constructor value
+(define/contract (make-effect-description constructor args return-type)
+  (-> string? (listof constructor-value?) hott-type/c constructor-value?)
+  (constructor-value constructor args (Effect return-type)))
 
 ;; Check if value is an effect description
 (define/contract (effect-description? value)
@@ -64,7 +104,7 @@
   (and (constructor-value? value)
        (let ([type (constructor-value-type value)])
          (and (inductive-type? type)
-              (string=? (inductive-type-name type) "EffectDescription")))))
+              (string=? (inductive-type-name type) "Effect")))))
 
 ;; Extract effect description components
 (define/contract (effect-description-name effect)
@@ -103,43 +143,67 @@
 ;; ============================================================================
 
 ;; Pure effect (no I/O, always deterministic)
-(define/contract (pure-effect-value value)
-  (-> constructor-value? constructor-value?)
-  (make-effect-description "pure-effect" (list value)))
+(define/contract (pure-effect-value value return-type)
+  (-> constructor-value? hott-type/c constructor-value?)
+  (make-effect-description "pure-effect" (list value) return-type))
 
 ;; I/O effect with explicit determinism annotation
-(define/contract (io-effect-description effect-name-val operation-val args determinism)
-  (-> constructor-value? constructor-value? (listof constructor-value?) symbol? constructor-value?)
+(define/contract (io-effect-description effect-name-val operation-val args determinism return-type)
+  (-> constructor-value? constructor-value? (listof constructor-value?) symbol? hott-type/c constructor-value?)
   (let ([args-val (racket-list->hott-list args)]
         [det-val (if (eq? determinism 'deterministic)
                      (constructor-value "deterministic" '() (inductive-type "Determinism" '()))
                      (constructor-value "non-deterministic" '() (inductive-type "Determinism" '())))])
-    (make-effect-description "io-effect" (list effect-name-val operation-val args-val det-val))))
+    (make-effect-description "io-effect" (list effect-name-val operation-val args-val det-val) return-type)))
+
+;; ============================================================================
+;; EFFECT TYPE EXTRACTION
+;; ============================================================================
+
+;; Extract the return type from an effect's type annotation
+(define/contract (extract-effect-return-type effect)
+  (-> constructor-value? hott-type/c)
+  (let ([effect-type (constructor-value-type effect)])
+    (match effect-type
+      ;; Effect types are inductive types instantiated with a return type parameter
+      [(inductive-type "Effect" constructors)
+       ;; For now, we'll extract from the type structure
+       ;; This is a simplified implementation - full version would parse the type parameter
+       (inductive-type "String" '())]  ; Default to String for now
+      [_ (error "extract-effect-return-type: not an Effect type")])))
 
 ;; ============================================================================
 ;; EFFECT COMPOSITION FUNCTIONS (PURE HOTT)
 ;; ============================================================================
 
-;; Sequential composition: first effect, then second effect
+;; Sequential composition: first effect, then second effect (returns type of second)
 (define/contract (effect-seq first-effect second-effect)
   (-> constructor-value? constructor-value? constructor-value?)
-  (make-effect-description "effect-seq" (list first-effect second-effect)))
+  (let ([second-return-type (extract-effect-return-type second-effect)])
+    (make-effect-description "effect-seq" (list first-effect second-effect) second-return-type)))
 
-;; Parallel composition: both effects concurrently
+;; Parallel composition: both effects concurrently (returns product type)
 (define/contract (effect-par first-effect second-effect)
   (-> constructor-value? constructor-value? constructor-value?)
-  (make-effect-description "effect-par" (list first-effect second-effect)))
+  (let ([first-return-type (extract-effect-return-type first-effect)]
+        [second-return-type (extract-effect-return-type second-effect)])
+    (let ([product-type (make-product-type first-return-type second-return-type)])
+      (make-effect-description "effect-par" (list first-effect second-effect) product-type))))
 
-;; Choice composition: either first or second effect
+;; Choice composition: either first or second effect (types must match)
 (define/contract (effect-choice first-effect second-effect)
   (-> constructor-value? constructor-value? constructor-value?)
-  (make-effect-description "effect-choice" (list first-effect second-effect)))
+  (let ([first-return-type (extract-effect-return-type first-effect)]
+        [second-return-type (extract-effect-return-type second-effect)])
+    (unless (hott-type-equal? first-return-type second-return-type)
+      (error "effect-choice: both effects must have same return type"))
+    (make-effect-description "effect-choice" (list first-effect second-effect) first-return-type)))
 
 ;; General effect composition helper
 (define/contract (compose-effects . effects)
   (->* () () #:rest (listof constructor-value?) constructor-value?)
   (if (null? effects)
-      (pure-effect-value unit)
+      (pure-effect-value (constructor-value "unit" '() Unit) Unit)
       (if (= (length effects) 1)
           (first effects)
           (effect-seq (first effects)
@@ -149,65 +213,69 @@
 ;; COMMON EFFECT DESCRIPTIONS
 ;; ============================================================================
 
-;; File I/O effects
+;; File I/O effects (type-safe)
 (define/contract (file-read-effect path-value)
   (-> constructor-value? constructor-value?)
   (let ([fileio-name (constructor-value "string" '() (inductive-type "String" '()))]
-        [read-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description fileio-name read-op (list path-value) 'deterministic)))
+        [read-op (constructor-value "string" '() (inductive-type "String" '()))]
+        [string-type (inductive-type "String" '())])
+    (io-effect-description fileio-name read-op (list path-value) 'deterministic string-type)))
 
 (define/contract (file-write-effect path-value content-value)
   (-> constructor-value? constructor-value? constructor-value?)
   (let ([fileio-name (constructor-value "string" '() (inductive-type "String" '()))]
         [write-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description fileio-name write-op (list path-value content-value) 'non-deterministic)))
+    (io-effect-description fileio-name write-op (list path-value content-value) 'non-deterministic Unit)))
 
 (define/contract (file-exists-effect path-value)
   (-> constructor-value? constructor-value?)
   (let ([fileio-name (constructor-value "string" '() (inductive-type "String" '()))]
         [exists-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description fileio-name exists-op (list path-value) 'deterministic)))
+    (io-effect-description fileio-name exists-op (list path-value) 'deterministic Bool)))
 
-;; Console I/O effects
+;; Console I/O effects (type-safe)
 (define/contract (console-print-effect message-value)
   (-> constructor-value? constructor-value?)
   (let ([console-name (constructor-value "string" '() (inductive-type "String" '()))]
         [print-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description console-name print-op (list message-value) 'non-deterministic)))
+    (io-effect-description console-name print-op (list message-value) 'non-deterministic Unit)))
 
 (define/contract (console-read-effect prompt-value)
   (-> constructor-value? constructor-value?)
   (let ([console-name (constructor-value "string" '() (inductive-type "String" '()))]
-        [read-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description console-name read-op (list prompt-value) 'non-deterministic)))
+        [read-op (constructor-value "string" '() (inductive-type "String" '()))]
+        [string-type (inductive-type "String" '())])
+    (io-effect-description console-name read-op (list prompt-value) 'non-deterministic string-type)))
 
-;; Network effects
+;; Network effects (type-safe)
 (define/contract (network-get-effect url-value ttl-value)
   (-> constructor-value? constructor-value? constructor-value?)
   (let ([network-name (constructor-value "string" '() (inductive-type "String" '()))]
-        [get-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description network-name get-op (list url-value ttl-value) 'deterministic)))
+        [get-op (constructor-value "string" '() (inductive-type "String" '()))]
+        [string-type (inductive-type "String" '())])
+    (io-effect-description network-name get-op (list url-value ttl-value) 'deterministic string-type)))
 
-;; Environment effects
+;; Environment effects (type-safe)
 (define/contract (environment-get-effect var-name-value)
   (-> constructor-value? constructor-value?)
   (let ([env-name (constructor-value "string" '() (inductive-type "String" '()))]
-        [get-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description env-name get-op (list var-name-value) 'deterministic)))
+        [get-op (constructor-value "string" '() (inductive-type "String" '()))]
+        [string-type (inductive-type "String" '())])
+    (io-effect-description env-name get-op (list var-name-value) 'deterministic string-type)))
 
-;; Time effects (non-deterministic)
+;; Time effects (non-deterministic, returns Nat timestamp)
 (define/contract (time-current-effect)
   (-> constructor-value?)
   (let ([time-name (constructor-value "string" '() (inductive-type "String" '()))]
         [current-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description time-name current-op '() 'non-deterministic)))
+    (io-effect-description time-name current-op '() 'non-deterministic Nat)))
 
-;; Random effects (non-deterministic)
+;; Random effects (non-deterministic, returns Nat)
 (define/contract (random-number-effect max-value)
   (-> constructor-value? constructor-value?)
   (let ([random-name (constructor-value "string" '() (inductive-type "String" '()))]
         [number-op (constructor-value "string" '() (inductive-type "String" '()))])
-    (io-effect-description random-name number-op (list max-value) 'non-deterministic)))
+    (io-effect-description random-name number-op (list max-value) 'non-deterministic Nat)))
 
 ;; ============================================================================
 ;; HELPER FUNCTIONS

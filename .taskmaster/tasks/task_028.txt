@@ -1,0 +1,47 @@
+# Task ID: 28
+# Title: Minimize Racket Dependencies by Replacing Host-Language Features
+# Status: pending
+# Dependencies: 8, 10, 17, 21
+# Priority: high
+# Description: Replace Racket-specific features like contracts, pattern matching, and mutable data structures with their HoTT-native equivalents. This task is a major step towards making the language self-hosting and reducing reliance on the Racket ecosystem.
+# Details:
+This task involves a systematic refactoring of the existing codebase to eliminate dependencies on Racket-specific functionalities, replacing them with features native to the HoTT-based language.
+
+1.  **Replace Racket Contracts with Dependent Types**: Identify all uses of Racket's contract system (`provide/contract`, `contract-out`). These runtime checks must be replaced with compile-time proofs. For function signatures, this involves using dependent function types (Π-types, from Task 10). For data structures, this means using `deftype` with `:where` clauses to define invariants that are enforced upon construction (from Task 8).
+
+2.  **Replace Racket Pattern Matching with Eliminators**: All instances of Racket's `match` syntax must be removed. For each sum type defined in the language, an eliminator (or "induction principle") function should be generated. The logic previously implemented with `match` will be refactored to use these eliminators, ensuring that data is deconstructed in a type-safe, principled manner that is native to the core language.
+
+3.  **Replace Mutable Data Structures with Persistent Ones**: Scan the codebase for any use of mutable data structures, such as those created with `vector`, `hash`, or modified with `set!`. These must be replaced with the language's own persistent data structures, such as the `List` and `NonEmptyList` types defined in Task 17. This change is critical for aligning the implementation with a purely functional, provable paradigm.
+
+# Test Strategy:
+1.  **Static Analysis**: Before starting, run a static analysis tool across the codebase to find and catalog all occurrences of Racket-specific forms (`contract-out`, `match`, `set!`, mutable data structure constructors). The primary success metric is the reduction of this count to zero.
+2.  **Regression Testing**: Ensure the existing comprehensive test suite passes before and after the refactoring. This guarantees that the logical behavior of the system remains unchanged.
+3.  **Contract Replacement Tests**: For each contract that is removed, write a corresponding negative test that attempts to violate the invariant. This test should now fail at type-checking time, demonstrating the successful migration from a runtime check to a compile-time proof.
+4.  **Eliminator Tests**: Write specific unit tests for the generated eliminator functions for each sum type, verifying they correctly deconstruct values and apply the provided functions.
+5.  **Persistence Tests**: Write tests to confirm that the new persistent data structures are used correctly and that no side-effects or mutations are present in the refactored code sections.
+
+# Subtasks:
+## 1. Refactor Racket Contracts to Compile-Time Dependent Types [pending]
+### Dependencies: None
+### Description: Systematically identify and replace all runtime Racket contracts (`provide/contract`, `contract-out`) with the language's native compile-time dependent types. This enforces invariants statically rather than at runtime, a key step in leveraging the HoTT-based type system.
+### Details:
+Use static analysis or text search to locate all occurrences of Racket's contract forms. For function contracts, rewrite the signatures using dependent function types (Π-types). For data structure contracts, refactor the `deftype` definitions to include `:where` clauses that specify the required invariants, which will be checked at construction time. Remove the now-redundant Racket contract definitions.
+
+## 2. Implement Automatic Generation of Eliminators for Sum Types [pending]
+### Dependencies: None
+### Description: Enhance the language's `deftype` macro to automatically generate a principled eliminator function (also known as an induction principle) for every sum type defined. This provides the foundational mechanism for replacing Racket's `match` with a native, type-safe construct.
+### Details:
+Modify the macro or compiler pass that handles `deftype`. For any sum type `(deftype T :is (sum (C1 A1 ...) (C2 B1 ...) ...))`, the macro should generate a corresponding eliminator function. The eliminator's signature should be of the form `(T-elim : (-> T (-> (A1 ...) P) (-> (B1 ...) P) ... P))`, where `P` is a polymorphic return type. The generated function will take an instance of `T` and one function for each constructor, applying the correct function to the deconstructed value.
+
+## 3. Replace Racket `match` Expressions with Generated Eliminators [pending]
+### Dependencies: 28.2
+### Description: With the eliminator generation in place, refactor the entire codebase to replace all instances of Racket's `match` syntax with calls to the corresponding native, type-safe eliminator functions generated in the previous subtask.
+### Details:
+Search the codebase for all `(match ...)` expressions. For each `match` expression over a sum type `T`, replace it with a call to `(T-elim ...)`. The clauses of the `match` expression will be converted into lambda functions passed as arguments to the eliminator. Pay close attention to nested patterns and guards, which may require more complex lambda bodies or nested eliminator calls.
+
+## 4. Replace Mutable Racket Data Structures with Persistent Equivalents [pending]
+### Dependencies: None
+### Description: Eradicate the use of mutable data structures from the Racket host language, such as vectors and hash tables, and replace them with the language's own purely functional, persistent data structures like `List` and `NonEmptyList`.
+### Details:
+Identify all uses of mutable data structures and operations: `vector`, `vector-set!`, `hash`, `hash-set!`, `box`, `set-box!`, and the general `set!`. Replace uses of mutable vectors and lists with the language's native `List` or `NonEmptyList` types. Refactor algorithms that rely on mutation to use a functional style, such as using recursion and passing updated state as arguments instead of modifying it in place.
+

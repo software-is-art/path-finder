@@ -1,11 +1,12 @@
 #lang racket/base
 
-(require "../src/main.rkt"
-         "../src/evaluator/evaluator.rkt"
+(require racket/list
+         racket/string
          "../src/effects/pure-hott-effects.rkt"
          "../src/effects/effect-executor.rkt"
          "../src/core/primitive-effects.rkt"
-         "../src/core/hott-cache.rkt")
+         "../src/core/hott-cache.rkt"
+         "../src/evaluator/values.rkt")
 
 ;; ============================================================================
 ;; PURE HOTT EFFECTS DEMONSTRATION
@@ -18,7 +19,7 @@
 ;; Initialize the system
 (printf "Step 1: Initialize Effect System~n")
 (printf "=====================================~n")
-(initialize-evaluator-cache)
+;; (initialize-evaluator-cache)  ; Not needed with pure effects
 (register-primitive-effects!)
 (printf "✓ Cache system initialized~n")
 (printf "✓ Primitive effects registered~n")

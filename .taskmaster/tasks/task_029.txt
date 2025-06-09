@@ -1,0 +1,28 @@
+# Task ID: 29
+# Title: Implement Native Host Bridge for Primitive Operations
+# Status: pending
+# Dependencies: 28, 26, 21, 2
+# Priority: low
+# Description: Design and implement a native host bridge using Rust, Zig, or C++ to replace Racket for primitive operations. This change targets a 10-100x performance increase by eliminating runtime contract overhead while maintaining strict HoTT semantics.
+# Details:
+This task involves creating a Foreign Function Interface (FFI) to a native library (preferably Rust, in line with Task #26) to offload performance-critical primitive operations.
+
+1.  **FFI and Bridge Design:**
+    *   Define a stable FFI between the Racket-based runtime and the native library.
+    *   Specify the data marshalling process for converting language-level data (like numbers, strings, and simple data structures) into native representations and back.
+    *   The bridge should be designed to be lightweight, introducing minimal overhead.
+
+2.  **Native Implementation (Rust):**
+    *   Set up a Rust crate and integrate its compilation into the main project's build system (extending the work from Task #21).
+    *   Identify a core set of primitive operations currently handled by Racket to be ported first (e.g., integer arithmetic, floating-point math, string manipulations).
+    *   Re-implement these primitives in Rust. The native functions must be pure and their behavior must be identical to the Racket versions to preserve HoTT semantics.
+
+3.  **Runtime Integration:**
+    *   Modify the core evaluator (from Task #2) to reroute calls for these primitive operations through the FFI to the native library.
+    *   Initially, keep the existing Racket-based conversion and utility functions, focusing the native implementation purely on raw computational primitives to gain the most performance benefit.
+
+# Test Strategy:
+1.  **Unit Testing:** Create a comprehensive suite of unit tests for the native Rust functions in isolation to verify their correctness.
+2.  **Integration Testing:** Develop specific tests for the FFI bridge itself. These tests will involve calling native functions from Racket and asserting that data is marshalled and returned correctly without corruption.
+3.  **Regression Testing:** Run the entire existing language test suite. The behavior and output must be identical to the pure Racket implementation, ensuring that this performance optimization does not introduce functional regressions.
+4.  **Benchmark Analysis:** Create a dedicated performance benchmark suite that measures the execution time of tight loops and computationally-intensive operations. Compare the performance of the new native implementation against the baseline Racket implementation to validate the 10-100x performance goal.
