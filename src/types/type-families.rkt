@@ -6,8 +6,7 @@
          racket/string
          "types.rkt"
          "../evaluator/values.rkt"
-         "../effects/generic-effects.rkt"
-         "../core/hott-evaluator.rkt")
+)
 
 (provide (all-defined-out))
 
@@ -143,14 +142,13 @@
 
 (define/contract (tier2-instantiate family type-args cache-key)
   (-> type-family? (listof any/c) any/c any/c)
-  ;; Use compile-time effects for type family resolution
-  (with-execution-context 'compile-time
-    (let ([instantiation-fn (type-family-instantiation-function family)])
-      ;; First try direct instantiation
-      (let ([resolved-type (apply instantiation-fn type-args)])
-        ;; TODO: Signal that we have a specialized type available for optimization
-        ;; (perform 'TypeFamily 'instantiate (type-family-name family) type-args)
-        resolved-type))))
+  ;; Type family resolution at compile-time (tier 2)
+  (let ([instantiation-fn (type-family-instantiation-function family)])
+    ;; First try direct instantiation
+    (let ([resolved-type (apply instantiation-fn type-args)])
+      ;; TODO: Signal that we have a specialized type available for optimization
+      ;; (perform 'TypeFamily 'instantiate (type-family-name family) type-args)
+      resolved-type)))
 
 ;; ============================================================================
 ;; TIER 3: RUNTIME TYPE DISPATCH
@@ -216,12 +214,11 @@
 ;; Tier 2 implementation: Compile-time specialization
 (define/contract (tier2-list-length element-type lst)
   (-> extended-hott-type/c constructor-value? constructor-value?)
-  ;; Generate specialized function at compile time
-  (with-execution-context 'compile-time
-    ;; TODO: Generate specialized function
-    ;; (let ([specialized-fn (perform 'TypeFamily 'specialize-function 'list-length element-type)])
-    ;; For now, fall back to tier1 implementation
-    (tier1-list-length element-type lst)))
+  ;; Generate specialized function at compile time (tier 2)
+  ;; TODO: Generate specialized function
+  ;; (let ([specialized-fn (perform 'TypeFamily 'specialize-function 'list-length element-type)])
+  ;; For now, fall back to tier1 implementation
+  (tier1-list-length element-type lst))
 
 ;; Tier 3 implementation: Runtime polymorphic dispatch
 (define/contract (tier3-list-length element-type lst)
@@ -251,10 +248,10 @@
 ;; Tier 2: Specialized constructor generation
 (define/contract (tier2-list-nil element-type)
   (-> extended-hott-type/c constructor-value?)
-  (with-execution-context 'compile-time
-    ;; TODO: Generate specialized constructor
-    ;; (perform 'TypeFamily 'specialize-function 'list-nil element-type)
-    (tier1-list-nil element-type)))
+  ;; Generate specialized constructor at compile-time (tier 2)
+  ;; TODO: Generate specialized constructor
+  ;; (perform 'TypeFamily 'specialize-function 'list-nil element-type)
+  (tier1-list-nil element-type))
 
 ;; Tier 3: Runtime constructor
 (define/contract (tier3-list-nil element-type)
@@ -281,10 +278,10 @@
 ;; Tier 2: Specialized cons generation
 (define/contract (tier2-list-cons element-type elem tail-list)
   (-> extended-hott-type/c constructor-value? constructor-value? constructor-value?)
-  (with-execution-context 'compile-time
-    ;; TODO: Generate specialized cons constructor
-    ;; (perform 'TypeFamily 'specialize-function 'list-cons element-type)
-    (tier1-list-cons element-type elem tail-list)))
+  ;; Generate specialized cons constructor at compile-time (tier 2)
+  ;; TODO: Generate specialized cons constructor
+  ;; (perform 'TypeFamily 'specialize-function 'list-cons element-type)
+  (tier1-list-cons element-type elem tail-list))
 
 ;; Tier 3: Runtime cons
 (define/contract (tier3-list-cons element-type elem tail-list)

@@ -67,6 +67,17 @@
 (define Unit (unit-type))
 (define Empty (empty-type))
 
+;; Character type: Char = MkChar Nat (where Nat is Unicode codepoint)
+(define Char-constructors
+  (list (type-constructor "char" (list 'Nat) 'Char)))
+(define Char (inductive-type "Char" Char-constructors))
+
+;; String type: String = EmptyString | StringCons Char String
+(define String-constructors
+  (list (type-constructor "empty-string" '() 'String)
+        (type-constructor "string-cons" (list 'Char 'String) 'String)))
+(define String (inductive-type "String" String-constructors))
+
 ;; Constructor helpers for common types
 
 ;; Simple function type (non-dependent): A → B

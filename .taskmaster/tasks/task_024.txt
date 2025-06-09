@@ -1,6 +1,6 @@
 # Task ID: 24
 # Title: Implement Practical Syntactic Sugar and Desugaring
-# Status: pending
+# Status: cancelled
 # Dependencies: 1, 2, 17
 # Priority: high
 # Description: Implement syntactic sugar for common programming patterns such as list literals, optional chaining (maybe-monad syntax like `x?.field`), and threading macros. These constructs will desugar into core HoTT-based language expressions, enhancing developer experience and code readability while preserving mathematical rigor.

@@ -4,8 +4,8 @@
          racket/match
          "../types/types.rkt"
          "../evaluator/values.rkt"
-         "../effects/generic-effects.rkt"
-         "hott-literals.rkt"
+         "../effects/pure-hott-effects.rkt"
+         (prefix-in literals: "hott-literals.rkt")
          "hott-literals-pure.rkt")
 
 (provide (all-defined-out))
@@ -211,16 +211,16 @@
 ;; EFFECT-BASED I/O (The only external interface)
 ;; ============================================================================
 
-;; All I/O goes through effects - no direct Racket calls
+;; All I/O goes through pure HoTT effects - no direct Racket calls
 (define/contract (hott-print value)
-  (-> constructor-value? effect-instance?)
-  ;; Convert value to HoTT string, then use Console effect
+  (-> constructor-value? constructor-value?)
+  ;; Convert value to HoTT string, then use pure HoTT Console effect
   (let ([str (hott-value->display-string value)])
-    (perform 'Console 'print-line str)))
+    (console-print-effect (string-value str))))
 
 (define/contract (hott-read-file path)
-  (-> constructor-value? effect-instance?)
-  ;; Use FileIO effect with HoTT string path
-  (perform 'FileIO 'read-file path))
+  (-> constructor-value? constructor-value?)
+  ;; Use pure HoTT FileIO effect with HoTT string path
+  (file-read-effect path))
 
 ;; No direct Racket I/O - everything through effects!

@@ -84,6 +84,30 @@
      (func head (hott-list-fold func initial tail))]
     [_ (error "Not a list: " lst)]))
 
+;; List filter - Filter elements based on predicate
+(define/contract (hott-list-filter predicate lst element-type)
+  (-> procedure? constructor-value? extended-hott-type/c constructor-value?)
+  (match lst
+    [(constructor-value "nil" '() _) 
+     (hott-list-nil element-type)]
+    [(constructor-value "cons" (list head tail) _)
+     (let ([filtered-tail (hott-list-filter predicate tail element-type)])
+       (if (string=? (constructor-value-constructor-name (predicate head)) "true")
+           (hott-list-cons head filtered-tail element-type)
+           filtered-tail))]
+    [_ (error "Not a list: " lst)]))
+
+;; List reverse - Reverse the order of elements
+(define/contract (hott-list-reverse lst)
+  (-> constructor-value? constructor-value?)
+  (match lst
+    [(constructor-value "nil" '() list-type) lst]  ; Empty list is its own reverse
+    [(constructor-value "cons" (list head tail) list-type)
+     (let ([element-type (extract-list-element-type list-type)])
+       (hott-list-append (hott-list-reverse tail) 
+                        (hott-list-cons head (hott-list-nil element-type) element-type)))]
+    [_ (error "Not a list: " lst)]))
+
 ;; ============================================================================
 ;; SAFE LIST ACCESS (Tier 1 with Proofs)
 ;; ============================================================================

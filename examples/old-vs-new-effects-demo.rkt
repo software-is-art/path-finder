@@ -17,29 +17,33 @@
   (constructor-value "string" '() (types:inductive-type "String" '())))
 
 ;; ============================================================================
-;; OLD SYSTEM (OBSOLETE - REMOVED)
+;; OLD APPROACHES (All Replaced by Pure HoTT Effects)
 ;; ============================================================================
 
-(printf "OLD SYSTEM (Obsolete - Removed):~n")
-(printf "=================================~n")
-(printf "// Effect instances - immediate execution~n")
-(printf "let fileEffect = perform('FileIO', 'read-file', ['config.json'])~n")
-(printf "let result = handle(fileEffect, 'runtime-handler')~n")
+(printf "OLD APPROACHES (All Replaced):~n")
+(printf "==============================~n")
+(printf "1. Traditional Algebraic Effects (defeffect/defhandler):~n")
+(printf "   ❌ Runtime effect dispatch~n")
+(printf "   ❌ Manual context management~n")
+(printf "   ❌ Not mathematically founded~n")
 (printf "~n")
-(printf "Problems:~n")
-(printf "  ❌ Effects execute immediately (no composition)~n")
-(printf "  ❌ Runtime handler resolution (no optimization)~n")
-(printf "  ❌ Mixed concerns: description + execution~n")
-(printf "  ❌ No mathematical analysis possible~n")
-(printf "  ❌ No caching or tier promotion~n")
-(printf "  ❌ Complex handler registration system~n~n")
+(printf "2. Haskell-style Monads:~n")
+(printf "   ❌ Monad transformer stack complexity~n")
+(printf "   ❌ Manual lifting operations~n")
+(printf "   ❌ No automatic parallelization~n")
+(printf "~n")
+(printf "3. Immediate Effect Execution:~n")
+(printf "   ❌ Effects execute immediately (no composition)~n")
+(printf "   ❌ Mixed concerns: description + execution~n")
+(printf "   ❌ No mathematical analysis possible~n")
+(printf "   ❌ No caching or optimization~n~n")
 
 ;; ============================================================================
-;; NEW SYSTEM (PURE HOTT EFFECTS)
+;; PATHFINDER APPROACH (PARAMETRIC PURE HOTT EFFECTS)
 ;; ============================================================================
 
-(printf "NEW SYSTEM (Pure HoTT Effects):~n")
-(printf "===============================~n")
+(printf "PATHFINDER APPROACH (Parametric Pure HoTT Effects):~n")
+(printf "===================================================~n")
 
 ;; Create pure effect descriptions
 (let ([config-read (file-read-effect (demo-string "config.json"))]

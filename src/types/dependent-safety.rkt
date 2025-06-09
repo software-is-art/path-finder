@@ -7,7 +7,7 @@
          "types.rkt"
          "../evaluator/values.rkt"
          "../core/hott-evaluator.rkt"
-         "../effects/generic-effects.rkt")
+         "../effects/pure-hott-effects.rkt")
 
 (provide (all-defined-out))
 

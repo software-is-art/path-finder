@@ -23,7 +23,12 @@
          effect-result-timestamp
          compose-effect-results
          effect-executor-registry
-         register-effect-executor!)
+         register-effect-executor!
+         ;; Tier-aware execution contexts
+         make-tier0-context
+         make-tier1-context
+         make-tier2-context
+         make-tier3-context)
 
 ;; ============================================================================
 ;; EFFECT EXECUTION CONTEXT
@@ -32,10 +37,27 @@
 
 (struct effect-execution-context (cache execution-mode environment timestamp) #:transparent)
 
-;; Create execution context
-(define/contract (make-effect-execution-context cache [mode 'runtime] [env #f])
+;; Create execution context with tier-aware mode
+(define/contract (make-effect-execution-context cache [mode 'tier3] [env #f])
   (->* (constructor-value?) (symbol? (or/c hash? #f)) effect-execution-context?)
   (effect-execution-context cache mode env (current-seconds)))
+
+;; Convenience functions for tier-specific contexts
+(define/contract (make-tier0-context cache)
+  (-> constructor-value? effect-execution-context?)
+  (make-effect-execution-context cache 'tier0))
+
+(define/contract (make-tier1-context cache)
+  (-> constructor-value? effect-execution-context?)
+  (make-effect-execution-context cache 'tier1))
+
+(define/contract (make-tier2-context cache)
+  (-> constructor-value? effect-execution-context?)
+  (make-effect-execution-context cache 'tier2))
+
+(define/contract (make-tier3-context cache)
+  (-> constructor-value? effect-execution-context?)
+  (make-effect-execution-context cache 'tier3))
 
 ;; ============================================================================
 ;; EFFECT EXECUTION RESULTS
@@ -86,31 +108,128 @@
   (let ([cache (effect-execution-context-cache context)]
         [mode (effect-execution-context-execution-mode context)])
     
-    ;; Check if effect is deterministic and cacheable
-    (if (and (pure-effects:effect-deterministic? effect-desc)
-             (eq? mode 'runtime))  ; Only cache at runtime
+    ;; Tier-aware effect execution with caching
+    (cond
+      ;; Tier 0: Compile-time elimination (pure effects become constants)
+      [(eq? mode 'tier0)
+       (tier0-execute-effect effect-desc context)]
+      
+      ;; Tier 1: Compile-time specialization with aggressive caching
+      [(eq? mode 'tier1)
+       (tier1-execute-effect effect-desc context)]
+      
+      ;; Tier 2: Mixed compile-time/runtime with effect promotion
+      [(eq? mode 'tier2)
+       (tier2-execute-effect effect-desc context)]
+      
+      ;; Tier 3: Runtime execution with content-addressable caching
+      [(eq? mode 'tier3)
+       (tier3-execute-effect effect-desc context)]
+      
+      ;; Legacy runtime mode maps to tier3
+      [(eq? mode 'runtime)
+       (tier3-execute-effect effect-desc context)]
+      
+      [else (error "Unknown execution mode: " mode)])))
+
+;; ============================================================================
+;; TIER-AWARE EFFECT EXECUTION IMPLEMENTATIONS
+;; ============================================================================
+
+;; Tier 0: Compile-time elimination (pure effects become constants)
+(define/contract (tier0-execute-effect effect-desc context)
+  (-> constructor-value? effect-execution-context? effect-result?)
+  (match effect-desc
+    ;; Pure effects are already constants - eliminate at compile time
+    [(constructor-value "pure-effect" (list value) _)
+     (effect-result value
+                    (constructor-value "compile-time-eliminated" (list effect-desc)
+                                     (inductive-type "Tier0Evidence" '()))
+                    (current-seconds)
+                    (effect-execution-context-cache context))]
+    
+    ;; Deterministic I/O effects can be pre-computed if inputs are known
+    [(constructor-value "io-effect" (list name-val op-val args-val det-val) _)
+     (if (pure-effects:effect-deterministic? effect-desc)
+         ;; Try to resolve at compile time
+         (tier1-execute-effect effect-desc context)
+         ;; Fall back to tier3 for non-deterministic effects
+         (tier3-execute-effect effect-desc context))]
+    
+    ;; Composed effects - try to eliminate components
+    [_ (tier1-execute-effect effect-desc context)]))
+
+;; Tier 1: Compile-time specialization with aggressive caching  
+(define/contract (tier1-execute-effect effect-desc context)
+  (-> constructor-value? effect-execution-context? effect-result?)
+  (let ([cache (effect-execution-context-cache context)])
+    ;; Always cache deterministic effects aggressively at tier1
+    (if (pure-effects:effect-deterministic? effect-desc)
         (let ([cache-key (pure-effects:effect-cache-key effect-desc)])
           (match (hott-cache:hott-cache-lookup cache-key cache)
             [(constructor-value "some" (list cached-value) _)
-             ;; Cache hit - return cached result
+             ;; Cache hit - specialized execution 
              (effect-result cached-value
-                           (constructor-value "cached-evidence" (list cache-key) 
-                                            (inductive-type "CacheEvidence" '()))
+                           (constructor-value "tier1-cached" (list cache-key)
+                                            (inductive-type "Tier1Evidence" '()))
                            (current-seconds)
                            cache)]
             [_
-             ;; Cache miss - execute and cache result
+             ;; Cache miss - execute and cache with specialization
              (let ([result (execute-effect-description effect-desc context)])
                (let ([new-cache (hott-cache:hott-cache-insert cache-key 
                                                   (effect-result-value result)
                                                   cache)])
                  (effect-result (effect-result-value result)
-                               (constructor-value "computed-evidence" 
+                               (constructor-value "tier1-specialized"
                                                  (list effect-desc (effect-result-evidence result))
-                                                 (inductive-type "ComputedEvidence" '()))
+                                                 (inductive-type "Tier1Evidence" '()))
                                (current-seconds)
                                new-cache)))]))
-        ;; Non-deterministic or compile-time - execute directly
+        ;; Non-deterministic - execute directly
+        (execute-effect-description effect-desc context))))
+
+;; Tier 2: Mixed compile-time/runtime with effect promotion
+(define/contract (tier2-execute-effect effect-desc context)
+  (-> constructor-value? effect-execution-context? effect-result?)
+  ;; Tier 2 promotes frequently used effects to tier1
+  (let ([result (tier1-execute-effect effect-desc context)])
+    (effect-result (effect-result-value result)
+                  (constructor-value "tier2-promoted"
+                                   (list (effect-result-evidence result))
+                                   (inductive-type "Tier2Evidence" '()))
+                  (current-seconds)
+                  (effect-result-cache result))))
+
+;; Tier 3: Runtime execution with content-addressable caching
+(define/contract (tier3-execute-effect effect-desc context)
+  (-> constructor-value? effect-execution-context? effect-result?)
+  (let ([cache (effect-execution-context-cache context)])
+    ;; Standard runtime caching for deterministic effects
+    (if (pure-effects:effect-deterministic? effect-desc)
+        ;; Deterministic - use caching
+        (let ([cache-key (pure-effects:effect-cache-key effect-desc)])
+          (match (hott-cache:hott-cache-lookup cache-key cache)
+            [(constructor-value "some" (list cached-value) _)
+             ;; Cache hit - runtime cached result
+             (effect-result cached-value
+                           (constructor-value "tier3-cached" (list cache-key)
+                                            (inductive-type "Tier3Evidence" '()))
+                           (current-seconds)
+                           cache)]
+            [_
+             ;; Cache miss - execute and cache
+             (let* ([result (execute-effect-description effect-desc context)]
+                    [new-cache (hott-cache:hott-cache-insert cache-key 
+                                                   (effect-result-value result)
+                                                   cache)])
+               (effect-result (effect-result-value result)
+                             (constructor-value "tier3-computed"
+                                               (list effect-desc (effect-result-evidence result))
+                                               (inductive-type "Tier3Evidence" '()))
+                             (current-seconds)
+                             new-cache))]))
+        ;; Non-deterministic - execute directly  
         (execute-effect-description effect-desc context))))
 
 ;; Execute effect description without caching

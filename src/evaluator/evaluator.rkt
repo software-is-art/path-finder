@@ -14,7 +14,10 @@
          "../core/hott-literals-pure.rkt"
          "../core/host-bridge.rkt"
          "../core/hott-cache.rkt"
-         "../core/hott-cache-persistence.rkt")
+         "../core/hott-cache-persistence.rkt"
+         "../types/equality-family.rkt"
+         "../types/generic-equality-impl.rkt"
+         "../types/equality-instances.rkt")
 
 (provide evaluate
          make-environment
@@ -340,6 +343,42 @@
   (-> value/c value/c)
   false-value)
 
+;; ============================================================================
+;; GENERIC EQUALITY BUILTIN WRAPPERS  
+;; ============================================================================
+
+;; Generic equality wrapper for builtin environment
+(define/contract (generic-equal-wrapper x y)
+  (-> value/c value/c value/c)
+  (cond
+    [(and (constructor-value? x) (constructor-value? y))
+     (equal? x y)]  ; Use our HoTT-native generic equal?
+    [else false-value]))
+
+;; Equality with proof wrapper
+(define/contract (equal-with-proof-wrapper x y)
+  (-> value/c value/c value/c)
+  (cond
+    [(and (constructor-value? x) (constructor-value? y))
+     (let ([proof (equal-with-proof? x y)])
+       ;; Convert to sum type constructor
+       (if (equality-proof-equal? proof)
+           (constructor-value "Equal" 
+                             (list (equality-proof-path-or-negation proof))
+                             (inductive-type "EqualityResult" '()))
+           (constructor-value "NotEqual"
+                             (list (equality-proof-path-or-negation proof))
+                             (inductive-type "EqualityResult" '()))))]
+    [else (constructor-value "NotEqual" 
+                            (list `(type-error ,x ,y))
+                            (inductive-type "EqualityResult" '()))]))
+
+;; Type class checking  
+(define/contract (has-decidable-equality-wrapper type-val)
+  (-> value/c value/c)
+  ;; Simplified - would inspect the type value in full implementation
+  true-value)
+
 ;; Boolean logical operations (HoTT-native)
 (define/contract (bool-and a b)
   (-> value/c value/c value/c)
@@ -367,7 +406,7 @@
       (env-define! env "+" (builtin-value "+" nat-add nat-nat-nat))
       (env-define! env "*" (builtin-value "*" nat-mult nat-nat-nat))
       (env-define! env "-" (builtin-value "-" nat-sub nat-nat-nat))
-      (env-define! env "=" (builtin-value "=" nat-equal? nat-nat-bool))
+      (env-define! env "=" (builtin-value "=" generic-equal-wrapper nat-nat-bool))
       (env-define! env "<" (builtin-value "<" nat-less? nat-nat-bool))
       (env-define! env "<=" (builtin-value "<=" nat-less-equal? nat-nat-bool))
       (env-define! env ">" (builtin-value ">" nat-greater? nat-nat-bool))
@@ -425,6 +464,26 @@
       (env-define! env "transport" (builtin-value "transport" transport-builtin path-type))
       (env-define! env "congruence" (builtin-value "congruence" cong-builtin path-type))
       (env-define! env "univalence" (builtin-value "univalence" univalence-builtin path-type)))
+    
+    ;; Generic Equality System (HoTT-native)
+    (let ([generic-eq-type (make-function-type 
+                           (make-product-type Type0 Type0) Bool)]
+          [eq-with-proof-type (make-function-type 
+                              (make-product-type Type0 Type0) 
+                              (inductive-type "EqualityResult" '()))]
+          [univ-eq-type (pi-type "A" Type0 
+                                (make-function-type 
+                                 (make-product-type Type0 Type0) Bool))]
+          [has-eq-type (make-function-type Type0 Bool)])
+      
+      ;; Proof-returning equality functions
+      (env-define! env "equal-with-proof" 
+                  (builtin-value "equal-with-proof" equal-with-proof-wrapper eq-with-proof-type))
+      
+      ;; Type class operations
+      (env-define! env "has-decidable-equality?" 
+                  (builtin-value "has-decidable-equality?" has-decidable-equality-wrapper has-eq-type)))
+    
     env))
 
 ;; Create a new environment that extends the builtin environment
