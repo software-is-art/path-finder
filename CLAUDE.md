@@ -51,19 +51,15 @@ PathFinder demonstrates that **less can be more** when foundations are mathemati
 ;; ❌ Monomorphic implementations - avoid duplicating for each type
 ```
 
-### 4. **Use Pure HoTT Effects for All I/O and Computational Behavior**
-- **Parametric Effect type family**: `Effect : Type₀ → Type₀` with tier-aware instantiation
-- **Mathematical composition**: `effect-seq`, `effect-par`, `effect-choice` 
-- **Pure effect descriptions** separate from execution (no side effects in descriptions)
-- **Tier-aware execution**: Automatic optimization from Tier 0 (compile-time) to Tier 3 (runtime)
+### 4. **Use Effect System for Computational Behavior**
+- **Pure HoTT effects** for type-level computation
+- **Effect-aware function types** for operations with requirements
+- **Algebraic effects** for control flow and error handling
 
 ```racket
-;; ✅ Pure HoTT effects with mathematical composition
-(let ([config-read (file-read-effect (string-value "config.json"))]
-      [log-write (console-print-effect (string-value "App started"))])
-  (effect-seq config-read log-write))  ; Pure mathematical composition
+;; ✅ Effect-aware generic function
+(divide : Nat → Nat → Nat) ⟨DivisionByZero⟩
 
-;; ❌ Traditional algebraic effects - removed from PathFinder
 ;; ❌ Exception-based error handling - use effects instead
 ```
 
@@ -86,12 +82,10 @@ PathFinder demonstrates that **less can be more** when foundations are mathemati
 - **Universe polymorphism** via Π-types
 - **Cumulative hierarchy** for type inclusion
 
-### **Pure HoTT Effects System** (`src/effects/pure-hott-effects.rkt`)
-- **Parametric Effect type family**: `Effect : Type₀ → Type₀` with type-safe composition
-- **Effects as pure mathematical objects** (inductive types, not computational side-effects)  
-- **Tier-aware execution** (`src/effects/effect-executor.rkt`): Tier 0-3 automatic optimization
-- **Content-addressable caching**: Deterministic effects automatically memoized
-- **Mathematical evidence**: HoTT proofs that optimization occurred (`TierEvidence` types)
+### **Pure HoTT Effects System** (`src/effects/`)
+- **Effects as mathematical objects** (not computational side-effects)
+- **Algebraic effect handlers** for pure functional control flow
+- **Effect inference and checking** integrated with type system
 
 ### **Content-Addressable Caching** (`src/core/hott-cache.rkt`)
 - **Automatic memoization** of pure computations
@@ -265,23 +259,25 @@ map : (A B : Type₀) → (A → B) → List A → List B
 ;; ↓ compiles to IL above
 ```
 
-## Development Strategy & Migration Path
+## Updated Development Strategy
 
-### **Strategic Goals**
-- **Phase 1**: Establish pure HoTT semantics with practical execution
-- **Phase 2**: Minimize host language dependencies  
-- **Phase 3**: Native host implementation for maximum performance
+### **STOP Adding Traditional Features**
+- ❌ Don't implement Option/Result types
+- ❌ Don't build macro systems  
+- ❌ Don't add complex pattern matching syntax
+- ❌ Don't create traditional generic systems
 
-### **Migration Principles**
-1. **HoTT-first design**: Always prefer mathematical constructs over host language features
-2. **Clean separation**: Keep semantics (HoTT) separate from optimization (host)
-3. **Incremental migration**: Replace host dependencies systematically
-4. **Behavior preservation**: Maintain mathematical correctness throughout migration
+### **START Demonstrating HoTT Superiority**
+- ✅ Show how effects replace Option/Result
+- ✅ Demonstrate type families replacing macros
+- ✅ Prove HoTT eliminators are more powerful than pattern matching
+- ✅ Document the mathematical elegance
 
-### **Project Management**
-- **Use task-master CLI** for tracking development progress and dependencies
-- **Check current status**: `task-master list` and `task-master next`
-- **Strategic planning**: Tasks organized by phases with clear dependencies
+### **Focus Areas:**
+1. **Complete the algebraic effect system** (Task #7)
+2. **Polish existing HoTT constructs** 
+3. **Create compelling examples** showing HoTT superiority
+4. **Document the paradigm shift** for users coming from traditional languages
 
 ## The Revolutionary Claim
 
