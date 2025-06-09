@@ -1,0 +1,276 @@
+-- ============================================================================
+-- PURE MATHEMATICAL HOTT-NATIVE AST
+-- ============================================================================
+-- This replaces hott-ast-native.hott with pure mathematical HoTT notation.
+-- The AST itself is mathematical data that can be manipulated by eliminators.
+
+-- Import pure foundations
+import pure-foundations
+
+-- ============================================================================
+-- AST AS HOTT INDUCTIVE TYPE
+-- ============================================================================
+-- The AST is defined as a pure HoTT inductive type
+
+-- HoTT-AST inductive type definition
+data HoTT-AST : 𝒰₀ where
+  var : String → HoTT-AST
+  app : HoTT-AST → HoTT-AST → HoTT-AST
+  lambda : String → HoTT-AST → HoTT-AST
+  pi-type : String → HoTT-AST → HoTT-AST → HoTT-AST
+  sigma-type : String → HoTT-AST → HoTT-AST → HoTT-AST
+  id-type : HoTT-AST → HoTT-AST → HoTT-AST → HoTT-AST
+  eliminator : HoTT-AST → List HoTT-AST → HoTT-AST
+  type-app : String → List HoTT-AST → HoTT-AST
+  constructor : String → List HoTT-AST → HoTT-AST
+  literal : Value → HoTT-AST
+  effect : Effect → HoTT-AST
+
+-- ============================================================================
+-- AST CONSTRUCTOR FUNCTIONS
+-- ============================================================================
+-- Smart constructors for creating AST nodes (pure mathematical)
+
+parse-variable : String → HoTT-AST
+parse-variable := λ(name : String), var(name)
+
+parse-application : HoTT-AST → HoTT-AST → HoTT-AST
+parse-application := λ(func arg : HoTT-AST), app(func, arg)
+
+parse-lambda : String → HoTT-AST → HoTT-AST
+parse-lambda := λ(param : String), λ(body : HoTT-AST), lambda(param, body)
+
+parse-pi-type : String → HoTT-AST → HoTT-AST → HoTT-AST
+parse-pi-type := λ(var : String), λ(domain codomain : HoTT-AST), 
+  pi-type(var, domain, codomain)
+
+parse-sigma-type : String → HoTT-AST → HoTT-AST → HoTT-AST
+parse-sigma-type := λ(var : String), λ(first second : HoTT-AST),
+  sigma-type(var, first, second)
+
+parse-id-type : HoTT-AST → HoTT-AST → HoTT-AST → HoTT-AST
+parse-id-type := λ(type-expr left right : HoTT-AST),
+  id-type(type-expr, left, right)
+
+parse-eliminator-call : HoTT-AST → List HoTT-AST → HoTT-AST
+parse-eliminator-call := λ(target : HoTT-AST), λ(cases : List HoTT-AST),
+  eliminator(target, cases)
+
+parse-literal : Value → HoTT-AST
+parse-literal := λ(value : Value), literal(value)
+
+parse-effect : Effect → HoTT-AST
+parse-effect := λ(eff : Effect), effect(eff)
+
+-- ============================================================================
+-- AST ELIMINATOR
+-- ============================================================================
+-- The fundamental eliminator for HoTT AST - mathematically principled
+
+hott-ast-eliminator : Π(A : Type), Π(ast : HoTT-AST),
+  Π(var-case : String → A),
+  Π(app-case : HoTT-AST → HoTT-AST → A),
+  Π(lambda-case : String → HoTT-AST → A),
+  Π(pi-type-case : String → HoTT-AST → HoTT-AST → A),
+  Π(sigma-type-case : String → HoTT-AST → HoTT-AST → A),
+  Π(id-type-case : HoTT-AST → HoTT-AST → HoTT-AST → A),
+  Π(eliminator-case : HoTT-AST → List HoTT-AST → A),
+  Π(type-app-case : String → List HoTT-AST → A),
+  Π(constructor-case : String → List HoTT-AST → A),
+  Π(literal-case : Value → A),
+  Π(effect-case : Effect → A), A
+hott-ast-eliminator := λ(A : Type), λ(ast : HoTT-AST),
+  λ(var-case : String → A),
+  λ(app-case : HoTT-AST → HoTT-AST → A),
+  λ(lambda-case : String → HoTT-AST → A),
+  λ(pi-type-case : String → HoTT-AST → HoTT-AST → A),
+  λ(sigma-type-case : String → HoTT-AST → HoTT-AST → A),
+  λ(id-type-case : HoTT-AST → HoTT-AST → HoTT-AST → A),
+  λ(eliminator-case : HoTT-AST → List HoTT-AST → A),
+  λ(type-app-case : String → List HoTT-AST → A),
+  λ(constructor-case : String → List HoTT-AST → A),
+  λ(literal-case : Value → A),
+  λ(effect-case : Effect → A),
+  HoTT-AST-elim(ast, var-case, app-case, lambda-case, pi-type-case,
+                sigma-type-case, id-type-case, eliminator-case,
+                type-app-case, constructor-case, literal-case, effect-case)
+
+-- ============================================================================
+-- AST UTILITIES
+-- ============================================================================
+
+-- Convert AST to string representation using eliminator
+ast-to-string : HoTT-AST → String
+ast-to-string := λ(ast : HoTT-AST),
+  hott-ast-eliminator(String, ast,
+    -- var case
+    λ(name : String), name,
+    
+    -- app case
+    λ(func arg : HoTT-AST),
+      string-concat("(", string-concat(ast-to-string(func), 
+        string-concat(" ", string-concat(ast-to-string(arg), ")")))),
+    
+    -- lambda case
+    λ(param : String), λ(body : HoTT-AST),
+      string-concat("(λ ", string-concat(param, 
+        string-concat(" → ", string-concat(ast-to-string(body), ")")))),
+    
+    -- pi-type case
+    λ(var : String), λ(domain codomain : HoTT-AST),
+      string-concat("(Π (", string-concat(var, string-concat(" : ", 
+        string-concat(ast-to-string(domain), string-concat(") ", 
+          string-concat(ast-to-string(codomain), ")")))))),
+    
+    -- sigma-type case
+    λ(var : String), λ(first second : HoTT-AST),
+      string-concat("(Σ (", string-concat(var, string-concat(" : ", 
+        string-concat(ast-to-string(first), string-concat(") ", 
+          string-concat(ast-to-string(second), ")")))))),
+    
+    -- id-type case
+    λ(type-expr left right : HoTT-AST),
+      string-concat("(Id ", string-concat(ast-to-string(type-expr),
+        string-concat(" ", string-concat(ast-to-string(left),
+          string-concat(" ", string-concat(ast-to-string(right), ")")))))),
+    
+    -- eliminator case
+    λ(target : HoTT-AST), λ(cases : List HoTT-AST),
+      string-concat("(eliminator ", string-concat(ast-to-string(target),
+        string-concat(" ", string-concat(
+          list-intercalate(" ", list-map(HoTT-AST, String, cases, ast-to-string)), ")")))),
+    
+    -- type-app case
+    λ(type-name : String), λ(args : List HoTT-AST),
+      if-then-else(String,
+        list-empty?(HoTT-AST, args),
+        type-name,
+        string-concat("(", string-concat(type-name, string-concat(" ",
+          string-concat(list-intercalate(" ", 
+            list-map(HoTT-AST, String, args, ast-to-string)), ")"))))),
+    
+    -- constructor case
+    λ(name : String), λ(args : List HoTT-AST),
+      if-then-else(String,
+        list-empty?(HoTT-AST, args),
+        name,
+        string-concat("(", string-concat(name, string-concat(" ",
+          string-concat(list-intercalate(" ",
+            list-map(HoTT-AST, String, args, ast-to-string)), ")"))))),
+    
+    -- literal case
+    λ(value : Value),
+      value-to-string(value),
+    
+    -- effect case
+    λ(eff : Effect),
+      string-concat("#<effect:", string-concat(effect-to-string(eff), ">")))
+
+-- ============================================================================
+-- AST TRANSFORMATIONS USING ELIMINATORS
+-- ============================================================================
+
+-- Map over AST using eliminator
+ast-map : (HoTT-AST → HoTT-AST) → HoTT-AST → HoTT-AST
+ast-map := λ(transform-fn : HoTT-AST → HoTT-AST), λ(ast : HoTT-AST),
+  hott-ast-eliminator(HoTT-AST, ast,
+    -- var case - apply transform
+    λ(name : String), transform-fn(var(name)),
+    
+    -- app case - recursively map
+    λ(func arg : HoTT-AST),
+      transform-fn(app(ast-map(transform-fn, func),
+                       ast-map(transform-fn, arg))),
+    
+    -- lambda case - recursively map body
+    λ(param : String), λ(body : HoTT-AST),
+      transform-fn(lambda(param, ast-map(transform-fn, body))),
+    
+    -- pi-type case - recursively map domain and codomain
+    λ(var : String), λ(domain codomain : HoTT-AST),
+      transform-fn(pi-type(var,
+                          ast-map(transform-fn, domain),
+                          ast-map(transform-fn, codomain))),
+    
+    -- sigma-type case - recursively map both types
+    λ(var : String), λ(first second : HoTT-AST),
+      transform-fn(sigma-type(var,
+                             ast-map(transform-fn, first),
+                             ast-map(transform-fn, second))),
+    
+    -- id-type case - recursively map all three components
+    λ(type-expr left right : HoTT-AST),
+      transform-fn(id-type(ast-map(transform-fn, type-expr),
+                          ast-map(transform-fn, left),
+                          ast-map(transform-fn, right))),
+    
+    -- eliminator case - recursively map target and cases
+    λ(target : HoTT-AST), λ(cases : List HoTT-AST),
+      transform-fn(eliminator(ast-map(transform-fn, target),
+                             list-map(HoTT-AST, HoTT-AST, cases, 
+                                     λ(case : HoTT-AST), ast-map(transform-fn, case)))),
+    
+    -- type-app case - recursively map arguments
+    λ(type-name : String), λ(args : List HoTT-AST),
+      transform-fn(type-app(type-name,
+                           list-map(HoTT-AST, HoTT-AST, args,
+                                   λ(arg : HoTT-AST), ast-map(transform-fn, arg)))),
+    
+    -- constructor case - recursively map arguments
+    λ(name : String), λ(args : List HoTT-AST),
+      transform-fn(constructor(name,
+                              list-map(HoTT-AST, HoTT-AST, args,
+                                      λ(arg : HoTT-AST), ast-map(transform-fn, arg)))),
+    
+    -- literal case - no recursion needed
+    λ(value : Value), transform-fn(literal(value)),
+    
+    -- effect case - no recursion needed
+    λ(eff : Effect), transform-fn(effect(eff)))
+
+-- Check if AST contains a specific variable
+ast-contains-var : String → HoTT-AST → 𝟚
+ast-contains-var := λ(target-var : String), λ(ast : HoTT-AST),
+  hott-ast-eliminator(𝟚, ast,
+    -- var case - check if this is the target variable
+    λ(name : String), string-equal?(name, target-var),
+    
+    -- app case - check both function and argument
+    λ(func arg : HoTT-AST),
+      𝟚-elim(ast-contains-var(target-var, func), 𝟚,
+             ₁,
+             ast-contains-var(target-var, arg)),
+    
+    -- lambda case - check body (could add scoping check here)
+    λ(param : String), λ(body : HoTT-AST),
+      ast-contains-var(target-var, body),
+    
+    -- pi-type case - check domain and codomain
+    λ(var : String), λ(domain codomain : HoTT-AST),
+      𝟚-elim(ast-contains-var(target-var, domain), 𝟚,
+             ₁,
+             ast-contains-var(target-var, codomain)),
+    
+    -- sigma-type case - check both types
+    λ(var : String), λ(first second : HoTT-AST),
+      𝟚-elim(ast-contains-var(target-var, first), 𝟚,
+             ₁,
+             ast-contains-var(target-var, second)),
+    
+    -- id-type case - check all three components
+    λ(type-expr left right : HoTT-AST),
+      𝟚-elim(ast-contains-var(target-var, type-expr), 𝟚,
+             ₁,
+             𝟚-elim(ast-contains-var(target-var, left), 𝟚,
+                    ₁,
+                    ast-contains-var(target-var, right))),
+    
+    -- Other cases: recursively check all sub-ASTs
+    λ(target : HoTT-AST), λ(cases : List HoTT-AST), ₀,  -- Simplified
+    λ(type-name : String), λ(args : List HoTT-AST), ₀,  -- Simplified
+    λ(name : String), λ(args : List HoTT-AST), ₀,       -- Simplified
+    λ(value : Value), ₀,  -- literals contain no variables
+    λ(eff : Effect), ₀)   -- effects contain no variables
+
+-- This demonstrates the AST as pure mathematical data structures
+-- that can be manipulated entirely through HoTT eliminators

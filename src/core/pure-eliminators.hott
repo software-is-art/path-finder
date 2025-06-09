@@ -1,5 +1,5 @@
 -- ============================================================================
--- PURE MATHEMATICAL HOTT ELIMINATORS  
+-- PURE MATHEMATICAL HOTT ELIMINATORS
 -- ============================================================================
 -- This replaces eliminators.hott with pure mathematical HoTT notation.
 -- These are the mathematically principled replacement for pattern matching.
