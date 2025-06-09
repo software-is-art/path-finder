@@ -1,0 +1,338 @@
+-- ============================================================================
+-- PURE MATHEMATICAL GENERIC EQUALITY FOR HOTT TYPES
+-- ============================================================================
+-- This replaces generic-equality.rkt with pure mathematical HoTT notation.
+-- Implements generic decidable equality that returns either:
+-- - A path (proof of equality): refl : Id A x x
+-- - A proof of inequality: ¬(Id A x y)
+-- This leverages HoTT's identity types for truly generic equality.
+
+-- Import dependencies
+import types.types
+import evaluator.values
+import types.families
+
+-- ============================================================================
+-- EQUALITY RESULT TYPE
+-- ============================================================================
+
+-- Generic equality result - either equal with proof or different with proof
+data EqualityResult : Type → 𝒰₀ where
+  equal-with-proof : ∀(A : Type), ∀(x y : A), Id A x y → EqualityResult A
+  different-with-proof : ∀(A : Type), ∀(x y : A), ¬(Id A x y) → EqualityResult A
+
+-- Negation of identity type
+¬ : Type → Type
+¬ := λ(A : Type), A → 𝟘
+
+-- ============================================================================
+-- GENERIC EQUALITY FUNCTION
+-- ============================================================================
+
+-- Generic equality function that dispatches based on type
+generic-equal? : ∀(A : Type), A → A → EqualityResult A
+generic-equal? := λ(A : Type), λ(x y : A),
+  -- Use type family dispatch for equality
+  instantiate-equality-family(A, x, y)
+
+-- Instantiate equality type family for specific type
+instantiate-equality-family : ∀(A : Type), A → A → EqualityResult A
+instantiate-equality-family := λ(A : Type), λ(x y : A),
+  -- Dispatch based on type structure
+  Type-elim(EqualityResult A, A,
+    -- universe case
+    λ(n : ℕ), universe-equal?(x, y),
+    -- pi-type case
+    λ(var : String), λ(domain codomain : Type), function-equal?(x, y),
+    -- sigma-type case
+    λ(var : String), λ(first second : Type), pair-equal?(x, y),
+    -- sum-type case
+    λ(left right : Type), sum-equal?(x, y),
+    -- identity-type case
+    λ(id-type : Type), λ(left right : A), path-equal?(x, y),
+    -- unit-type case
+    unit-equal?(x, y),
+    -- empty-type case
+    empty-equal?(x, y),
+    -- inductive-type case
+    λ(name : String), λ(constructors : List Constructor),
+      inductive-equal?(name, constructors, x, y),
+    -- effect-type case
+    λ(base : Type), λ(req opt : EffectSet), effect-equal?(x, y))
+
+-- ============================================================================
+-- TYPE-SPECIFIC EQUALITY IMPLEMENTATIONS
+-- ============================================================================
+
+-- Natural number equality with proof
+nat-equal? : Value → Value → EqualityResult ℕ
+nat-equal? := λ(x y : Value),
+  Value-elim(EqualityResult ℕ, x,
+    -- constructor-value case for x
+    λ(name-x : String), λ(args-x : List Value), λ(type-x : Type),
+      Value-elim(EqualityResult ℕ, y,
+        -- constructor-value case for y
+        λ(name-y : String), λ(args-y : List Value), λ(type-y : Type),
+          if-then-else(EqualityResult ℕ,
+            string-equal?(name-x, "zero"),
+            if-then-else(EqualityResult ℕ,
+              string-equal?(name-y, "zero"),
+              equal-with-proof(ℕ, zero-value, zero-value, refl),
+              different-with-proof(ℕ, zero-value, y, zero-not-succ-proof)),
+            if-then-else(EqualityResult ℕ,
+              string-equal?(name-x, "succ"),
+              if-then-else(EqualityResult ℕ,
+                string-equal?(name-y, "succ"),
+                -- Both succ: recursively compare predecessors
+                List-elim(args-x,
+                  different-with-proof(ℕ, x, y, malformed-nat-proof),
+                  λ(pred-x : Value), λ(rest-x : List Value),
+                    List-elim(args-y,
+                      different-with-proof(ℕ, x, y, malformed-nat-proof),
+                      λ(pred-y : Value), λ(rest-y : List Value),
+                        nat-succ-equal-helper(pred-x, pred-y))),
+                different-with-proof(ℕ, x, y, succ-not-zero-proof)),
+              different-with-proof(ℕ, x, y, unknown-constructor-proof))),
+        -- Other value types for y
+        λ(p : List String), λ(b : AST), λ(e : Environment), 
+          different-with-proof(ℕ, x, y, nat-not-closure-proof),
+        λ(n : String), λ(a : ℕ), λ(t : Type),
+          different-with-proof(ℕ, x, y, nat-not-builtin-proof),
+        different-with-proof(ℕ, x, y, nat-not-unit-proof),
+        λ(s : String), different-with-proof(ℕ, x, y, nat-not-string-proof),
+        λ(eff : Effect), different-with-proof(ℕ, x, y, nat-not-effect-proof),
+        λ(t : Type), λ(s e : Value), λ(pr : Proof),
+          different-with-proof(ℕ, x, y, nat-not-path-proof),
+        λ(ta tb : Type), λ(f qi : Value),
+          different-with-proof(ℕ, x, y, nat-not-equiv-proof)),
+    -- Other value types for x
+    λ(p : List String), λ(b : AST), λ(e : Environment),
+      different-with-proof(ℕ, x, y, nat-not-closure-proof),
+    λ(n : String), λ(a : ℕ), λ(t : Type),
+      different-with-proof(ℕ, x, y, nat-not-builtin-proof),
+    different-with-proof(ℕ, x, y, nat-not-unit-proof),
+    λ(s : String), different-with-proof(ℕ, x, y, nat-not-string-proof),
+    λ(eff : Effect), different-with-proof(ℕ, x, y, nat-not-effect-proof),
+    λ(t : Type), λ(s e : Value), λ(pr : Proof),
+      different-with-proof(ℕ, x, y, nat-not-path-proof),
+    λ(ta tb : Type), λ(f qi : Value),
+      different-with-proof(ℕ, x, y, nat-not-equiv-proof))
+
+-- Helper for succ equality
+nat-succ-equal-helper : Value → Value → EqualityResult ℕ
+nat-succ-equal-helper := λ(pred-x pred-y : Value),
+  let rec-result := nat-equal?(pred-x, pred-y) in
+  EqualityResult-elim(rec-result,
+    λ(proof : Id ℕ pred-x pred-y),
+      equal-with-proof(ℕ, succ-value(pred-x), succ-value(pred-y),
+        cong(ℕ, ℕ, succ-value, proof)),
+    λ(neg-proof : ¬(Id ℕ pred-x pred-y)),
+      different-with-proof(ℕ, succ-value(pred-x), succ-value(pred-y),
+        λ(succ-eq : Id ℕ (succ-value pred-x) (succ-value pred-y)),
+          neg-proof(succ-injective(pred-x, pred-y, succ-eq))))
+
+-- Boolean equality with proof
+bool-equal? : Value → Value → EqualityResult 𝟚
+bool-equal? := λ(x y : Value),
+  Value-elim(EqualityResult 𝟚, x,
+    -- constructor-value case for x
+    λ(name-x : String), λ(args-x : List Value), λ(type-x : Type),
+      Value-elim(EqualityResult 𝟚, y,
+        -- constructor-value case for y
+        λ(name-y : String), λ(args-y : List Value), λ(type-y : Type),
+          if-then-else(EqualityResult 𝟚,
+            string-equal?(name-x, "₁"),
+            if-then-else(EqualityResult 𝟚,
+              string-equal?(name-y, "₁"),
+              equal-with-proof(𝟚, true-value, true-value, refl),
+              different-with-proof(𝟚, true-value, false-value, true-not-false-proof)),
+            if-then-else(EqualityResult 𝟚,
+              string-equal?(name-x, "₀"),
+              if-then-else(EqualityResult 𝟚,
+                string-equal?(name-y, "₀"),
+                equal-with-proof(𝟚, false-value, false-value, refl),
+                different-with-proof(𝟚, false-value, true-value, false-not-true-proof)),
+              different-with-proof(𝟚, x, y, unknown-bool-constructor-proof))),
+        -- Other value types for y: all different
+        λ(p : List String), λ(b : AST), λ(e : Environment),
+          different-with-proof(𝟚, x, y, bool-not-closure-proof),
+        λ(n : String), λ(a : ℕ), λ(t : Type),
+          different-with-proof(𝟚, x, y, bool-not-builtin-proof),
+        different-with-proof(𝟚, x, y, bool-not-unit-proof),
+        λ(s : String), different-with-proof(𝟚, x, y, bool-not-string-proof),
+        λ(eff : Effect), different-with-proof(𝟚, x, y, bool-not-effect-proof),
+        λ(t : Type), λ(s e : Value), λ(pr : Proof),
+          different-with-proof(𝟚, x, y, bool-not-path-proof),
+        λ(ta tb : Type), λ(f qi : Value),
+          different-with-proof(𝟚, x, y, bool-not-equiv-proof)),
+    -- Other value types for x: all different from bool
+    λ(p : List String), λ(b : AST), λ(e : Environment),
+      different-with-proof(𝟚, x, y, bool-not-closure-proof),
+    λ(n : String), λ(a : ℕ), λ(t : Type),
+      different-with-proof(𝟚, x, y, bool-not-builtin-proof),
+    different-with-proof(𝟚, x, y, bool-not-unit-proof),
+    λ(s : String), different-with-proof(𝟚, x, y, bool-not-string-proof),
+    λ(eff : Effect), different-with-proof(𝟚, x, y, bool-not-effect-proof),
+    λ(t : Type), λ(s e : Value), λ(pr : Proof),
+      different-with-proof(𝟚, x, y, bool-not-path-proof),
+    λ(ta tb : Type), λ(f qi : Value),
+      different-with-proof(𝟚, x, y, bool-not-equiv-proof))
+
+-- List equality with proof (parametric)
+list-equal? : ∀(A : Type), (A → A → EqualityResult A) → Value → Value → EqualityResult (List A)
+list-equal? := λ(A : Type), λ(elem-eq : A → A → EqualityResult A), λ(x y : Value),
+  Value-elim(EqualityResult (List A), x,
+    -- constructor-value case for x
+    λ(name-x : String), λ(args-x : List Value), λ(type-x : Type),
+      Value-elim(EqualityResult (List A), y,
+        -- constructor-value case for y
+        λ(name-y : String), λ(args-y : List Value), λ(type-y : Type),
+          if-then-else(EqualityResult (List A),
+            string-equal?(name-x, "nil"),
+            if-then-else(EqualityResult (List A),
+              string-equal?(name-y, "nil"),
+              equal-with-proof(List A, hott-list-nil(A), hott-list-nil(A), refl),
+              different-with-proof(List A, x, y, nil-not-cons-proof)),
+            if-then-else(EqualityResult (List A),
+              string-equal?(name-x, "cons"),
+              if-then-else(EqualityResult (List A),
+                string-equal?(name-y, "cons"),
+                -- Both cons: compare heads and tails
+                list-cons-equal-helper(A, elem-eq, args-x, args-y),
+                different-with-proof(List A, x, y, cons-not-nil-proof)),
+              different-with-proof(List A, x, y, unknown-list-constructor-proof))),
+        -- Other value types for y: all different
+        λ(p : List String), λ(b : AST), λ(e : Environment),
+          different-with-proof(List A, x, y, list-not-closure-proof),
+        λ(n : String), λ(a : ℕ), λ(t : Type),
+          different-with-proof(List A, x, y, list-not-builtin-proof),
+        different-with-proof(List A, x, y, list-not-unit-proof),
+        λ(s : String), different-with-proof(List A, x, y, list-not-string-proof),
+        λ(eff : Effect), different-with-proof(List A, x, y, list-not-effect-proof),
+        λ(t : Type), λ(s e : Value), λ(pr : Proof),
+          different-with-proof(List A, x, y, list-not-path-proof),
+        λ(ta tb : Type), λ(f qi : Value),
+          different-with-proof(List A, x, y, list-not-equiv-proof)),
+    -- Other cases: similar pattern
+    λ(p : List String), λ(b : AST), λ(e : Environment),
+      different-with-proof(List A, x, y, list-not-closure-proof),
+    λ(n : String), λ(a : ℕ), λ(t : Type),
+      different-with-proof(List A, x, y, list-not-builtin-proof),
+    different-with-proof(List A, x, y, list-not-unit-proof),
+    λ(s : String), different-with-proof(List A, x, y, list-not-string-proof),
+    λ(eff : Effect), different-with-proof(List A, x, y, list-not-effect-proof),
+    λ(t : Type), λ(s e : Value), λ(pr : Proof),
+      different-with-proof(List A, x, y, list-not-path-proof),
+    λ(ta tb : Type), λ(f qi : Value),
+      different-with-proof(List A, x, y, list-not-equiv-proof))
+
+-- Helper for cons equality
+list-cons-equal-helper : ∀(A : Type), (A → A → EqualityResult A) → List Value → List Value → EqualityResult (List A)
+list-cons-equal-helper := λ(A : Type), λ(elem-eq : A → A → EqualityResult A), λ(args-x args-y : List Value),
+  List-elim(args-x,
+    different-with-proof(List A, sorry, sorry, malformed-cons-proof),
+    λ(head-x : Value), λ(tail-x-args : List Value),
+      List-elim(tail-x-args,
+        different-with-proof(List A, sorry, sorry, malformed-cons-proof),
+        λ(tail-x : Value), λ(rest-x : List Value),
+          List-elim(args-y,
+            different-with-proof(List A, sorry, sorry, malformed-cons-proof),
+            λ(head-y : Value), λ(tail-y-args : List Value),
+              List-elim(tail-y-args,
+                different-with-proof(List A, sorry, sorry, malformed-cons-proof),
+                λ(tail-y : Value), λ(rest-y : List Value),
+                  -- Compare heads and tails
+                  let head-result := elem-eq(value-to-A(head-x), value-to-A(head-y)) in
+                  let tail-result := list-equal?(A, elem-eq, tail-x, tail-y) in
+                  combine-cons-equality(head-result, tail-result)))))
+
+-- ============================================================================
+-- GENERIC INDUCTIVE TYPE EQUALITY
+-- ============================================================================
+
+-- Generic inductive type equality
+inductive-equal? : String → List Constructor → Value → Value → EqualityResult Value
+inductive-equal? := λ(type-name : String), λ(constructors : List Constructor), λ(x y : Value),
+  if-then-else(EqualityResult Value,
+    string-equal?(type-name, "ℕ"),
+    nat-equal?(x, y),
+    if-then-else(EqualityResult Value,
+      string-equal?(type-name, "𝟚"),
+      bool-equal?(x, y),
+      if-then-else(EqualityResult Value,
+        string-prefix?(type-name, "List"),
+        list-equal?(Value, value-equal?, x, y),
+        generic-constructor-equal?(constructors, x, y))))
+
+-- Generic constructor-based equality
+generic-constructor-equal? : List Constructor → Value → Value → EqualityResult Value
+generic-constructor-equal? := λ(constructors : List Constructor), λ(x y : Value),
+  Value-elim(EqualityResult Value, x,
+    -- constructor-value case for x
+    λ(name-x : String), λ(args-x : List Value), λ(type-x : Type),
+      Value-elim(EqualityResult Value, y,
+        -- constructor-value case for y
+        λ(name-y : String), λ(args-y : List Value), λ(type-y : Type),
+          if-then-else(EqualityResult Value,
+            string-equal?(name-x, name-y),
+            -- Same constructor: compare arguments
+            list-equal?(Value, value-equal?, args-x, args-y),
+            -- Different constructors: not equal
+            different-with-proof(Value, x, y, different-constructor-proof(name-x, name-y))),
+        -- Other value types: not equal
+        λ(p : List String), λ(b : AST), λ(e : Environment),
+          different-with-proof(Value, x, y, constructor-not-closure-proof),
+        λ(n : String), λ(a : ℕ), λ(t : Type),
+          different-with-proof(Value, x, y, constructor-not-builtin-proof),
+        different-with-proof(Value, x, y, constructor-not-unit-proof),
+        λ(s : String), different-with-proof(Value, x, y, constructor-not-string-proof),
+        λ(eff : Effect), different-with-proof(Value, x, y, constructor-not-effect-proof),
+        λ(t : Type), λ(s e : Value), λ(pr : Proof),
+          different-with-proof(Value, x, y, constructor-not-path-proof),
+        λ(ta tb : Type), λ(f qi : Value),
+          different-with-proof(Value, x, y, constructor-not-equiv-proof)),
+    -- Other cases: symmetric to above
+    λ(p : List String), λ(b : AST), λ(e : Environment),
+      different-with-proof(Value, x, y, constructor-not-closure-proof),
+    λ(n : String), λ(a : ℕ), λ(t : Type),
+      different-with-proof(Value, x, y, constructor-not-builtin-proof),
+    different-with-proof(Value, x, y, constructor-not-unit-proof),
+    λ(s : String), different-with-proof(Value, x, y, constructor-not-string-proof),
+    λ(eff : Effect), different-with-proof(Value, x, y, constructor-not-effect-proof),
+    λ(t : Type), λ(s e : Value), λ(pr : Proof),
+      different-with-proof(Value, x, y, constructor-not-path-proof),
+    λ(ta tb : Type), λ(f qi : Value),
+      different-with-proof(Value, x, y, constructor-not-equiv-proof))
+
+-- ============================================================================
+-- PROOF UTILITIES AND AXIOMS
+-- ============================================================================
+
+-- These would be proven using HoTT axioms and induction principles
+-- For now, represented as constructors
+
+zero-not-succ-proof : ¬(Id ℕ zero-value (succ-value sorry))
+zero-not-succ-proof := sorry
+
+succ-not-zero-proof : ¬(Id ℕ (succ-value sorry) zero-value)
+succ-not-zero-proof := sorry
+
+true-not-false-proof : ¬(Id 𝟚 true-value false-value)
+true-not-false-proof := sorry
+
+false-not-true-proof : ¬(Id 𝟚 false-value true-value)
+false-not-true-proof := sorry
+
+succ-injective : ∀(m n : Value), Id ℕ (succ-value m) (succ-value n) → Id ℕ m n
+succ-injective := sorry
+
+-- Category mismatch proofs
+nat-not-closure-proof : ¬(Id ℕ sorry sorry)
+nat-not-closure-proof := sorry
+
+different-constructor-proof : String → String → ¬(Id Value sorry sorry)
+different-constructor-proof := λ(name1 name2 : String), sorry
+
+-- Additional utility proofs would be defined similarly...
+
+-- This establishes the pure mathematical generic equality system for PathFinder

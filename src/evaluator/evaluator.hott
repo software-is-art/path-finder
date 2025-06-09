@@ -1,0 +1,459 @@
+-- ============================================================================
+-- PURE HOTT EVALUATOR INFRASTRUCTURE
+-- ============================================================================
+-- Complete evaluation system using only HoTT mathematical constructs
+-- No host language dependencies - pure constructive mathematics
+
+import effects.effects
+import core.operations
+import effects.effects
+import core.cache
+import evaluator.values.hott
+
+-- ============================================================================
+-- ENVIRONMENT AS DEPENDENT RECORD TYPE
+-- ============================================================================
+
+-- Environment for lexical scoping using dependent types
+data Environment : 𝒰₀ where
+  empty-env : Environment
+  bind-env : String → Value → Environment → Environment
+
+-- Environment operations as mathematical functions
+env-lookup : String → Environment → Option Value
+env-lookup = λ(name : String), λ(env : Environment),
+  environment-eliminator env
+    (none Value)                         -- empty environment
+    (λ(var : String), λ(val : Value), λ(parent : Environment), λ(ih : Option Value),
+      bool-eliminator (string-equal name var)
+        ih                               -- names don't match, continue searching
+        (some val))                      -- names match, return value
+
+-- Environment extension (immutable)
+env-extend : String → Value → Environment → Environment
+env-extend = λ(name : String), λ(value : Value), λ(env : Environment),
+  bind-env name value env
+
+-- Environment size for debugging
+env-size : Environment → ℕ
+env-size = λ(env : Environment),
+  environment-eliminator env
+    zero                                 -- empty environment
+    (λ(_ : String), λ(_ : Value), λ(parent : Environment), λ(ih : ℕ),
+      succ ih)                          -- one more binding
+
+-- ============================================================================
+-- EVALUATION CONTEXT WITH TIER AWARENESS
+-- ============================================================================
+
+-- Evaluation context carrying tier information and cache
+data EvaluationContext : 𝒰₀ where
+  eval-context :
+    (tier : TierLevel) →
+    (cache : Cache AST Value) →
+    (env : Environment) →
+    (effect-handlers : EffectHandlerRegistry) →
+    EvaluationContext
+
+-- Extract components from evaluation context
+context-tier : EvaluationContext → TierLevel
+context-tier = λ(ctx : EvaluationContext),
+  match ctx with
+  | eval-context tier _ _ _ => tier
+
+context-cache : EvaluationContext → Cache AST Value
+context-cache = λ(ctx : EvaluationContext),
+  match ctx with
+  | eval-context _ cache _ _ => cache
+
+context-env : EvaluationContext → Environment
+context-env = λ(ctx : EvaluationContext),
+  match ctx with
+  | eval-context _ _ env _ => env
+
+context-handlers : EvaluationContext → EffectHandlerRegistry
+context-handlers = λ(ctx : EvaluationContext),
+  match ctx with
+  | eval-context _ _ _ handlers => handlers
+
+-- Update context components
+with-env : EvaluationContext → Environment → EvaluationContext
+with-env = λ(ctx : EvaluationContext), λ(new-env : Environment),
+  match ctx with
+  | eval-context tier cache _ handlers => eval-context tier cache new-env handlers
+
+with-cache : EvaluationContext → Cache AST Value → EvaluationContext
+with-cache = λ(ctx : EvaluationContext), λ(new-cache : Cache AST Value),
+  match ctx with
+  | eval-context tier _ env handlers => eval-context tier new-cache env handlers
+
+-- ============================================================================
+-- CORE EVALUATION FUNCTION
+-- ============================================================================
+
+-- Main evaluation function with cache integration
+evaluate : AST → EvaluationContext → (Value × EvaluationContext)
+evaluate = λ(ast : AST), λ(ctx : EvaluationContext),
+  -- First check cache for this AST
+  let cache-result : Option Value := cache-lookup AST Value ast (context-cache ctx) in
+  option-eliminator cache-result
+    -- Cache miss: evaluate and cache result
+    (let eval-result : (Value × EvaluationContext) := evaluate-uncached ast ctx in
+     let result-value : Value := fst eval-result in
+     let new-ctx : EvaluationContext := snd eval-result in
+     let content-addr : ContentAddress AST := compute-content-address AST ast in
+     let proof : ComputationalEquivalence AST Value content-addr result-value := 
+       make-eval-proof ast result-value in
+     let updated-cache : Cache AST Value := 
+       cache-insert AST Value content-addr result-value proof (context-cache new-ctx) in
+     let final-ctx : EvaluationContext := with-cache new-ctx updated-cache in
+     (result-value, final-ctx))
+    
+    -- Cache hit: return cached value
+    (λ(cached-value : Value), (cached-value, ctx))
+
+-- Uncached evaluation - the actual computational work
+evaluate-uncached : AST → EvaluationContext → (Value × EvaluationContext)
+evaluate-uncached = λ(ast : AST), λ(ctx : EvaluationContext),
+  ast-eliminator ast
+    -- Variable reference
+    (λ(name : String),
+      let value : Option Value := env-lookup name (context-env ctx) in
+      option-eliminator value
+        -- Variable not found: return error value
+        (error-value ("Unbound variable: " ++ name), ctx)
+        -- Variable found: return its value
+        (λ(val : Value), (val, ctx)))
+    
+    -- Literal values
+    (λ(lit : LiteralValue),
+      let value : Value := literal-to-value lit in
+      (value, ctx))
+    
+    -- Function application
+    (λ(func : AST), λ(args : List AST),
+      let func-result : (Value × EvaluationContext) := evaluate func ctx in
+      let func-value : Value := fst func-result in
+      let ctx1 : EvaluationContext := snd func-result in
+      let args-result : (List Value × EvaluationContext) := evaluate-list args ctx1 in
+      let arg-values : List Value := fst args-result in
+      let ctx2 : EvaluationContext := snd args-result in
+      apply-function func-value arg-values ctx2)
+    
+    -- Lambda abstraction
+    (λ(params : List String), λ(body : AST),
+      let closure : Value := closure-value params body (context-env ctx) in
+      (closure, ctx))
+    
+    -- Let binding
+    (λ(bindings : List (String × AST)), λ(body : AST),
+      let binding-result : (Environment × EvaluationContext) := 
+        evaluate-bindings bindings (context-env ctx) ctx in
+      let new-env : Environment := fst binding-result in
+      let ctx1 : EvaluationContext := snd binding-result in
+      let body-ctx : EvaluationContext := with-env ctx1 new-env in
+      evaluate body body-ctx)
+    
+    -- Effect operation
+    (λ(effect : Effect), λ(args : List AST),
+      let args-result : (List Value × EvaluationContext) := evaluate-list args ctx in
+      let arg-values : List Value := fst args-result in
+      let ctx1 : EvaluationContext := snd args-result in
+      perform-effect effect arg-values ctx1)
+
+-- ============================================================================
+-- HELPER EVALUATION FUNCTIONS
+-- ============================================================================
+
+-- Evaluate list of AST nodes
+evaluate-list : List AST → EvaluationContext → (List Value × EvaluationContext)
+evaluate-list = λ(asts : List AST), λ(ctx : EvaluationContext),
+  list-eliminator asts
+    -- Empty list
+    ((nil Value), ctx)
+    
+    -- Non-empty list: evaluate head then tail
+    (λ(head : AST), λ(tail : List AST), λ(ih : EvaluationContext → (List Value × EvaluationContext)),
+      let head-result : (Value × EvaluationContext) := evaluate head ctx in
+      let head-value : Value := fst head-result in
+      let ctx1 : EvaluationContext := snd head-result in
+      let tail-result : (List Value × EvaluationContext) := ih ctx1 in
+      let tail-values : List Value := fst tail-result in
+      let ctx2 : EvaluationContext := snd tail-result in
+      (cons head-value tail-values, ctx2))
+
+-- Evaluate let bindings to create new environment
+evaluate-bindings : List (String × AST) → Environment → EvaluationContext → (Environment × EvaluationContext)
+evaluate-bindings = λ(bindings : List (String × AST)), λ(base-env : Environment), λ(ctx : EvaluationContext),
+  list-eliminator bindings
+    -- No bindings: return base environment
+    (base-env, ctx)
+    
+    -- Evaluate binding and add to environment
+    (λ(binding : (String × AST)), λ(rest : List (String × AST)), 
+      λ(ih : Environment → EvaluationContext → (Environment × EvaluationContext)),
+      let name : String := fst binding in
+      let ast : AST := snd binding in
+      let value-result : (Value × EvaluationContext) := evaluate ast ctx in
+      let value : Value := fst value-result in
+      let ctx1 : EvaluationContext := snd value-result in
+      let extended-env : Environment := env-extend name value base-env in
+      ih extended-env ctx1)
+
+-- ============================================================================
+-- FUNCTION APPLICATION WITH TYPE CHECKING
+-- ============================================================================
+
+-- Apply function value to arguments
+apply-function : Value → List Value → EvaluationContext → (Value × EvaluationContext)
+apply-function = λ(func : Value), λ(args : List Value), λ(ctx : EvaluationContext),
+  value-eliminator func
+    -- Constructor application
+    (λ(name : String), λ(existing-args : List Value), λ(type : Type),
+      let all-args : List Value := list-append existing-args args in
+      (constructor-value name all-args type, ctx))
+    
+    -- Closure application  
+    (λ(params : List String), λ(body : AST), λ(closure-env : Environment),
+      if list-length-equal (list-length params) (list-length args)
+      then
+        -- Correct arity: bind parameters and evaluate body
+        let param-env : Environment := bind-parameters params args closure-env in
+        let body-ctx : EvaluationContext := with-env ctx param-env in
+        evaluate body body-ctx
+      else
+        -- Arity mismatch: return error
+        (error-value "Arity mismatch in function application", ctx))
+    
+    -- Built-in function application
+    (λ(name : String), λ(arity : ℕ), λ(type : Type),
+      apply-builtin name args ctx)
+    
+    -- Effect value (should not be applied directly)
+    (λ(effect : Effect),
+      (error-value "Cannot apply effect value directly", ctx))
+    
+    -- Other value types: not applicable
+    (_ => (error-value "Value is not a function", ctx))
+
+-- Bind parameters to arguments in environment
+bind-parameters : List String → List Value → Environment → Environment
+bind-parameters = λ(params : List String), λ(args : List Value), λ(env : Environment),
+  list-zip-fold String Value params args env
+    (λ(param : String), λ(arg : Value), λ(acc-env : Environment),
+      env-extend param arg acc-env)
+
+-- ============================================================================
+-- BUILT-IN FUNCTION APPLICATION
+-- ============================================================================
+
+-- Apply built-in mathematical functions
+apply-builtin : String → List Value → EvaluationContext → (Value × EvaluationContext)
+apply-builtin = λ(name : String), λ(args : List Value), λ(ctx : EvaluationContext),
+  string-eliminator name
+    -- Arithmetic operations
+    (if string-equal name "+"
+     then apply-nat-add args ctx
+     else if string-equal name "*"
+     then apply-nat-mult args ctx
+     else if string-equal name "-"
+     then apply-nat-sub args ctx
+     else if string-equal name "="
+     then apply-nat-equal args ctx
+     else if string-equal name "<"
+     then apply-nat-less args ctx
+     -- Boolean operations
+     else if string-equal name "and"
+     then apply-bool-and args ctx
+     else if string-equal name "or"
+     then apply-bool-or args ctx
+     else if string-equal name "not"
+     then apply-bool-not args ctx
+     -- String operations
+     else if string-equal name "string-append"
+     then apply-string-append args ctx
+     else if string-equal name "string-equal?"
+     then apply-string-equal args ctx
+     -- Default: unknown function
+     else (error-value ("Unknown built-in function: " ++ name), ctx))
+
+-- Natural number addition built-in
+apply-nat-add : List Value → EvaluationContext → (Value × EvaluationContext)
+apply-nat-add = λ(args : List Value), λ(ctx : EvaluationContext),
+  if list-length-equal (list-length args) (succ (succ zero))
+  then
+    let n1 : Value := list-nth args zero in
+    let n2 : Value := list-nth args (succ zero) in
+    let result : Value := hott-add-values n1 n2 in
+    (result, ctx)
+  else
+    (error-value "Addition requires exactly 2 arguments", ctx)
+
+-- Natural number multiplication built-in
+apply-nat-mult : List Value → EvaluationContext → (Value × EvaluationContext)
+apply-nat-mult = λ(args : List Value), λ(ctx : EvaluationContext),
+  if list-length-equal (list-length args) (succ (succ zero))
+  then
+    let n1 : Value := list-nth args zero in
+    let n2 : Value := list-nth args (succ zero) in
+    let result : Value := hott-mult-values n1 n2 in
+    (result, ctx)
+  else
+    (error-value "Multiplication requires exactly 2 arguments", ctx)
+
+-- ============================================================================
+-- EFFECT EXECUTION SYSTEM
+-- ============================================================================
+
+-- Perform effect operation within evaluation context
+perform-effect : Effect → List Value → EvaluationContext → (Value × EvaluationContext)
+perform-effect = λ(effect : Effect), λ(args : List Value), λ(ctx : EvaluationContext),
+  let handlers : EffectHandlerRegistry := context-handlers ctx in
+  effect-eliminator effect
+    -- Console effect
+    (λ(operation : ConsoleOperation),
+      console-operation-eliminator operation
+        -- Print operation
+        (λ(msg : String),
+          let result : Value := execute-console-print msg in
+          (result, ctx))
+        
+        -- Read operation
+        (λ(prompt : String),
+          let result : Value := execute-console-read prompt in
+          (result, ctx)))
+    
+    -- File I/O effect
+    (λ(operation : FileIOOperation),
+      file-operation-eliminator operation
+        -- Read file
+        (λ(path : String),
+          let result : Value := execute-file-read path in
+          (result, ctx))
+        
+        -- Write file
+        (λ(path : String), λ(content : String),
+          let result : Value := execute-file-write path content in
+          (result, ctx)))
+    
+    -- Network effect
+    (λ(operation : NetworkOperation),
+      let result : Value := execute-network-operation operation in
+      (result, ctx))
+    
+    -- Custom effects: delegate to handler registry
+    (λ(custom : CustomEffect),
+      execute-custom-effect custom args handlers ctx)
+
+-- ============================================================================
+-- GLOBAL EVALUATOR STATE
+-- ============================================================================
+
+-- Global cache for transparent caching across evaluations
+data GlobalEvaluatorState : 𝒰₀ where
+  global-state :
+    (cache : Cache AST Value) →
+    (effect-handlers : EffectHandlerRegistry) →
+    (builtin-env : Environment) →
+    GlobalEvaluatorState
+
+-- Initialize global evaluator state
+initialize-global-state : GlobalEvaluatorState
+initialize-global-state =
+  let empty-cache : Cache AST Value := empty-cache AST Value in
+  let default-handlers : EffectHandlerRegistry := make-default-handlers in
+  let builtin-env : Environment := make-builtin-environment in
+  global-state empty-cache default-handlers builtin-env
+
+-- Extract global cache
+global-cache : GlobalEvaluatorState → Cache AST Value
+global-cache = λ(state : GlobalEvaluatorState),
+  match state with
+  | global-state cache _ _ => cache
+
+-- Update global cache
+update-global-cache : GlobalEvaluatorState → Cache AST Value → GlobalEvaluatorState
+update-global-cache = λ(state : GlobalEvaluatorState), λ(new-cache : Cache AST Value),
+  match state with
+  | global-state _ handlers env => global-state new-cache handlers env
+
+-- ============================================================================
+-- MATHEMATICAL EVALUATION PROOFS
+-- ============================================================================
+
+-- Proof that evaluation preserves computational equivalence
+make-eval-proof : AST → Value → ComputationalEquivalence AST Value _ _
+make-eval-proof = λ(ast : AST), λ(result : Value),
+  -- This would construct a proof that (evaluate ast) ≡ result
+  -- For now, placeholder proof
+  comp-equiv 
+    (λ(a : AST), evaluate-deterministic a)
+    ast
+    (content-address-refl AST ast)
+    (refl Value result)
+
+-- Evaluation is deterministic
+evaluate-deterministic : AST → Value
+evaluate-deterministic = λ(ast : AST),
+  -- This function represents the mathematical specification of evaluation
+  -- It's the pure function that evaluation implements
+  fst (evaluate ast (eval-context Tier0 (empty-cache AST Value) empty-env make-default-handlers))
+
+-- ============================================================================
+-- BUILT-IN ENVIRONMENT CONSTRUCTION
+-- ============================================================================
+
+-- Create built-in environment with mathematical operations
+make-builtin-environment : Environment
+make-builtin-environment =
+  let env0 : Environment := empty-env in
+  let env1 : Environment := env-extend "+" (builtin-value "+" (succ (succ zero)) (ℕ → ℕ → ℕ)) env0 in
+  let env2 : Environment := env-extend "*" (builtin-value "*" (succ (succ zero)) (ℕ → ℕ → ℕ)) env1 in
+  let env3 : Environment := env-extend "-" (builtin-value "-" (succ (succ zero)) (ℕ → ℕ → ℕ)) env2 in
+  let env4 : Environment := env-extend "=" (builtin-value "=" (succ (succ zero)) (∀(A : 𝒰₀), A → A → 𝟚)) env3 in
+  let env5 : Environment := env-extend "<" (builtin-value "<" (succ (succ zero)) (ℕ → ℕ → 𝟚)) env4 in
+  let env6 : Environment := env-extend "and" (builtin-value "and" (succ (succ zero)) (𝟚 → 𝟚 → 𝟚)) env5 in
+  let env7 : Environment := env-extend "or" (builtin-value "or" (succ (succ zero)) (𝟚 → 𝟚 → 𝟚)) env6 in
+  let env8 : Environment := env-extend "not" (builtin-value "not" (succ zero) (𝟚 → 𝟚)) env7 in
+  env8
+
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+-- Error value constructor
+error-value : String → Value
+error-value = λ(msg : String),
+  constructor-value "error" (cons (string-value msg) (nil Value)) ErrorType
+
+-- String concatenation for error messages
+string-concat : String → String → String
+string-concat = λ(s1 : String), λ(s2 : String),
+  string-append s1 s2
+
+-- Check if two list lengths are equal
+list-length-equal : ℕ → ℕ → 𝟚
+list-length-equal = λ(n1 : ℕ), λ(n2 : ℕ),
+  nat-equal n1 n2
+
+-- Get nth element from list (with default)
+list-nth : ∀(A : 𝒰₀), List A → ℕ → A → A
+list-nth = λ(A : 𝒰₀), λ(xs : List A), λ(n : ℕ), λ(default : A),
+  list-eliminator xs
+    default                              -- Empty list: return default
+    (λ(head : A), λ(tail : List A), λ(ih : ℕ → A → A),
+      nat-eliminator n
+        head                             -- n = 0: return head
+        (λ(pred : ℕ), λ(_ : ℕ), ih pred default))  -- n > 0: recurse on tail
+
+-- List zip and fold operation
+list-zip-fold : ∀(A B C : 𝒰₀), List A → List B → C → (A → B → C → C) → C
+list-zip-fold = λ(A B C : 𝒰₀), λ(xs : List A), λ(ys : List B), λ(acc : C), λ(f : A → B → C → C),
+  list-eliminator xs
+    acc                                  -- Empty xs: return accumulator
+    (λ(x : A), λ(xs-tail : List A), λ(ih : List B → C → (A → B → C → C) → C),
+      list-eliminator ys
+        acc                              -- Empty ys: return accumulator
+        (λ(y : B), λ(ys-tail : List B), λ(_ : List B → C → (A → B → C → C) → C),
+          let new-acc : C := f x y acc in
+          ih ys-tail new-acc f))

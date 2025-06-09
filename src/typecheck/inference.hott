@@ -1,0 +1,656 @@
+-- ============================================================================
+-- PURE MATHEMATICAL HoTT-NATIVE TYPE INFERENCE AND ELABORATION
+-- ============================================================================
+-- This replaces hott-native-inference.rkt with pure mathematical HoTT notation.
+-- Uses PathFinder's native HoTT foundations: type families, identity types,
+-- computational evidence, and universe polymorphism.
+
+-- Import dependencies
+import types.types
+import evaluator.values
+import core.ast
+import types.families
+
+-- ============================================================================
+-- INFERENCE UNIVERSE: HoTT-NATIVE CONSTRAINT SYSTEM
+-- ============================================================================
+
+-- Inference universe: a universe containing type variables and constraints
+-- Following HoTT: inference happens within a universe at a specific level
+data InferenceUniverse : 𝒰₀ where
+  inference-universe : ℕ →                                    -- universe level
+                      TypeEnvironment →                       -- type environment
+                      List UniverseConstraint →              -- constraints
+                      EvidenceContext →                      -- evidence context
+                      Tier →                                 -- execution tier
+                      InferenceUniverse
+
+-- Type variable: a term in the universe waiting for evidence
+data TypeVariable : 𝒰₀ where
+  type-variable : String →                                   -- variable name
+                 ℕ →                                        -- universe level
+                 List EvidenceRequirement →                -- evidence requirements
+                 TypeVariable
+
+-- Proof obligation: computational evidence that must be provided
+data ProofObligation : 𝒰₀ where
+  proof-obligation : Type →                                  -- obligation type
+                    Maybe Value →                           -- witness (if found)
+                    Goal →                                  -- goal to prove
+                    InferenceContext →                      -- local context
+                    ProofObligation
+
+-- Evidence context: tracks computational proofs and witnesses
+data EvidenceContext : 𝒰₀ where
+  evidence-context : List (Type × Evidence) →               -- type-evidence pairs
+                    List (Type × Evidence × HoTT-AST) →     -- witnesses with sources
+                    List ProofObligation →                  -- pending obligations
+                    EvidenceContext
+
+-- Evidence requirement for type variables
+data EvidenceRequirement : 𝒰₀ where
+  requires-proof : Type → EvidenceRequirement
+  requires-witness : Type → EvidenceRequirement
+  requires-computation : Type → EvidenceRequirement
+
+-- Goal representation
+data Goal : 𝒰₀ where
+  prove-equal : Type → Type → Goal
+  prove-inhabited : Type → Goal
+  prove-computation : Type → Value → Goal
+
+-- Inference context for local reasoning
+data InferenceContext : 𝒰₀ where
+  local-context : List (String × Type) → InferenceContext
+
+-- Evidence for computational proofs
+data Evidence : 𝒰₀ where
+  literal-evidence : Value → Evidence
+  formation-evidence : String → List Type → ℕ → Evidence
+  elimination-evidence : HoTT-AST → HoTT-AST → Evidence
+  constraint-evidence : Type → Type → Evidence
+
+-- ============================================================================
+-- INFERENCE UNIVERSE CONSTRUCTION
+-- ============================================================================
+
+-- Create inference universe at specified level
+make-inference-universe : ℕ → TypeEnvironment → Tier → InferenceUniverse
+make-inference-universe := λ(level : ℕ), λ(type-env : TypeEnvironment), λ(tier : Tier),
+  inference-universe(level, type-env, nil, 
+    evidence-context(nil, nil, nil), tier)
+
+-- ============================================================================
+-- HoTT TYPE SYNTHESIS (INFERENCE)
+-- ============================================================================
+
+-- HoTT-native type synthesis using computational evidence
+hott-infer : HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer := λ(ast : HoTT-AST), λ(universe : InferenceUniverse),
+  hott-ast-eliminator((Type × InferenceUniverse), ast,
+    -- Variable case: lookup with universe level checking
+    λ(name : String),
+      universe-lookup(universe, name),
+    
+    -- Application case: Π-elimination with path computation
+    λ(func-ast arg-ast : HoTT-AST),
+      hott-infer-pi-elimination(cons(func-ast, cons(arg-ast, nil)), universe),
+    
+    -- Lambda case: Π-introduction with computational evidence
+    λ(param : String), λ(body-ast : HoTT-AST),
+      hott-infer-pi-introduction(param, body-ast, universe),
+    
+    -- Pi-type case: Π-type formation
+    λ(var : String), λ(domain-ast codomain-ast : HoTT-AST),
+      hott-infer-pi-formation(var, domain-ast, codomain-ast, universe),
+    
+    -- Sigma-type case: Σ-type formation
+    λ(var : String), λ(first-ast second-ast : HoTT-AST),
+      hott-infer-sigma-formation(var, first-ast, second-ast, universe),
+    
+    -- Identity-type case: identity type formation
+    λ(type-ast left-ast right-ast : HoTT-AST),
+      hott-infer-identity-formation(type-ast, left-ast, right-ast, universe),
+    
+    -- Eliminator case: HoTT eliminator inference
+    λ(target : HoTT-AST), λ(cases : List HoTT-AST),
+      hott-infer-eliminator(target, cases, universe),
+    
+    -- Type application case: type family application
+    λ(family-name : String), λ(args : List HoTT-AST),
+      hott-infer-type-family-application(family-name, args, universe),
+    
+    -- Constructor case: inductive type constructor inference
+    λ(constructor-name : String), λ(args : List HoTT-AST),
+      hott-infer-constructor(constructor-name, args, universe),
+    
+    -- Literal case: canonical types with computational evidence
+    λ(value : Value),
+      hott-infer-literal(value, universe),
+    
+    -- Effect case: effect type inference
+    λ(eff : Effect),
+      hott-infer-effect(eff, universe))
+
+-- ============================================================================
+-- HoTT TYPE CHECKING WITH COMPUTATIONAL EVIDENCE
+-- ============================================================================
+
+-- HoTT-native type checking: verify computational evidence
+hott-check : HoTT-AST → Type → InferenceUniverse → (Evidence × InferenceUniverse)
+hott-check := λ(ast : HoTT-AST), λ(expected-type : Type), λ(universe : InferenceUniverse),
+  let infer-result := hott-infer(ast, universe) in
+  let inferred-type := first(infer-result) in
+  let updated-universe := second(infer-result) in
+  let constraint-result := generate-identity-constraint(updated-universe, inferred-type, expected-type, ast) in
+  let evidence := constraint-evidence(inferred-type, expected-type) in
+  pair(evidence, constraint-result)
+
+-- ============================================================================
+-- Π-TYPE FORMATION AND ELIMINATION (HoTT-NATIVE)
+-- ============================================================================
+
+-- Lambda inference: Π-introduction with computational evidence
+hott-infer-pi-introduction : String → HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-pi-introduction := λ(param : String), λ(body-ast : HoTT-AST), λ(universe : InferenceUniverse),
+  let param-type-var := fresh-type-variable(universe) in
+  let extended-universe := extend-universe-binding(universe, param, param-type-var) in
+  let body-result := hott-infer(body-ast, extended-universe) in
+  let body-type := first(body-result) in
+  let final-universe := second(body-result) in
+  let pi-type := make-pi-type(param, param-type-var, body-type) in
+  let evidence := formation-evidence("pi-intro", cons(param-type-var, cons(body-type, nil)), zero) in
+  let universe-with-evidence := record-computational-evidence(final-universe, pi-type, evidence, lambda(param, body-ast)) in
+  pair(pi-type, universe-with-evidence)
+
+-- Function application: Π-elimination with path computation
+hott-infer-pi-elimination : List HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-pi-elimination := λ(elements : List HoTT-AST), λ(universe : InferenceUniverse),
+  List-elim(elements,
+    -- Empty elements: error
+    pair(sorry, universe),
+    λ(func-ast : HoTT-AST), λ(rest : List HoTT-AST),
+      List-elim(rest,
+        -- Single element: return its type
+        hott-infer(func-ast, universe),
+        λ(arg-ast : HoTT-AST), λ(rest-args : List HoTT-AST),
+          let func-result := hott-infer(func-ast, universe) in
+          let func-type := first(func-result) in
+          let universe1 := second(func-result) in
+          let arg-result := hott-infer(arg-ast, universe1) in
+          let arg-type := first(arg-result) in
+          let universe2 := second(arg-result) in
+          -- Handle function type elimination
+          Type-elim((Type × InferenceUniverse), func-type,
+            -- Universe case: not a function
+            λ(n : ℕ), pair(sorry, universe2),  -- Error
+            -- Pi-type case: dependent function application
+            λ(var : String), λ(domain codomain : Type),
+              let constraint-universe := generate-identity-constraint(universe2, arg-type, domain, arg-ast) in
+              let result-type := substitute-in-type(codomain, var, arg-ast, constraint-universe) in
+              let evidence := elimination-evidence(func-ast, arg-ast) in
+              let final-universe := record-computational-evidence(constraint-universe, result-type, evidence, app(func-ast, arg-ast)) in
+              pair(result-type, final-universe),
+            -- Other type cases: not functions
+            λ(var : String), λ(first second : Type), pair(sorry, universe2),
+            λ(left right : Type), pair(sorry, universe2),
+            λ(A : Type), λ(x y : Value), pair(sorry, universe2),
+            pair(sorry, universe2),
+            pair(sorry, universe2),
+            λ(name : String), λ(constructors : List Constructor), pair(sorry, universe2),
+            λ(base : Type), λ(req opt : EffectSet), pair(sorry, universe2))))
+
+-- ============================================================================
+-- TYPE FAMILY INFERENCE (ADAPTIVE DISPATCH)
+-- ============================================================================
+
+hott-infer-type-family-application : String → List HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-type-family-application := λ(family-name : String), λ(args : List HoTT-AST), λ(universe : InferenceUniverse),
+  let family-maybe := get-type-family-by-name(family-name) in
+  Maybe-elim(family-maybe,
+    -- Unknown family: error
+    pair(sorry, universe),
+    λ(family : TypeFamily),
+      let arg-results := infer-list-types(args, universe) in
+      let arg-types := first(arg-results) in
+      let updated-universe := second(arg-results) in
+      let tier := InferenceUniverse-elim(updated-universe,
+        λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence : EvidenceContext), λ(t : Tier), t) in
+      -- Dispatch based on execution tier
+      Tier-elim((Type × InferenceUniverse), tier,
+        tier0-type-family-instantiation(family, arg-types, updated-universe),
+        tier1-type-family-instantiation(family, arg-types, updated-universe),
+        tier2-type-family-instantiation(family, arg-types, updated-universe),
+        tier3-type-family-instantiation(family, arg-types, updated-universe)))
+
+-- Tier 0: Pure mathematical instantiation
+tier0-type-family-instantiation : TypeFamily → List Type → InferenceUniverse → (Type × InferenceUniverse)
+tier0-type-family-instantiation := λ(family : TypeFamily), λ(arg-types : List Type), λ(universe : InferenceUniverse),
+  let instantiated-type := instantiate-type-family(family, arg-types) in
+  let evidence := formation-evidence("type-family-tier0", arg-types, zero) in
+  let universe-with-evidence := record-computational-evidence(universe, instantiated-type, evidence, sorry) in
+  pair(instantiated-type, universe-with-evidence)
+
+-- Tier 1: Compile-time type family instantiation
+tier1-type-family-instantiation : TypeFamily → List Type → InferenceUniverse → (Type × InferenceUniverse)
+tier1-type-family-instantiation := λ(family : TypeFamily), λ(arg-types : List Type), λ(universe : InferenceUniverse),
+  let instantiated-type := instantiate-type-family(family, arg-types) in
+  let evidence := formation-evidence("type-family-tier1", arg-types, one) in
+  let universe-with-evidence := record-computational-evidence(universe, instantiated-type, evidence, sorry) in
+  pair(instantiated-type, universe-with-evidence)
+
+-- Tier 2: Type-resolution time type family instantiation
+tier2-type-family-instantiation : TypeFamily → List Type → InferenceUniverse → (Type × InferenceUniverse)
+tier2-type-family-instantiation := λ(family : TypeFamily), λ(arg-types : List Type), λ(universe : InferenceUniverse),
+  let instantiated-type := instantiate-type-family(family, arg-types) in
+  let evidence := formation-evidence("type-family-tier2", arg-types, two) in
+  let universe-with-evidence := record-computational-evidence(universe, instantiated-type, evidence, sorry) in
+  pair(instantiated-type, universe-with-evidence)
+
+-- Tier 3: Runtime type family instantiation
+tier3-type-family-instantiation : TypeFamily → List Type → InferenceUniverse → (Type × InferenceUniverse)
+tier3-type-family-instantiation := λ(family : TypeFamily), λ(arg-types : List Type), λ(universe : InferenceUniverse),
+  let instantiated-type := instantiate-type-family(family, arg-types) in
+  let evidence := formation-evidence("type-family-tier3", arg-types, three) in
+  let universe-with-evidence := record-computational-evidence(universe, instantiated-type, evidence, sorry) in
+  pair(instantiated-type, universe-with-evidence)
+
+-- ============================================================================
+-- DEPENDENT TYPE FORMATION (UNIVERSE POLYMORPHIC)
+-- ============================================================================
+
+-- Sigma-type formation: (Σ (x : A) B)
+hott-infer-sigma-formation : String → HoTT-AST → HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-sigma-formation := λ(var : String), λ(domain-ast body-ast : HoTT-AST), λ(universe : InferenceUniverse),
+  let domain-result := hott-infer(domain-ast, universe) in
+  let domain-type := first(domain-result) in
+  let universe1 := second(domain-result) in
+  let extended-universe := extend-universe-binding(universe1, var, domain-type) in
+  let codomain-result := hott-infer(body-ast, extended-universe) in
+  let codomain-type := first(codomain-result) in
+  let universe2 := second(codomain-result) in
+  -- Universe level calculation with computational evidence
+  let domain-level := type-universe-level(domain-type) in
+  let codomain-level := type-universe-level(codomain-type) in
+  let result-level := nat-max(domain-level, codomain-level) in
+  let sigma-type := make-sigma-type(var, domain-type, codomain-type) in
+  let evidence := formation-evidence("sigma-formation", cons(domain-type, cons(codomain-type, nil)), result-level) in
+  let final-universe := record-computational-evidence(universe2, sigma-type, evidence, sigma-type(var, domain-ast, body-ast)) in
+  pair(sigma-type, final-universe)
+
+-- Pi-type formation: (Π (x : A) B)
+hott-infer-pi-formation : String → HoTT-AST → HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-pi-formation := λ(var : String), λ(domain-ast body-ast : HoTT-AST), λ(universe : InferenceUniverse),
+  let domain-result := hott-infer(domain-ast, universe) in
+  let domain-type := first(domain-result) in
+  let universe1 := second(domain-result) in
+  let extended-universe := extend-universe-binding(universe1, var, domain-type) in
+  let codomain-result := hott-infer(body-ast, extended-universe) in
+  let codomain-type := first(codomain-result) in
+  let universe2 := second(codomain-result) in
+  -- Universe level calculation with computational evidence
+  let domain-level := type-universe-level(domain-type) in
+  let codomain-level := type-universe-level(codomain-type) in
+  let result-level := nat-max(domain-level, codomain-level) in
+  let pi-type := make-pi-type(var, domain-type, codomain-type) in
+  let evidence := formation-evidence("pi-formation", cons(domain-type, cons(codomain-type, nil)), result-level) in
+  let final-universe := record-computational-evidence(universe2, pi-type, evidence, pi-type(var, domain-ast, body-ast)) in
+  pair(pi-type, final-universe)
+
+-- Identity type formation with computational evidence
+hott-infer-identity-formation : HoTT-AST → HoTT-AST → HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-identity-formation := λ(type-ast left-ast right-ast : HoTT-AST), λ(universe : InferenceUniverse),
+  let type-result := hott-infer(type-ast, universe) in
+  let type-expr := first(type-result) in
+  let universe1 := second(type-result) in
+  let left-result := hott-infer(left-ast, universe1) in
+  let left-type := first(left-result) in
+  let universe2 := second(left-result) in
+  let right-result := hott-infer(right-ast, universe2) in
+  let right-type := first(right-result) in
+  let universe3 := second(right-result) in
+  -- Generate identity constraints
+  let universe4 := generate-identity-constraint(universe3, left-type, type-expr, left-ast) in
+  let universe5 := generate-identity-constraint(universe4, right-type, type-expr, right-ast) in
+  -- Form identity type with universe level evidence
+  let type-level := type-universe-level(type-expr) in
+  let id-type := make-identity-type(type-expr, sorry, sorry) in  -- Would use actual terms
+  let evidence := formation-evidence("identity-formation", cons(type-expr, nil), type-level) in
+  let final-universe := record-computational-evidence(universe5, id-type, evidence, id-type(type-ast, left-ast, right-ast)) in
+  pair(id-type, final-universe)
+
+-- ============================================================================
+-- LITERAL AND EFFECT INFERENCE
+-- ============================================================================
+
+-- Infer types for literal values
+hott-infer-literal : Value → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-literal := λ(value : Value), λ(universe : InferenceUniverse),
+  Value-elim((Type × InferenceUniverse), value,
+    -- Constructor value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      let evidence := literal-evidence(value) in
+      let universe-with-evidence := with-computational-evidence(universe, type, evidence, literal(value)) in
+      pair(type, universe-with-evidence),
+    -- Other value cases
+    λ(params : List String), λ(body : HoTT-AST), λ(env : Environment),
+      pair(sorry, universe),  -- Function closure
+    λ(name : String), λ(arity : ℕ), λ(type : Type),
+      let evidence := literal-evidence(value) in
+      let universe-with-evidence := with-computational-evidence(universe, type, evidence, literal(value)) in
+      pair(type, universe-with-evidence),
+    -- Unit value
+    let evidence := literal-evidence(value) in
+    let universe-with-evidence := with-computational-evidence(universe, unit-type, evidence, literal(value)) in
+    pair(unit-type, universe-with-evidence),
+    -- String value
+    λ(str : String),
+      let string-type := inductive-type("String", nil) in
+      let evidence := literal-evidence(value) in
+      let universe-with-evidence := with-computational-evidence(universe, string-type, evidence, literal(value)) in
+      pair(string-type, universe-with-evidence),
+    -- Other cases
+    λ(eff : Effect), pair(sorry, universe),
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), pair(type, universe),
+    λ(type-a type-b : Type), λ(forward quasi-inverse : Value), pair(sorry, universe))
+
+-- Infer types for effects
+hott-infer-effect : Effect → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-effect := λ(eff : Effect), λ(universe : InferenceUniverse),
+  Effect-elim((Type × InferenceUniverse), eff,
+    λ(name : String), λ(arg-type return-type : Type),
+      let effect-type := make-effect-type(arg-type, return-type) in
+      pair(effect-type, universe))
+
+-- Infer constructor types
+hott-infer-constructor : String → List HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-constructor := λ(constructor-name : String), λ(args : List HoTT-AST), λ(universe : InferenceUniverse),
+  -- Look up constructor signature and infer result type
+  let constructor-maybe := lookup-constructor(constructor-name) in
+  Maybe-elim(constructor-maybe,
+    pair(sorry, universe),  -- Unknown constructor
+    λ(constructor-type : Type),
+      let arg-results := infer-list-types(args, universe) in
+      let arg-types := first(arg-results) in
+      let updated-universe := second(arg-results) in
+      -- Apply constructor type to arguments
+      let result-type := apply-constructor-type(constructor-type, arg-types) in
+      pair(result-type, updated-universe))
+
+-- ============================================================================
+-- COMPUTATIONAL EVIDENCE AND PROOF OBLIGATIONS
+-- ============================================================================
+
+-- Attach computational evidence to inferred type
+with-computational-evidence : InferenceUniverse → Type → Evidence → HoTT-AST → InferenceUniverse
+with-computational-evidence := λ(universe : InferenceUniverse), λ(type : Type), λ(evidence : Evidence), λ(ast : HoTT-AST),
+  InferenceUniverse-elim(universe,
+    λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+      EvidenceContext-elim(evidence-ctx,
+        λ(proofs : List (Type × Evidence)), λ(witnesses : List (Type × Evidence × HoTT-AST)), λ(obligations : List ProofObligation),
+          let new-proofs := cons(pair(type, evidence), proofs) in
+          let new-evidence-ctx := evidence-context(new-proofs, witnesses, obligations) in
+          inference-universe(level, env, constraints, new-evidence-ctx, tier)))
+
+-- Record computational evidence for complex type formations
+record-computational-evidence : InferenceUniverse → Type → Evidence → HoTT-AST → InferenceUniverse
+record-computational-evidence := λ(universe : InferenceUniverse), λ(type : Type), λ(evidence : Evidence), λ(source : HoTT-AST),
+  InferenceUniverse-elim(universe,
+    λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+      EvidenceContext-elim(evidence-ctx,
+        λ(proofs : List (Type × Evidence)), λ(witnesses : List (Type × Evidence × HoTT-AST)), λ(obligations : List ProofObligation),
+          let new-witnesses := cons(triple(type, evidence, source), witnesses) in
+          let new-evidence-ctx := evidence-context(proofs, new-witnesses, obligations) in
+          inference-universe(level, env, constraints, new-evidence-ctx, tier)))
+
+-- Generate identity type constraint (equality proof obligation)
+generate-identity-constraint : InferenceUniverse → Type → Type → HoTT-AST → InferenceUniverse
+generate-identity-constraint := λ(universe : InferenceUniverse), λ(type1 type2 : Type), λ(source : HoTT-AST),
+  if-then-else(InferenceUniverse,
+    type-equal?(type1, type2),
+    universe,  -- Types already equal
+    -- Generate proof obligation
+    InferenceUniverse-elim(universe,
+      λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+        let id-type := make-identity-type(universe-of-types(type1, type2), sorry, sorry) in
+        let obligation := proof-obligation(id-type, nothing, prove-equal(type1, type2), local-context(nil)) in
+        EvidenceContext-elim(evidence-ctx,
+          λ(proofs : List (Type × Evidence)), λ(witnesses : List (Type × Evidence × HoTT-AST)), λ(obligations : List ProofObligation),
+            let new-obligations := cons(obligation, obligations) in
+            let new-evidence-ctx := evidence-context(proofs, witnesses, new-obligations) in
+            inference-universe(level, env, constraints, new-evidence-ctx, tier))))
+
+-- ============================================================================
+-- UNIVERSE OPERATIONS AND TYPE VARIABLES
+-- ============================================================================
+
+-- Universe-aware variable lookup
+universe-lookup : InferenceUniverse → String → (Type × InferenceUniverse)
+universe-lookup := λ(universe : InferenceUniverse), λ(name : String),
+  InferenceUniverse-elim(universe,
+    λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+      let type-maybe := lookup-type(env, name) in
+      Maybe-elim(type-maybe,
+        -- Create fresh type variable in current universe
+        let var := fresh-type-variable(universe) in
+        let new-env := type-env-extend(name, var, env) in
+        let new-universe := inference-universe(level, new-env, constraints, evidence-ctx, tier) in
+        pair(var, new-universe),
+        -- Variable found
+        λ(var-type : Type), pair(var-type, universe)))
+
+-- Create fresh type variable in universe
+fresh-type-variable : InferenceUniverse → Type
+fresh-type-variable := λ(universe : InferenceUniverse),
+  InferenceUniverse-elim(universe,
+    λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+      let var-name := generate-fresh-name("TVar") in
+      let type-var := type-variable(var-name, level, nil) in
+      universe(level))  -- Return universe type for now
+
+-- Extend universe with single binding
+extend-universe-binding : InferenceUniverse → String → Type → InferenceUniverse
+extend-universe-binding := λ(universe : InferenceUniverse), λ(var : String), λ(var-type : Type),
+  InferenceUniverse-elim(universe,
+    λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+      let new-env := type-env-extend(var, var-type, env) in
+      inference-universe(level, new-env, constraints, evidence-ctx, tier))
+
+-- ============================================================================
+-- HoTT-NATIVE AST ELABORATION
+-- ============================================================================
+
+-- Elaborate AST with HoTT computational evidence
+hott-elaborate : HoTT-AST → InferenceUniverse → HoTT-AST
+hott-elaborate := λ(ast : HoTT-AST), λ(universe : InferenceUniverse),
+  -- Solve identity constraints first
+  let solved-universe := solve-identity-constraints(universe) in
+  -- Elaborate with computational evidence
+  elaborate-with-evidence(ast, solved-universe)
+
+elaborate-with-evidence : HoTT-AST → InferenceUniverse → HoTT-AST
+elaborate-with-evidence := λ(ast : HoTT-AST), λ(universe : InferenceUniverse),
+  hott-ast-eliminator(HoTT-AST, ast,
+    -- Variable case: may have resolved types
+    λ(name : String),
+      InferenceUniverse-elim(universe,
+        λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+          let type-maybe := lookup-type(env, name) in
+          Maybe-elim(type-maybe,
+            var(name),  -- No change
+            λ(var-type : Type),
+              -- Could elaborate with type information
+              var(name))),
+    
+    -- Application case: recursive elaboration
+    λ(func-ast arg-ast : HoTT-AST),
+      app(elaborate-with-evidence(func-ast, universe),
+          elaborate-with-evidence(arg-ast, universe)),
+    
+    -- Other cases: recursive elaboration
+    λ(param : String), λ(body-ast : HoTT-AST),
+      lambda(param, elaborate-with-evidence(body-ast, universe)),
+    
+    λ(var : String), λ(domain-ast codomain-ast : HoTT-AST),
+      pi-type(var, elaborate-with-evidence(domain-ast, universe),
+                   elaborate-with-evidence(codomain-ast, universe)),
+    
+    λ(var : String), λ(first-ast second-ast : HoTT-AST),
+      sigma-type(var, elaborate-with-evidence(first-ast, universe),
+                      elaborate-with-evidence(second-ast, universe)),
+    
+    λ(type-ast left-ast right-ast : HoTT-AST),
+      id-type(elaborate-with-evidence(type-ast, universe),
+              elaborate-with-evidence(left-ast, universe),
+              elaborate-with-evidence(right-ast, universe)),
+    
+    λ(target : HoTT-AST), λ(cases : List HoTT-AST),
+      eliminator(elaborate-with-evidence(target, universe),
+                list-map(HoTT-AST, HoTT-AST, cases, λ(case : HoTT-AST), elaborate-with-evidence(case, universe))),
+    
+    λ(type-name : String), λ(args : List HoTT-AST),
+      type-app(type-name, list-map(HoTT-AST, HoTT-AST, args, λ(arg : HoTT-AST), elaborate-with-evidence(arg, universe))),
+    
+    λ(constructor-name : String), λ(args : List HoTT-AST),
+      constructor(constructor-name, list-map(HoTT-AST, HoTT-AST, args, λ(arg : HoTT-AST), elaborate-with-evidence(arg, universe))),
+    
+    -- Literals and effects: unchanged
+    λ(value : Value), literal(value),
+    λ(eff : Effect), effect(eff))
+
+-- ============================================================================
+-- HoTT ELIMINATOR INFERENCE
+-- ============================================================================
+
+-- Infer type for pattern matching using HoTT eliminators
+hott-infer-eliminator : HoTT-AST → List HoTT-AST → InferenceUniverse → (Type × InferenceUniverse)
+hott-infer-eliminator := λ(scrutinee : HoTT-AST), λ(cases : List HoTT-AST), λ(universe : InferenceUniverse),
+  let scrutinee-result := hott-infer(scrutinee, universe) in
+  let scrutinee-type := first(scrutinee-result) in
+  let universe1 := second(scrutinee-result) in
+  let motive-type := fresh-type-variable(universe1) in
+  -- Generate eliminator constraints for each case
+  let final-universe := generate-eliminator-constraints(cases, scrutinee-type, motive-type, universe1) in
+  pair(motive-type, final-universe)
+
+-- Generate constraints for all eliminator cases
+generate-eliminator-constraints : List HoTT-AST → Type → Type → InferenceUniverse → InferenceUniverse
+generate-eliminator-constraints := λ(cases : List HoTT-AST), λ(scrutinee-type motive-type : Type), λ(universe : InferenceUniverse),
+  List-elim(cases,
+    universe,  -- No cases
+    λ(case : HoTT-AST), λ(rest : List HoTT-AST), λ(rec : InferenceUniverse),
+      let universe-with-case := generate-eliminator-constraint(case, scrutinee-type, motive-type, universe) in
+      generate-eliminator-constraints(rest, scrutinee-type, motive-type, universe-with-case))
+
+-- Generate constraint for single eliminator case
+generate-eliminator-constraint : HoTT-AST → Type → Type → InferenceUniverse → InferenceUniverse
+generate-eliminator-constraint := λ(case : HoTT-AST), λ(scrutinee-type motive-type : Type), λ(universe : InferenceUniverse),
+  -- Simplified eliminator constraint generation
+  universe
+
+-- ============================================================================
+-- UTILITY FUNCTIONS
+-- ============================================================================
+
+-- Infer types for list of ASTs
+infer-list-types : List HoTT-AST → InferenceUniverse → (List Type × InferenceUniverse)
+infer-list-types := λ(asts : List HoTT-AST), λ(universe : InferenceUniverse),
+  List-elim(asts,
+    -- Empty list
+    pair(nil, universe),
+    -- Non-empty list
+    λ(head : HoTT-AST), λ(tail : List HoTT-AST), λ(rec : (List Type × InferenceUniverse)),
+      let head-result := hott-infer(head, universe) in
+      let head-type := first(head-result) in
+      let universe1 := second(head-result) in
+      let tail-result := infer-list-types(tail, universe1) in
+      let tail-types := first(tail-result) in
+      let final-universe := second(tail-result) in
+      pair(cons(head-type, tail-types), final-universe))
+
+-- Substitute term in type (for dependent types)
+substitute-in-type : Type → String → HoTT-AST → InferenceUniverse → Type
+substitute-in-type := λ(type : Type), λ(var : String), λ(term : HoTT-AST), λ(universe : InferenceUniverse),
+  -- Simplified substitution - full implementation would handle all type constructors
+  type
+
+-- Universe of two types (for identity type formation)
+universe-of-types : Type → Type → Type
+universe-of-types := λ(type1 type2 : Type),
+  let level1 := type-universe-level(type1) in
+  let level2 := type-universe-level(type2) in
+  universe(nat-max(level1, level2))
+
+-- Solve identity constraints using HoTT path computation
+solve-identity-constraints : InferenceUniverse → InferenceUniverse
+solve-identity-constraints := λ(universe : InferenceUniverse),
+  InferenceUniverse-elim(universe,
+    λ(level : ℕ), λ(env : TypeEnvironment), λ(constraints : List UniverseConstraint), λ(evidence-ctx : EvidenceContext), λ(tier : Tier),
+      EvidenceContext-elim(evidence-ctx,
+        λ(proofs : List (Type × Evidence)), λ(witnesses : List (Type × Evidence × HoTT-AST)), λ(obligations : List ProofObligation),
+          -- Process each obligation
+          let solved-obligations := attempt-proof-synthesis-for-all(obligations, universe) in
+          let new-evidence-ctx := evidence-context(proofs, witnesses, solved-obligations) in
+          inference-universe(level, env, constraints, new-evidence-ctx, tier)))
+
+-- Attempt proof synthesis for all obligations
+attempt-proof-synthesis-for-all : List ProofObligation → InferenceUniverse → List ProofObligation
+attempt-proof-synthesis-for-all := λ(obligations : List ProofObligation), λ(universe : InferenceUniverse),
+  list-map(ProofObligation, ProofObligation, obligations, 
+    λ(obligation : ProofObligation), attempt-proof-synthesis(obligation, universe))
+
+-- Attempt to synthesize proof for obligation
+attempt-proof-synthesis : ProofObligation → InferenceUniverse → ProofObligation
+attempt-proof-synthesis := λ(obligation : ProofObligation), λ(universe : InferenceUniverse),
+  -- Simplified proof synthesis - real implementation would use HoTT tactics
+  obligation
+
+-- ============================================================================
+-- CONSTRUCTOR AND TYPE UTILITIES
+-- ============================================================================
+
+-- Instantiate type family with arguments
+instantiate-type-family : TypeFamily → List Type → Type
+instantiate-type-family := λ(family : TypeFamily), λ(arg-types : List Type),
+  TypeFamily-elim(family,
+    λ(name : String), λ(arity : ℕ), λ(instantiation : List Type → Type), λ(instances : List TypeInstance),
+      instantiation(arg-types))
+
+-- Apply constructor type to arguments
+apply-constructor-type : Type → List Type → Type
+apply-constructor-type := λ(constructor-type : Type), λ(arg-types : List Type),
+  -- Simplified application - would handle dependent constructor types
+  constructor-type
+
+-- Lookup constructor signature
+lookup-constructor : String → Maybe Type
+lookup-constructor := λ(constructor-name : String),
+  -- Would lookup in constructor environment
+  just(sorry)
+
+-- Generate fresh name
+generate-fresh-name : String → String
+generate-fresh-name := λ(prefix : String),
+  prefix ++ "0"  -- Simplified
+
+-- Natural number literals
+one : ℕ
+one := succ(zero)
+
+two : ℕ
+two := succ(one)
+
+three : ℕ
+three := succ(two)
+
+-- Type helper functions
+make-effect-type : Type → Type → Type
+make-effect-type := λ(arg-type return-type : Type),
+  effect-type(arg-type, empty-effect-set, empty-effect-set)
+
+-- Triple constructor
+triple : ∀(A B C : Type), A → B → C → (A × B × C)
+triple := λ(A B C : Type), λ(a : A), λ(b : B), λ(c : C),
+  pair(pair(a, b), c)
+
+-- This establishes the pure mathematical HoTT-native inference system for PathFinder

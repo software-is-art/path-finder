@@ -1,0 +1,378 @@
+-- ============================================================================
+-- PURE MATHEMATICAL HOTT VALUE SYSTEM
+-- ============================================================================
+-- This replaces values.rkt with pure mathematical HoTT notation.
+-- Runtime values for PathFinder LISP HoTT-based evaluation.
+
+-- Import the pure type system
+import types.types
+
+-- ============================================================================
+-- VALUE HIERARCHY AS HOTT INDUCTIVE TYPE
+-- ============================================================================
+
+-- The type of runtime values
+data Value : 𝒰₀ where
+  -- Constructor applications (for inductive types)
+  constructor-value : String → List Value → Type → Value
+  
+  -- Function closures
+  closure-value : List String → AST → Environment → Value
+  
+  -- Built-in function values  
+  builtin-value : String → ℕ → Type → Value  -- name, arity, type
+  
+  -- Unit value (the unique inhabitant of 𝟙)
+  unit-value : Value
+  
+  -- String values (for effects and I/O)
+  string-value : String → Value
+  
+  -- Effect values (algebraic effects that signal operations)
+  effect-value : Effect → Value
+  
+  -- Path values (inhabitants of identity types)
+  path-runtime-value : Type → Value → Value → Proof → Value
+  
+  -- Equivalence values (inhabitants of equivalence types)
+  equivalence-runtime-value : Type → Type → Value → Value → Value
+
+-- Environment for variable bindings (defined in foundations)
+-- Imported from core.foundations
+
+-- AST type (defined in AST module)
+-- Imported from core.ast
+
+-- Effect type
+data Effect : 𝒰₀ where
+  -- I/O effects
+  io-effect : String → List Value → Effect
+  
+  -- Computation effects
+  computation-effect : String → Value → Effect
+  
+  -- Composite effects
+  composite-effect : List Effect → Effect
+
+-- Proof objects for path values
+data Proof : 𝒰₀ where
+  -- Reflexivity proof
+  refl-proof : Type → Value → Proof
+  
+  -- J-eliminator proof
+  j-proof : Type → Value → (Value → Proof → Type) → Type → Value → Proof → Proof
+  
+  -- Transport proof
+  transport-proof : Type → (Value → Type) → Value → Value → Proof → Type → Type → Proof
+  
+  -- Congruence proof
+  cong-proof : Type → Type → Value → Value → Value → Proof → Proof
+
+-- ============================================================================
+-- PREDEFINED VALUES FOR HOTT INDUCTIVE TYPES
+-- ============================================================================
+
+-- Natural number values
+zero-value : Value
+zero-value := constructor-value("zero", nil, ℕ)
+
+succ-value : Value → Value
+succ-value := λ(n : Value),
+  constructor-value("succ", cons(n, nil), ℕ)
+
+-- Boolean values
+true-value : Value
+true-value := constructor-value("₁", nil, 𝟚)
+
+false-value : Value  
+false-value := constructor-value("₀", nil, 𝟚)
+
+-- Unit value
+unit : Value
+unit := unit-value
+
+-- ============================================================================
+-- VALUE ELIMINATORS FOR PATTERN MATCHING
+-- ============================================================================
+
+-- Main value eliminator
+Value-elim : Π(A : Type), Value →
+  (String → List Value → Type → A) →                     -- constructor-value
+  (List String → AST → Environment → A) →                 -- closure-value
+  (String → ℕ → Type → A) →                             -- builtin-value
+  A →                                                     -- unit-value
+  (String → A) →                                         -- string-value
+  (Effect → A) →                                         -- effect-value
+  (Type → Value → Value → Proof → A) →                  -- path-runtime-value
+  (Type → Type → Value → Value → A) →                   -- equivalence-runtime-value
+  A
+Value-elim := λ(A : Type), λ(v : Value),
+  λ(constructor-case : String → List Value → Type → A),
+  λ(closure-case : List String → AST → Environment → A),
+  λ(builtin-case : String → ℕ → Type → A),
+  λ(unit-case : A),
+  λ(string-case : String → A),
+  λ(effect-case : Effect → A),
+  λ(path-case : Type → Value → Value → Proof → A),
+  λ(equiv-case : Type → Type → Value → Value → A),
+  sorry  -- Implementation depends on Value structure
+
+-- Effect eliminator
+Effect-elim : Π(A : Type), Effect →
+  (String → List Value → A) →                           -- io-effect
+  (String → Value → A) →                                -- computation-effect
+  (List Effect → A) →                                   -- composite-effect
+  A
+Effect-elim := λ(A : Type), λ(e : Effect),
+  λ(io-case : String → List Value → A),
+  λ(comp-case : String → Value → A),
+  λ(composite-case : List Effect → A),
+  sorry  -- Implementation depends on Effect structure
+
+-- Proof eliminator
+Proof-elim : Π(A : Type), Proof →
+  (Type → Value → A) →                                  -- refl-proof
+  (Type → Value → (Value → Proof → Type) → Type → Value → Proof → A) → -- j-proof
+  (Type → (Value → Type) → Value → Value → Proof → Type → Type → A) → -- transport-proof
+  (Type → Type → Value → Value → Value → Proof → A) → -- cong-proof
+  A
+Proof-elim := λ(A : Type), λ(p : Proof),
+  λ(refl-case : Type → Value → A),
+  λ(j-case : Type → Value → (Value → Proof → Type) → Type → Value → Proof → A),
+  λ(transport-case : Type → (Value → Type) → Value → Value → Proof → Type → Type → A),
+  λ(cong-case : Type → Type → Value → Value → Value → Proof → A),
+  sorry  -- Implementation depends on Proof structure
+
+-- ============================================================================
+-- TYPE CHECKING FOR VALUES
+-- ============================================================================
+
+-- Check if value has given type
+value-has-type? : Value → Type → 𝟚
+value-has-type? := λ(val : Value), λ(typ : Type),
+  Value-elim(𝟚, val,
+    -- Constructor value: check if type matches
+    λ(name : String), λ(args : List Value), λ(val-type : Type),
+      type-equal?(val-type, typ),
+    
+    -- Closure value: check if type is a pi-type
+    λ(params : List String), λ(body : AST), λ(env : Environment),
+      Type-elim(𝟚, typ,
+        λ(n : ℕ), ₀,                                    -- not universe
+        λ(var : String), λ(A B : Type), ₁,             -- is pi-type
+        λ(var : String), λ(A B : Type), ₀,             -- not sigma
+        λ(A B : Type), ₀,                               -- not sum
+        λ(A : Type), λ(x y : Value), ₀,                -- not identity
+        ₀, ₀,                                           -- not unit/empty
+        λ(name : String), λ(cs : List Constructor), ₀,  -- not inductive
+        λ(base : Type), λ(req opt : EffectSet),        -- effect type with pi base
+          Type-elim(𝟚, base,
+            λ(n : ℕ), ₀,
+            λ(var : String), λ(A B : Type), ₁,
+            λ(var : String), λ(A B : Type), ₀,
+            λ(A B : Type), ₀,
+            λ(A : Type), λ(x y : Value), ₀,
+            ₀, ₀,
+            λ(name : String), λ(cs : List Constructor), ₀,
+            λ(b : Type), λ(r o : EffectSet), ₀)),
+    
+    -- Builtin value: check declared type
+    λ(name : String), λ(arity : ℕ), λ(val-type : Type),
+      type-equal?(val-type, typ),
+    
+    -- Unit value: check if type is unit
+    Type-elim(𝟚, typ,
+      λ(n : ℕ), ₀,
+      λ(var : String), λ(A B : Type), ₀,
+      λ(var : String), λ(A B : Type), ₀,
+      λ(A B : Type), ₀,
+      λ(A : Type), λ(x y : Value), ₀,
+      ₁,  -- is unit type
+      ₀,
+      λ(name : String), λ(cs : List Constructor), ₀,
+      λ(base : Type), λ(req opt : EffectSet), ₀),
+    
+    -- String value: simplified check
+    λ(content : String), 
+      Type-elim(𝟚, typ,
+        λ(n : ℕ), ₀,
+        λ(var : String), λ(A B : Type), ₀,
+        λ(var : String), λ(A B : Type), ₀,
+        λ(A B : Type), ₀,
+        λ(A : Type), λ(x y : Value), ₀,
+        ₀, ₀,
+        λ(name : String), λ(cs : List Constructor),
+          string-equal?(name, "String"),
+        λ(base : Type), λ(req opt : EffectSet), ₀),
+    
+    -- Effect value: check if type is effect type
+    λ(eff : Effect),
+      Type-elim(𝟚, typ,
+        λ(n : ℕ), ₀,
+        λ(var : String), λ(A B : Type), ₀,
+        λ(var : String), λ(A B : Type), ₀,
+        λ(A B : Type), ₀,
+        λ(A : Type), λ(x y : Value), ₀,
+        ₀, ₀,
+        λ(name : String), λ(cs : List Constructor), ₀,
+        λ(base : Type), λ(req opt : EffectSet), ₁),
+    
+    -- Path value: check if type is identity type
+    λ(path-type : Type), λ(start end : Value), λ(proof : Proof),
+      Type-elim(𝟚, typ,
+        λ(n : ℕ), ₀,
+        λ(var : String), λ(A B : Type), ₀,
+        λ(var : String), λ(A B : Type), ₀,
+        λ(A B : Type), ₀,
+        λ(A : Type), λ(x y : Value), 
+          𝟚-elim(type-equal?(A, path-type), 𝟚,
+            𝟚-elim(value-equal?(x, start), 𝟚,
+              value-equal?(y, end),
+              ₀),
+            ₀),
+        ₀, ₀,
+        λ(name : String), λ(cs : List Constructor), ₀,
+        λ(base : Type), λ(req opt : EffectSet), ₀),
+    
+    -- Equivalence value: simplified check
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), ₁)
+
+-- ============================================================================
+-- VALUE EQUALITY
+-- ============================================================================
+
+-- Check value equality (intensional)
+value-equal? : Value → Value → 𝟚
+value-equal? := λ(v1 v2 : Value),
+  Value-elim(𝟚, v1,
+    -- Constructor values
+    λ(name1 : String), λ(args1 : List Value), λ(type1 : Type),
+      Value-elim(𝟚, v2,
+        λ(name2 : String), λ(args2 : List Value), λ(type2 : Type),
+          𝟚-elim(string-equal?(name1, name2), 𝟚,
+            𝟚-elim(type-equal?(type1, type2), 𝟚,
+              list-equal?(Value, args1, args2, value-equal?),
+              ₀),
+            ₀),
+        λ(p : List String), λ(b : AST), λ(e : Environment), ₀,
+        λ(n : String), λ(a : ℕ), λ(t : Type), ₀,
+        ₀, λ(s : String), ₀, λ(e : Effect), ₀,
+        λ(t : Type), λ(s e : Value), λ(p : Proof), ₀,
+        λ(ta tb : Type), λ(f qi : Value), ₀),
+    
+    -- Other cases: only equal if same constructor
+    λ(params1 : List String), λ(body1 : AST), λ(env1 : Environment), ₀,
+    λ(name1 : String), λ(arity1 : ℕ), λ(type1 : Type), ₀,
+    Value-elim(𝟚, v2,
+      λ(n : String), λ(a : List Value), λ(t : Type), ₀,
+      λ(p : List String), λ(b : AST), λ(e : Environment), ₀,
+      λ(n : String), λ(a : ℕ), λ(t : Type), ₀,
+      ₁,  -- both unit
+      λ(s : String), ₀, λ(e : Effect), ₀,
+      λ(t : Type), λ(s e : Value), λ(p : Proof), ₀,
+      λ(ta tb : Type), λ(f qi : Value), ₀),
+    λ(content1 : String),
+      Value-elim(𝟚, v2,
+        λ(n : String), λ(a : List Value), λ(t : Type), ₀,
+        λ(p : List String), λ(b : AST), λ(e : Environment), ₀,
+        λ(n : String), λ(a : ℕ), λ(t : Type), ₀,
+        ₀,
+        λ(content2 : String), string-equal?(content1, content2),
+        λ(e : Effect), ₀,
+        λ(t : Type), λ(s e : Value), λ(p : Proof), ₀,
+        λ(ta tb : Type), λ(f qi : Value), ₀),
+    λ(effect1 : Effect), ₀,  -- Effect equality would need effect-equal?
+    λ(t1 : Type), λ(s1 e1 : Value), λ(p1 : Proof), ₀,
+    λ(ta1 tb1 : Type), λ(f1 qi1 : Value), ₀)
+
+-- ============================================================================
+-- PATH OPERATIONS ON VALUES
+-- ============================================================================
+
+-- Create reflexivity path
+make-refl : Type → Value → Value
+make-refl := λ(A : Type), λ(x : Value),
+  path-runtime-value(A, x, x, refl-proof(A, x))
+
+-- Path concatenation
+path-concat : Value → Value → Value
+path-concat := λ(p q : Value),
+  Value-elim(Value, p,
+    λ(n : String), λ(a : List Value), λ(t : Type), unit-value,  -- error
+    λ(params : List String), λ(body : AST), λ(env : Environment), unit-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), unit-value,
+    unit-value, λ(s : String), unit-value, λ(e : Effect), unit-value,
+    λ(type-p : Type), λ(start-p mid : Value), λ(proof-p : Proof),
+      Value-elim(Value, q,
+        λ(n : String), λ(a : List Value), λ(t : Type), unit-value,
+        λ(params : List String), λ(body : AST), λ(env : Environment), unit-value,
+        λ(name : String), λ(arity : ℕ), λ(type : Type), unit-value,
+        unit-value, λ(s : String), unit-value, λ(e : Effect), unit-value,
+        λ(type-q : Type), λ(start-q end : Value), λ(proof-q : Proof),
+          -- Check that paths compose (mid point matches)
+          if-then-else(Value,
+            𝟚-elim(value-equal?(mid, start-q), 𝟚,
+              type-equal?(type-p, type-q),
+              ₀),
+            path-runtime-value(type-p, start-p, end,
+              sorry),  -- Proof composition
+            unit-value),
+        λ(ta tb : Type), λ(f qi : Value), unit-value),
+    λ(ta tb : Type), λ(f qi : Value), unit-value)
+
+-- Path inverse
+path-inverse : Value → Value
+path-inverse := λ(p : Value),
+  Value-elim(Value, p,
+    λ(n : String), λ(a : List Value), λ(t : Type), unit-value,  -- error
+    λ(params : List String), λ(body : AST), λ(env : Environment), unit-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), unit-value,
+    unit-value, λ(s : String), unit-value, λ(e : Effect), unit-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof),
+      path-runtime-value(type, end, start, sorry),  -- Inverse proof
+    λ(ta tb : Type), λ(f qi : Value), unit-value)
+
+-- Transport value along path
+transport : Value → (Value → Type) → Value → Value
+transport := λ(p : Value), λ(P : Value → Type), λ(x : Value),
+  Value-elim(Value, p,
+    λ(n : String), λ(a : List Value), λ(t : Type), x,  -- error: return unchanged
+    λ(params : List String), λ(body : AST), λ(env : Environment), x,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), x,
+    x, λ(s : String), x, λ(e : Effect), x,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof),
+      sorry,  -- Transport implementation
+    λ(ta tb : Type), λ(f qi : Value), x)
+
+-- Action on paths (congruence)
+cong : Type → Type → (Value → Value) → Value → Value
+cong := λ(A B : Type), λ(f : Value → Value), λ(p : Value),
+  Value-elim(Value, p,
+    λ(n : String), λ(a : List Value), λ(t : Type), unit-value,
+    λ(params : List String), λ(body : AST), λ(env : Environment), unit-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), unit-value,
+    unit-value, λ(s : String), unit-value, λ(e : Effect), unit-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof),
+      path-runtime-value(B, f(start), f(end),
+        cong-proof(A, B, constructor-value("function", [unit-value], A → B),
+                   start, end, proof)),
+    λ(ta tb : Type), λ(f qi : Value), unit-value)
+
+-- ============================================================================
+-- UTILITY FUNCTIONS
+-- ============================================================================
+
+-- List equality helper
+list-equal? : Π(A : Type), List A → List A → (A → A → 𝟚) → 𝟚
+list-equal? := λ(A : Type), λ(xs ys : List A), λ(eq : A → A → 𝟚),
+  List-elim(xs,
+    List-elim(ys, ₁, λ(y : A), λ(ys' : List A), ₀),
+    λ(x : A), λ(xs' : List A),
+      List-elim(ys,
+        ₀,
+        λ(y : A), λ(ys' : List A),
+          𝟚-elim(eq(x, y), 𝟚,
+            list-equal?(A, xs', ys', eq),
+            ₀)))
+
+-- This establishes the pure mathematical runtime value system for PathFinder

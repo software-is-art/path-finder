@@ -1,0 +1,55 @@
+-- ============================================================================
+-- MATHEMATICAL HOTT IL - AUTHENTIC NOTATION
+-- ============================================================================
+-- This demonstrates mathematically standard HoTT notation
+
+-- Universe hierarchy
+𝒰₀ : 𝒰₁
+
+-- Natural numbers (Peano arithmetic)
+data ℕ : 𝒰₀ where
+  zero : ℕ
+  succ : ℕ → ℕ
+
+-- Boolean type (2-type)
+data 𝟚 : 𝒰₀ where
+  ₀ : 𝟚
+  ₁ : 𝟚
+
+-- Identity function on naturals
+id_ℕ : ℕ → ℕ
+id_ℕ := λ(n : ℕ), n
+
+-- Successor function  
+next : ℕ → ℕ
+next := λ(n : ℕ), succ(n)
+
+-- Addition (dependent on first argument)
+add : Π(m : ℕ), ℕ → ℕ
+add := λ(m : ℕ), λ(n : ℕ), 
+  ℕ-elim(m, n, λ(k : ℕ), λ(rec : ℕ), succ(rec))
+
+-- Example: 2 + 1 = 3
+two : ℕ := succ(succ(zero))
+one : ℕ := succ(zero) 
+three : ℕ := add(two)(one)
+
+-- Identity type example
+proof₁ : Id_ℕ(succ(zero), one)
+proof₁ := refl_ℕ(succ(zero))
+
+-- Dependent pair (Σ-type)
+ℕ-pair : Σ(n : ℕ), ℕ
+ℕ-pair := ⟨two, three⟩
+
+-- Path induction (J-eliminator)
+transport : Π(A : 𝒰₀), Π(P : A → 𝒰₀), Π(x y : A), Id_A(x, y) → P(x) → P(y)
+transport := λ(A : 𝒰₀), λ(P : A → 𝒰₀), λ(x y : A), λ(p : Id_A(x, y)), λ(px : P(x)),
+  J(A, x, λ(z : A), λ(q : Id_A(x, z)), P(z), px, y, p)
+
+-- Higher-order function
+apply_twice : Π(A : 𝒰₀), (A → A) → A → A  
+apply_twice := λ(A : 𝒰₀), λ(f : A → A), λ(x : A), f(f(x))
+
+-- Example usage
+four : ℕ := apply_twice(ℕ)(next)(two)

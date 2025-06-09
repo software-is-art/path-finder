@@ -1,0 +1,131 @@
+-- ============================================================================
+-- MATHEMATICAL HOTT FOUNDATIONS
+-- ============================================================================
+-- This is the mathematically authentic HoTT IL foundation.
+-- Replaces src/core/foundations.hott with proper mathematical notation.
+
+-- Universe hierarchy (standard HoTT)
+𝒰₀ : 𝒰₁ : 𝒰₂ : 𝒰₃
+
+-- Basic inductive types
+data ℕ : 𝒰₀ where
+  zero : ℕ
+  succ : ℕ → ℕ
+
+data 𝟚 : 𝒰₀ where
+  ₀ : 𝟚  
+  ₁ : 𝟚
+
+-- Unit and empty types
+data 𝟙 : 𝒰₀ where
+  ⋆ : 𝟙
+
+data 𝟘 : 𝒰₀ where
+  -- no constructors
+
+-- Identity type (central to HoTT)
+Id : Π(A : 𝒰₀), A → A → 𝒰₀
+Id := λ(A : 𝒰₀), λ(x y : A), Id_A(x, y)
+
+-- Reflexivity constructor
+refl : Π(A : 𝒰₀), Π(x : A), Id_A(x, x)
+refl := λ(A : 𝒰₀), λ(x : A), refl_A(x)
+
+-- J-eliminator (path induction)
+J : Π(A : 𝒰₀), Π(x : A), Π(C : Π(y : A), Id_A(x, y) → 𝒰₀),
+    C(x)(refl_A(x)) → Π(y : A), Π(p : Id_A(x, y)), C(y)(p)
+J := λ(A : 𝒰₀), λ(x : A), λ(C : Π(y : A), Id_A(x, y) → 𝒰₀),
+     λ(d : C(x)(refl_A(x))), λ(y : A), λ(p : Id_A(x, y)),
+     J-elim(A, x, C, d, y, p)
+
+-- Transport (fundamental HoTT operation)
+transport : Π(A : 𝒰₀), Π(P : A → 𝒰₀), Π(x y : A), 
+           Id_A(x, y) → P(x) → P(y)
+transport := λ(A : 𝒰₀), λ(P : A → 𝒰₀), λ(x y : A), λ(p : Id_A(x, y)),
+             J(A, x, λ(z : A), λ(q : Id_A(x, z)), P(z), λ(px : P(x)), px, y, p)
+
+-- Congruence (applying functions to paths)
+cong : Π(A B : 𝒰₀), Π(f : A → B), Π(x y : A),
+       Id_A(x, y) → Id_B(f(x), f(y))
+cong := λ(A B : 𝒰₀), λ(f : A → B), λ(x y : A), λ(p : Id_A(x, y)),
+        J(A, x, λ(z : A), λ(q : Id_A(x, z)), Id_B(f(x), f(z)), 
+          refl_B(f(x)), y, p)
+
+-- Dependent pair type (Σ-type)
+Σ : Π(A : 𝒰₀), (A → 𝒰₀) → 𝒰₀
+Σ := λ(A : 𝒰₀), λ(B : A → 𝒰₀), Σ(x : A), B(x)
+
+-- Pair constructor
+⟨_,_⟩ : Π(A : 𝒰₀), Π(B : A → 𝒰₀), Π(a : A), B(a) → Σ(x : A), B(x)
+⟨_,_⟩ := λ(A : 𝒰₀), λ(B : A → 𝒰₀), λ(a : A), λ(b : B(a)), ⟨a, b⟩
+
+-- Projection functions
+fst : Π(A : 𝒰₀), Π(B : A → 𝒰₀), Σ(x : A), B(x) → A
+fst := λ(A : 𝒰₀), λ(B : A → 𝒰₀), λ(p : Σ(x : A), B(x)), 
+       Σ-elim(A, B, λ(z : Σ(x : A), B(x)), A, λ(a : A), λ(b : B(a)), a, p)
+
+snd : Π(A : 𝒰₀), Π(B : A → 𝒰₀), Π(p : Σ(x : A), B(x)), B(fst(A, B, p))
+snd := λ(A : 𝒰₀), λ(B : A → 𝒰₀), λ(p : Σ(x : A), B(x)),
+       Σ-elim(A, B, λ(z : Σ(x : A), B(x)), B(fst(A, B, z)),
+              λ(a : A), λ(b : B(a)), b, p)
+
+-- Basic arithmetic
+add : ℕ → ℕ → ℕ
+add := λ(m n : ℕ), ℕ-elim(m, n, λ(k : ℕ), λ(rec : ℕ), succ(rec))
+
+mul : ℕ → ℕ → ℕ  
+mul := λ(m n : ℕ), ℕ-elim(m, zero, λ(k : ℕ), λ(rec : ℕ), add(n, rec))
+
+-- Boolean operations
+if_then_else : Π(A : 𝒰₀), 𝟚 → A → A → A
+if_then_else := λ(A : 𝒰₀), λ(b : 𝟚), λ(x y : A),
+                𝟚-elim(b, A, x, y)
+
+-- Natural number predicates
+is_zero : ℕ → 𝟚
+is_zero := λ(n : ℕ), ℕ-elim(n, ₁, λ(k : ℕ), λ(rec : 𝟚), ₀)
+
+-- Equality on natural numbers (decidable)
+eq_ℕ : ℕ → ℕ → 𝟚
+eq_ℕ := λ(m n : ℕ), 
+        ℕ-elim(m, 
+               ℕ-elim(n, ₁, λ(k : ℕ), λ(rec : 𝟚), ₀),
+               λ(j : ℕ), λ(rec_m : ℕ → 𝟚), λ(n' : ℕ),
+               ℕ-elim(n', ₀, λ(k : ℕ), λ(rec_n : 𝟚), rec_m(k)))(n)
+
+-- Function composition
+∘ : Π(A B C : 𝒰₀), (B → C) → (A → B) → (A → C)
+∘ := λ(A B C : 𝒰₀), λ(g : B → C), λ(f : A → B), λ(x : A), g(f(x))
+
+-- Identity function
+id : Π(A : 𝒰₀), A → A
+id := λ(A : 𝒰₀), λ(x : A), x
+
+-- Constant function
+const : Π(A B : 𝒰₀), A → B → A
+const := λ(A B : 𝒰₀), λ(x : A), λ(y : B), x
+
+-- Higher-order functions
+apply_twice : Π(A : 𝒰₀), (A → A) → A → A
+apply_twice := λ(A : 𝒰₀), λ(f : A → A), λ(x : A), f(f(x))
+
+-- Examples demonstrating the foundations
+one : ℕ := succ(zero)
+two : ℕ := succ(one)
+three : ℕ := succ(two)
+
+example_add : ℕ := add(two, one)  -- Should evaluate to three
+example_mul : ℕ := mul(two, three) -- Should evaluate to six
+
+-- Identity proofs
+proof_refl : Id_ℕ(two, two) := refl_ℕ(two)
+
+-- Transport example
+ℕ_property : ℕ → 𝒰₀ := λ(n : ℕ), Id_ℕ(add(n, zero), n)
+
+example_transport : ℕ_property(two) → ℕ_property(two) :=
+  transport(ℕ, ℕ_property, two, two, proof_refl)
+
+-- Dependent pair example
+ℕ_with_successor : 𝒰₀ := Σ(n : ℕ), ℕ
+example_pair : ℕ_with_successor := ⟨two, three⟩
