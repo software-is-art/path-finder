@@ -1,0 +1,137 @@
+#lang racket/base
+
+;; ============================================================================
+;; HOTT IL FOUNDATIONS - LAYER 1: PURE DEFINITIONS
+;; ============================================================================
+;; This module contains only struct definitions and basic predicates.
+;; NO circular dependencies - this is the foundation layer.
+
+(provide (all-defined-out))
+
+;; ============================================================================
+;; CORE VALUE STRUCTURES
+;; ============================================================================
+;; These are the fundamental data structures for HoTT IL
+
+;; Base value type
+(struct value () #:transparent)
+
+;; Constructor applications (for inductive types)
+(struct constructor-value value (constructor-name args type) #:transparent)
+
+;; Function closures 
+(struct closure-value value (params body env) #:transparent)
+
+;; Built-in function values
+(struct builtin-value value (name proc type) #:transparent)
+
+;; Unit value (the unique inhabitant of 𝟙)
+(struct unit-value value () #:transparent)
+
+;; Path values (inhabitants of identity types)
+(struct path-runtime-value value (type start end proof) #:transparent)
+
+;; Equivalence values (inhabitants of equivalence types)
+(struct equivalence-runtime-value value (type-a type-b function quasi-inv) #:transparent)
+
+;; String values (for host bridge communication)
+(struct string-value value (content) #:transparent)
+
+;; Effect values (algebraic effects that signal operations)
+(struct effect-value value (effect) #:transparent)
+
+;; ============================================================================
+;; CORE TYPE STRUCTURES  
+;; ============================================================================
+;; Basic HoTT type system structures
+
+;; Base type structure
+(struct hott-type () #:transparent)
+
+;; Universe hierarchy: Type₀ : Type₁ : Type₂ : ...
+(struct universe hott-type (level) #:transparent)
+
+;; Π-types (dependent function types): (Π (x : A) B(x))
+(struct pi-type hott-type (var-name domain codomain) #:transparent)
+
+;; Σ-types (dependent pair types): (Σ (x : A) B(x))  
+(struct sigma-type hott-type (var-name first-type second-type) #:transparent)
+
+;; Sum types: A + B
+(struct sum-type hott-type (left-type right-type) #:transparent)
+
+;; Identity types: Id A x y (paths/equality)
+(struct identity-type hott-type (type-expr left-term right-term) #:transparent)
+
+;; Unit type: 𝟙 (has exactly one element)
+(struct unit-type hott-type () #:transparent)
+
+;; Empty type: 𝟘 (has no elements)
+(struct empty-type hott-type () #:transparent)
+
+;; Inductive type definitions
+(struct inductive-type hott-type (name constructors) #:transparent)
+
+;; Effect-aware types: types that carry effect requirements
+(struct effect-type hott-type (base-type required-effects optional-effects) #:transparent)
+
+;; Constructor for inductive types
+(struct type-constructor (name param-types result-type) #:transparent)
+
+;; ============================================================================
+;; BASIC PREDICATES
+;; ============================================================================
+;; Simple predicates that only check struct types
+
+;; HoTT-native value predicate
+(define (hott-value? x)
+  (or (constructor-value? x) (closure-value? x) (builtin-value? x) (unit-value? x)
+      (path-runtime-value? x) (equivalence-runtime-value? x) (string-value? x) (effect-value? x)))
+
+;; HoTT type predicate (avoiding conflict with auto-generated predicates)
+(define (valid-hott-type? x)
+  (or (universe? x) (pi-type? x) (sigma-type? x) (sum-type? x) 
+      (identity-type? x) (unit-type? x) (empty-type? x) 
+      (inductive-type? x) (effect-type? x)))
+
+;; Extended type predicate (includes higher-level constructs)
+(define (extended-hott-type? x)
+  (valid-hott-type? x))  ; Can be extended later
+
+;; Compatibility contracts
+(define value/c hott-value?)
+(define hott-type/c valid-hott-type?)
+(define extended-hott-type/c extended-hott-type?)
+
+;; ============================================================================
+;; PREDEFINED VALUES AND TYPES
+;; ============================================================================
+
+;; Universe levels
+(define Type0 (universe 0))
+(define Type1 (universe 1))
+(define Type2 (universe 2))
+
+;; Fundamental types
+(define Unit (unit-type))
+(define Empty (empty-type))
+
+;; Predefined values
+(define unit (unit-value))
+
+;; Natural number constructors
+(define Nat-constructors
+  (list (type-constructor "zero" '() 'Nat)
+        (type-constructor "next" '(Nat) 'Nat)))
+(define Nat (inductive-type "Nat" Nat-constructors))
+
+;; Boolean constructors  
+(define Bool-constructors
+  (list (type-constructor "true" '() 'Bool)
+        (type-constructor "false" '() 'Bool)))
+(define Bool (inductive-type "Bool" Bool-constructors))
+
+;; Predefined values for basic types
+(define zero-value (constructor-value "zero" '() Nat))
+(define true-value (constructor-value "true" '() Bool))
+(define false-value (constructor-value "false" '() Bool))

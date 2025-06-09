@@ -85,8 +85,9 @@
 (register-type-family! Effect-family)
 
 ;; Convenience function for Effect type instantiation
-(define/contract (Effect return-type)
-  (-> hott-type/c hott-type/c)
+(define (Effect return-type)
+  (unless (hott-type? return-type)
+    (error "Effect: return-type must be a HoTT type" return-type))
   (instantiate-type-family 'Effect return-type))
 
 ;; ============================================================================
@@ -94,25 +95,31 @@
 ;; ============================================================================
 
 ;; Create parameterized effect constructor value
-(define/contract (make-effect-description constructor args return-type)
-  (-> string? (listof constructor-value?) hott-type/c constructor-value?)
+(define (make-effect-description constructor args return-type)
+  (unless (string? constructor)
+    (error "make-effect-description: constructor must be a string" constructor))
+  (unless (and (list? args) (andmap constructor-value? args))
+    (error "make-effect-description: args must be a list of constructor-values" args))
+  (unless (hott-type? return-type)
+    (error "make-effect-description: return-type must be a HoTT type" return-type))
   (constructor-value constructor args (Effect return-type)))
 
 ;; Check if value is an effect description
-(define/contract (effect-description? value)
-  (-> any/c boolean?)
+(define (effect-description? value)
   (and (constructor-value? value)
        (let ([type (constructor-value-type value)])
          (and (inductive-type? type)
               (string=? (inductive-type-name type) "Effect")))))
 
 ;; Extract effect description components
-(define/contract (effect-description-name effect)
-  (-> constructor-value? string?)
+(define (effect-description-name effect)
+  (unless (constructor-value? effect)
+    (error "effect-description-name: argument must be a constructor-value" effect))
   (constructor-value-constructor-name effect))
 
-(define/contract (effect-description-operation effect)
-  (-> constructor-value? (or/c constructor-value? #f))
+(define (effect-description-operation effect)
+  (unless (constructor-value? effect)
+    (error "effect-description-operation: argument must be a constructor-value" effect))
   (match effect
     [(constructor-value "io-effect" (list name-val op-val args-val det-val) _)
      op-val]

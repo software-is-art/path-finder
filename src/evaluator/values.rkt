@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require racket/contract
-         racket/match
+(require racket/match
          racket/string
          "../types/types.rkt")
 
@@ -40,18 +39,22 @@
 
 ;; Values have no inhabitants for Empty type (𝟘)
 
-;; Value contracts
-(define value/c
-  (or/c constructor-value? closure-value? builtin-value? unit-value? 
-        path-runtime-value? equivalence-runtime-value? string-value? effect-value?))
+;; HoTT-native value predicates (replacing Racket contracts)
+(define (hott-value? x)
+  (or (constructor-value? x) (closure-value? x) (builtin-value? x) (unit-value? x)
+      (path-runtime-value? x) (equivalence-runtime-value? x) (string-value? x) (effect-value? x)))
+
+;; Type contract using HoTT dependent types
+(define value/c hott-value?)
 
 ;; Predefined values for HoTT inductive types
 
 ;; Natural number values
 (define zero-value (constructor-value "zero" '() Nat))
 
-(define/contract (succ-value n)
-  (-> value/c constructor-value?)
+(define (succ-value n)
+  (unless (hott-value? n)
+    (error "succ-value: argument must be a value" n))
   (constructor-value "next" (list n) Nat))
 
 ;; Boolean values  
@@ -68,8 +71,11 @@
 ;; All Racket conversion functions moved to host-bridge.rkt for self-hosting
 
 ;; Type checking for values
-(define/contract (value-has-type? val type)
-  (-> value/c extended-hott-type/c boolean?)
+(define (value-has-type? val type)
+  (unless (hott-value? val)
+    (error "value-has-type?: first argument must be a value" val))
+  (unless (extended-hott-type/c type)
+    (error "value-has-type?: second argument must be a HoTT type" type))
   (match* (val type)
     ;; Constructor values check against their inductive type
     [((constructor-value _ _ val-type) type)
@@ -98,37 +104,67 @@
     
     [(_ _) #f]))
 
-;; Pretty printing for values
-(define/contract (value->string val)
-  (-> value/c string?)
-  (match val
-    [(constructor-value name args _)
-     (if (null? args)
-         name
-         (string-append "(" name " " 
-                       (string-join (map value->string args) " ") 
-                       ")"))]
-    [(closure-value _ _ _) "#<closure>"]
-    [(builtin-value name _ _) (string-append "#<builtin:" name ">")]
-    [(unit-value) "unit"]
-    [(string-value content) (string-append "\"" content "\"")]
-    [(effect-value effect) (string-append "#<effect:" (format "~a" effect) ">")]
-    [(path-runtime-value type start end proof)
-     (string-append "path[" (type->string type) " : " 
-                   (value->string start) " = " (value->string end) "]")]
-    [(equivalence-runtime-value type-a type-b _ _)
-     (string-append (type->string type-a) " ≃ " (type->string type-b))]))
+;; HoTT-style value eliminator for value->string
+(define (value-eliminator val constructor-case closure-case builtin-case unit-case string-case effect-case path-case equiv-case)
+  "HoTT eliminator for value types - total by construction"
+  (cond
+    [(constructor-value? val) 
+     (let ([name (constructor-value-constructor-name val)]
+           [args (constructor-value-args val)])
+       (constructor-case name args (constructor-value-type val)))]
+    [(closure-value? val) (closure-case (closure-value-params val) (closure-value-body val) (closure-value-env val))]
+    [(builtin-value? val) (builtin-case (builtin-value-name val) (builtin-value-proc val) (builtin-value-type val))]
+    [(unit-value? val) (unit-case)]
+    [(string-value? val) (string-case (string-value-content val))]
+    [(effect-value? val) (effect-case (effect-value-effect val))]
+    [(path-runtime-value? val) (path-case (path-runtime-value-type val) (path-runtime-value-start val) 
+                                         (path-runtime-value-end val) (path-runtime-value-proof val))]
+    [(equivalence-runtime-value? val) (equiv-case (equivalence-runtime-value-type-a val) (equivalence-runtime-value-type-b val)
+                                                 (equivalence-runtime-value-function val) (equivalence-runtime-value-quasi-inv val))]
+    [else (error "value-eliminator: unknown value type" val)]))
+
+;; Pretty printing for values using HoTT eliminator
+(define (value->string val)
+  (unless (hott-value? val)
+    (error "value->string: argument must be a value" val))
+  (value-eliminator val
+    ;; constructor-value case
+    (lambda (name args type)
+      (if (null? args)
+          name
+          (string-append "(" name " " 
+                        (string-join (map value->string args) " ") 
+                        ")")))
+    ;; closure-value case  
+    (lambda (params body env) "#<closure>")
+    ;; builtin-value case
+    (lambda (name proc type) (string-append "#<builtin:" name ">"))
+    ;; unit-value case
+    (lambda () "unit")
+    ;; string-value case
+    (lambda (content) (string-append "\"" content "\""))
+    ;; effect-value case
+    (lambda (effect) (string-append "#<effect:" (format "~a" effect) ">"))
+    ;; path-runtime-value case
+    (lambda (type start end proof)
+      (string-append "path[" (type->string type) " : " 
+                    (value->string start) " = " (value->string end) "]"))
+    ;; equivalence-runtime-value case
+    (lambda (type-a type-b func quasi-inv)
+      (string-append (type->string type-a) " ≃ " (type->string type-b)))))
 
 ;; Check if value is a natural number
-(define/contract (nat-value? val)
-  (-> value/c boolean?)
+(define (nat-value? val)
+  (unless (hott-value? val)
+    (error "nat-value?: argument must be a value" val))
   (and (constructor-value? val)
        (let ([name (constructor-value-constructor-name val)])
          (or (string=? name "zero") (string=? name "next")))))
 
 ;; Check if value is a boolean
-(define/contract (bool-value? val)
-  (-> value/c boolean?)
+(define (bool-value? val)
+  (unless (hott-value? val)
+    (error "bool-value?: argument must be a value" val))
   (and (constructor-value? val)
        (let ([name (constructor-value-constructor-name val)])
          (or (string=? name "true") (string=? name "false")))))
@@ -138,13 +174,19 @@
 ;; ============================================================================
 
 ;; Create reflexivity path
-(define/contract (make-refl-value type term)
-  (-> hott-type/c value/c path-runtime-value?)
+(define (make-refl-value type term)
+  (unless (hott-type? type)
+    (error "make-refl-value: type must be a HoTT type" type))
+  (unless (hott-value? term)
+    (error "make-refl-value: term must be a value" term))
   (path-runtime-value type term term 'refl))
 
 ;; Create path concatenation
-(define/contract (make-path-concat-value p q)
-  (-> path-runtime-value? path-runtime-value? path-runtime-value?)
+(define (make-path-concat-value p q)
+  (unless (path-runtime-value? p)
+    (error "make-path-concat-value: first argument must be a path-runtime-value" p))
+  (unless (path-runtime-value? q)
+    (error "make-path-concat-value: second argument must be a path-runtime-value" q))
   (unless (equal? (path-runtime-value-end p) (path-runtime-value-start q))
     (error "Cannot concatenate paths: end of first must equal start of second"))
   (path-runtime-value (path-runtime-value-type p)
@@ -154,36 +196,43 @@
                            (path-runtime-value-proof q))))
 
 ;; Create path inverse
-(define/contract (make-path-inverse-value p)
-  (-> path-runtime-value? path-runtime-value?)
+(define (make-path-inverse-value p)
+  (unless (path-runtime-value? p)
+    (error "make-path-inverse-value: argument must be a path-runtime-value" p))
   (path-runtime-value (path-runtime-value-type p)
                       (path-runtime-value-end p)
                       (path-runtime-value-start p)
                       (list 'inverse (path-runtime-value-proof p))))
 
 ;; Transport operation: move value along a path
-(define/contract (transport-value path predicate val)
-  (-> path-runtime-value? any/c value/c value/c)
+(define (transport-value path predicate val)
+  (unless (path-runtime-value? path)
+    (error "transport-value: first argument must be a path-runtime-value" path))
+  (unless (hott-value? val)
+    (error "transport-value: third argument must be a value" val))
   ;; Simplified implementation - just return the value for now
   val)
 
 ;; Congruence: apply function to path
-(define/contract (cong-value func path)
-  (-> any/c path-runtime-value? path-runtime-value?)
+(define (cong-value func path)
+  (unless (path-runtime-value? path)
+    (error "cong-value: second argument must be a path-runtime-value" path))
   (path-runtime-value (path-runtime-value-type path) ; Simplified
                       (func (path-runtime-value-start path))
                       (func (path-runtime-value-end path))
                       (list 'ap func (path-runtime-value-proof path))))
 
 ;; Create identity equivalence
-(define/contract (make-identity-equiv-value type-a)
-  (-> hott-type/c equivalence-runtime-value?)
+(define (make-identity-equiv-value type-a)
+  (unless (hott-type? type-a)
+    (error "make-identity-equiv-value: argument must be a HoTT type" type-a))
   (let ([id-func (lambda (x) x)])
     (equivalence-runtime-value type-a type-a id-func 'id-quasi-inverse)))
 
 ;; Apply univalence axiom to equivalence
-(define/contract (univalence-apply equiv)
-  (-> equivalence-runtime-value? path-runtime-value?)
+(define (univalence-apply equiv)
+  (unless (equivalence-runtime-value? equiv)
+    (error "univalence-apply: argument must be an equivalence-runtime-value" equiv))
   (path-runtime-value Type1 
                       (equivalence-runtime-value-type-a equiv)
                       (equivalence-runtime-value-type-b equiv)
@@ -192,7 +241,8 @@
 ;; Predicates are auto-generated by struct definitions
 
 ;; Check if path is reflexivity
-(define/contract (is-refl-runtime-path? p)
-  (-> path-runtime-value? boolean?)
+(define (is-refl-runtime-path? p)
+  (unless (path-runtime-value? p)
+    (error "is-refl-runtime-path?: argument must be a path-runtime-value" p))
   (and (equal? (path-runtime-value-start p) (path-runtime-value-end p))
        (eq? (path-runtime-value-proof p) 'refl)))

@@ -1,0 +1,9 @@
+/Users/cgalbreath@simplemachines.co.nz/git/path-finder/rust-host/target/debug/deps/libpathfinder_rust_host-c0795c7407bea630.rmeta: src/lib.rs src/hott_values.rs src/hott_eliminators.rs src/hott_parser.rs src/hott_evaluator.rs
+
+/Users/cgalbreath@simplemachines.co.nz/git/path-finder/rust-host/target/debug/deps/pathfinder_rust_host-c0795c7407bea630.d: src/lib.rs src/hott_values.rs src/hott_eliminators.rs src/hott_parser.rs src/hott_evaluator.rs
+
+src/lib.rs:
+src/hott_values.rs:
+src/hott_eliminators.rs:
+src/hott_parser.rs:
+src/hott_evaluator.rs:

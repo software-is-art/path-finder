@@ -1,0 +1,221 @@
+#lang racket/base
+
+;; ============================================================================
+;; HOTT IL OPERATIONS - LAYER 3: COMBINED FUNCTIONALITY
+;; ============================================================================
+;; This module demonstrates HoTT eliminators in action, replacing traditional
+;; pattern matching with mathematically principled operations.
+
+(require racket/string
+         "foundations.hott"
+         "eliminators.hott")
+
+(provide value->string
+         succ-value
+         value-has-type?
+         nat-value?
+         bool-value?)
+
+;; ============================================================================
+;; PRETTY PRINTING USING HOTT ELIMINATORS
+;; ============================================================================
+;; This demonstrates replacing 'match' expressions with HoTT eliminators
+
+;; Pretty printing for values using HoTT eliminator
+(define (value->string val)
+  "Convert a value to its string representation using HoTT eliminators"
+  (unless (hott-value? val)
+    (error "value->string: argument must be a value" val))
+  
+  (value-eliminator val
+    ;; constructor-value case
+    (lambda (name args type)
+      (if (null? args)
+          name
+          (string-append "(" name " " 
+                        (string-join (map value->string args) " ") 
+                        ")")))
+    ;; closure-value case  
+    (lambda (params body env) "#<closure>")
+    ;; builtin-value case
+    (lambda (name proc type) (string-append "#<builtin:" name ">"))
+    ;; unit-value case
+    (lambda () "unit")
+    ;; string-value case
+    (lambda (content) (string-append "\"" content "\""))
+    ;; effect-value case
+    (lambda (effect) (string-append "#<effect:" (format "~a" effect) ">"))
+    ;; path-runtime-value case
+    (lambda (type start end proof)
+      (string-append "path[" (format "~a" type) " : " 
+                    (value->string start) " = " (value->string end) "]"))
+    ;; equivalence-runtime-value case
+    (lambda (type-a type-b func quasi-inv)
+      (string-append (format "~a" type-a) " ≃ " (format "~a" type-b)))))
+
+;; ============================================================================
+;; CONSTRUCTOR FUNCTIONS USING ELIMINATORS
+;; ============================================================================
+
+;; Create successor value (demonstrating eliminator-free construction)
+(define (succ-value n)
+  "Create successor of natural number using HoTT constructor"
+  (unless (hott-value? n)
+    (error "succ-value: argument must be a value" n))
+  (constructor-value "next" (list n) Nat))
+
+;; ============================================================================
+;; TYPE CHECKING USING ELIMINATORS  
+;; ============================================================================
+;; These functions show how eliminators can replace match expressions for type checking
+
+;; Type checking for values using eliminators
+(define (value-has-type? val type)
+  "Check if value has given type using HoTT eliminators"
+  (unless (hott-value? val)
+    (error "value-has-type?: first argument must be a value" val))
+  (unless (extended-hott-type? type)
+    (error "value-has-type?: second argument must be a HoTT type" type))
+  
+  (value-eliminator val
+    ;; constructor-value case
+    (lambda (name args val-type)
+      ;; For constructor values, check if their type equals the expected type
+      ;; This is simplified - full implementation would use type equality
+      (equal? val-type type))
+    ;; closure-value case
+    (lambda (params body env)
+      ;; Closures should have function types (simplified check)
+      (pi-type? type))
+    ;; builtin-value case  
+    (lambda (name proc val-type)
+      ;; Built-ins have their declared type
+      (equal? val-type type))
+    ;; unit-value case
+    (lambda ()
+      ;; Unit value has unit type
+      (unit-type? type))
+    ;; string-value case
+    (lambda (content)
+      ;; String values have String type (simplified)
+      #t)  ; Simplified for now
+    ;; effect-value case
+    (lambda (effect)
+      ;; Effect values have effect types (simplified)
+      (effect-type? type))
+    ;; path-runtime-value case
+    (lambda (path-type start end proof)
+      ;; Path values have identity types
+      (identity-type? type))
+    ;; equivalence-runtime-value case
+    (lambda (type-a type-b func quasi-inv)
+      ;; Equivalence values have equivalence types (simplified)
+      #t)))  ; Simplified for now
+
+;; ============================================================================
+;; SPECIFIC TYPE PREDICATES USING ELIMINATORS
+;; ============================================================================
+
+;; Check if value is a natural number using eliminators
+(define (nat-value? val)
+  "Check if value is a natural number using HoTT eliminators"
+  (unless (hott-value? val)
+    (error "nat-value?: argument must be a value" val))
+  
+  (value-eliminator val
+    ;; constructor-value case
+    (lambda (name args type)
+      (and (equal? type Nat)
+           (or (string=? name "zero") (string=? name "next"))))
+    ;; All other cases are false
+    (lambda args #f)  ; closure-value case
+    (lambda args #f)  ; builtin-value case  
+    (lambda args #f)  ; unit-value case
+    (lambda args #f)  ; string-value case
+    (lambda args #f)  ; effect-value case
+    (lambda args #f)  ; path-runtime-value case
+    (lambda args #f)  ; equivalence-runtime-value case
+    ))
+
+;; Check if value is a boolean using eliminators
+(define (bool-value? val)
+  "Check if value is a boolean using HoTT eliminators"
+  (unless (hott-value? val)
+    (error "bool-value?: argument must be a value" val))
+  
+  (value-eliminator val
+    ;; constructor-value case
+    (lambda (name args type)
+      (and (equal? type Bool)
+           (or (string=? name "true") (string=? name "false"))))
+    ;; All other cases are false
+    (lambda args #f)  ; closure-value case
+    (lambda args #f)  ; builtin-value case  
+    (lambda args #f)  ; unit-value case
+    (lambda args #f)  ; string-value case
+    (lambda args #f)  ; effect-value case
+    (lambda args #f)  ; path-runtime-value case
+    (lambda args #f)  ; equivalence-runtime-value case
+    ))
+
+;; ============================================================================
+;; DEMONSTRATION: ELIMINATOR VS MATCH
+;; ============================================================================
+
+;; Traditional approach (what we're replacing):
+#|
+(define (value->string-old val)
+  (match val
+    [(constructor-value name args _)
+     (if (null? args) name (string-append "(" name " " ...))]
+    [(closure-value _ _ _) "#<closure>"]
+    [(builtin-value name _ _) (string-append "#<builtin:" name ">")]
+    ...))
+|#
+
+;; HoTT approach (mathematically principled):
+;; Uses value-eliminator which is:
+;; 1. Total by construction (all cases must be handled)
+;; 2. Mathematically principled (follows induction principles)
+;; 3. Composable (eliminators can be combined)
+;; 4. Type-safe (enforces proper case handling)
+
+;; ============================================================================
+;; ADVANCED ELIMINATOR EXAMPLES
+;; ============================================================================
+
+;; Map over constructor arguments using eliminators
+(define (map-constructor-args func val)
+  "Apply function to all arguments of a constructor value"
+  (value-eliminator val
+    ;; constructor-value case
+    (lambda (name args type)
+      (constructor-value name (map func args) type))
+    ;; All other cases return unchanged
+    (lambda args val)  ; closure-value case
+    (lambda args val)  ; builtin-value case
+    (lambda args val)  ; unit-value case  
+    (lambda args val)  ; string-value case
+    (lambda args val)  ; effect-value case
+    (lambda args val)  ; path-runtime-value case
+    (lambda args val)  ; equivalence-runtime-value case
+    ))
+
+;; Example: Recursive depth calculation using eliminators
+(define (value-depth val)
+  "Calculate the maximum depth of a value tree using eliminators"
+  (value-eliminator val
+    ;; constructor-value case
+    (lambda (name args type)
+      (if (null? args)
+          1
+          (+ 1 (apply max (map value-depth args)))))
+    ;; All other cases have depth 1
+    (lambda args 1)  ; closure-value case
+    (lambda args 1)  ; builtin-value case
+    (lambda args 1)  ; unit-value case
+    (lambda args 1)  ; string-value case
+    (lambda args 1)  ; effect-value case
+    (lambda args 1)  ; path-runtime-value case
+    (lambda args 1)  ; equivalence-runtime-value case
+    ))

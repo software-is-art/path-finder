@@ -1,0 +1,244 @@
+#lang racket/base
+
+;; ============================================================================
+;; HOTT IL ELIMINATORS - LAYER 2: PURE OPERATIONS
+;; ============================================================================
+;; This module contains HoTT eliminators - the mathematically principled
+;; replacement for pattern matching. Depends only on foundations.hott.
+
+(require "foundations.hott")
+
+(provide constructor-value-eliminator
+         value-eliminator
+         effect-eliminator
+         list-eliminator
+         bool-eliminator
+         nat-eliminator
+         hott-type-eliminator
+         generate-eliminator)
+
+;; ============================================================================
+;; GENERAL CONSTRUCTOR-VALUE ELIMINATOR
+;; ============================================================================
+;; The fundamental eliminator for any inductive type represented as constructor-value
+
+(define (constructor-value-eliminator val cases default-case)
+  "Eliminate constructor-value using provided case functions
+   cases: list of (constructor-name . handler-function) pairs
+   default-case: function to call if no case matches"
+  (unless (constructor-value? val)
+    (error "constructor-value-eliminator: first argument must be a constructor-value" val))
+  (unless (list? cases)
+    (error "constructor-value-eliminator: cases must be a list" cases))
+  
+  (let* ([constructor-name (constructor-value-constructor-name val)]
+         [args (constructor-value-args val)]
+         [case-entry (assoc constructor-name cases)])
+    (if case-entry
+        (let ([handler (cdr case-entry)])
+          (if (procedure? handler)
+              (apply handler args)
+              handler))
+        (if (procedure? default-case)
+            (default-case val)
+            default-case))))
+
+;; ============================================================================
+;; VALUE ELIMINATOR
+;; ============================================================================
+;; Specific eliminator for the value type hierarchy
+
+(define (value-eliminator val constructor-case closure-case builtin-case unit-case 
+                         string-case effect-case path-case equiv-case)
+  "HoTT eliminator for value types - total by construction"
+  (unless (hott-value? val)
+    (error "value-eliminator: first argument must be a hott-value" val))
+  
+  (cond
+    [(constructor-value? val) 
+     (let ([name (constructor-value-constructor-name val)]
+           [args (constructor-value-args val)]
+           [type (constructor-value-type val)])
+       (constructor-case name args type))]
+    [(closure-value? val) 
+     (closure-case (closure-value-params val) 
+                   (closure-value-body val) 
+                   (closure-value-env val))]
+    [(builtin-value? val) 
+     (builtin-case (builtin-value-name val) 
+                   (builtin-value-proc val) 
+                   (builtin-value-type val))]
+    [(unit-value? val) (unit-case)]
+    [(string-value? val) (string-case (string-value-content val))]
+    [(effect-value? val) (effect-case (effect-value-effect val))]
+    [(path-runtime-value? val) 
+     (path-case (path-runtime-value-type val) 
+                (path-runtime-value-start val)
+                (path-runtime-value-end val) 
+                (path-runtime-value-proof val))]
+    [(equivalence-runtime-value? val) 
+     (equiv-case (equivalence-runtime-value-type-a val) 
+                 (equivalence-runtime-value-type-b val)
+                 (equivalence-runtime-value-function val) 
+                 (equivalence-runtime-value-quasi-inv val))]
+    [else (error "value-eliminator: unknown value type" val)]))
+
+;; ============================================================================
+;; EFFECT ELIMINATOR
+;; ============================================================================
+;; Effect-elim : (A : Type₀) → (pure : A → R) → (io : String → String → List Value → Determinism → R) 
+;;              → (seq : Effect A → Effect B → R) → (par : Effect A → Effect B → R) 
+;;              → (choice : Effect A → Effect A → R) → Effect A → R
+
+(define (effect-eliminator effect pure-case io-case seq-case par-case choice-case)
+  "HoTT eliminator for Effect types"
+  (unless (constructor-value? effect)
+    (error "effect-eliminator: first argument must be a constructor-value representing an Effect" effect))
+  
+  (constructor-value-eliminator effect
+    `(("pure-effect" . ,pure-case)
+      ("io-effect" . ,io-case)  
+      ("effect-seq" . ,seq-case)
+      ("effect-par" . ,par-case)
+      ("effect-choice" . ,choice-case))
+    (lambda (val) 
+      (error "effect-eliminator: unknown effect constructor" 
+             (constructor-value-constructor-name val)))))
+
+;; ============================================================================
+;; LIST ELIMINATOR  
+;; ============================================================================
+;; List-elim : (A : Type₀) → (nil : R) → (cons : A → List A → R) → List A → R
+
+(define (list-eliminator lst nil-case cons-case)
+  "HoTT eliminator for List types"
+  (unless (constructor-value? lst)
+    (error "list-eliminator: first argument must be a constructor-value representing a List" lst))
+  
+  (constructor-value-eliminator lst
+    `(("nil" . ,(lambda () nil-case))
+      ("cons" . ,cons-case))
+    (lambda (val) 
+      (error "list-eliminator: unknown list constructor" 
+             (constructor-value-constructor-name val)))))
+
+;; ============================================================================
+;; BOOL ELIMINATOR
+;; ============================================================================
+;; Bool-elim : (true : R) → (false : R) → Bool → R
+
+(define (bool-eliminator bool true-case false-case)
+  "HoTT eliminator for Bool types"
+  (unless (constructor-value? bool)
+    (error "bool-eliminator: first argument must be a constructor-value representing a Bool" bool))
+  
+  (constructor-value-eliminator bool
+    `(("true" . ,(lambda () true-case))
+      ("false" . ,(lambda () false-case)))
+    (lambda (val) 
+      (error "bool-eliminator: unknown bool constructor" 
+             (constructor-value-constructor-name val)))))
+
+;; ============================================================================
+;; NAT ELIMINATOR
+;; ============================================================================
+;; Nat-elim : (zero : R) → (next : Nat → R) → Nat → R
+
+(define (nat-eliminator nat zero-case next-case)
+  "HoTT eliminator for Nat types"
+  (unless (constructor-value? nat)
+    (error "nat-eliminator: first argument must be a constructor-value representing a Nat" nat))
+  
+  (constructor-value-eliminator nat
+    `(("zero" . ,(lambda () zero-case))
+      ("next" . ,next-case))
+    (lambda (val) 
+      (error "nat-eliminator: unknown nat constructor" 
+             (constructor-value-constructor-name val)))))
+
+;; ============================================================================
+;; HOTT TYPE ELIMINATOR
+;; ============================================================================
+;; Eliminator for the type system itself
+
+(define (hott-type-eliminator type universe-case pi-case sigma-case sum-case identity-case 
+                             unit-case empty-case inductive-case effect-case)
+  "HoTT eliminator for HoTT types themselves"
+  (unless (hott-type? type)
+    (error "hott-type-eliminator: first argument must be a hott-type" type))
+  
+  (cond
+    [(universe? type) (universe-case (universe-level type))]
+    [(pi-type? type) (pi-case (pi-type-var-name type) 
+                              (pi-type-domain type) 
+                              (pi-type-codomain type))]
+    [(sigma-type? type) (sigma-case (sigma-type-var-name type) 
+                                    (sigma-type-first-type type) 
+                                    (sigma-type-second-type type))]
+    [(sum-type? type) (sum-case (sum-type-left-type type) 
+                                (sum-type-right-type type))]
+    [(identity-type? type) (identity-case (identity-type-type-expr type) 
+                                          (identity-type-left-term type) 
+                                          (identity-type-right-term type))]
+    [(unit-type? type) (unit-case)]
+    [(empty-type? type) (empty-case)]
+    [(inductive-type? type) (inductive-case (inductive-type-name type) 
+                                            (inductive-type-constructors type))]
+    [(effect-type? type) (effect-case (effect-type-base-type type) 
+                                      (effect-type-required-effects type) 
+                                      (effect-type-optional-effects type))]
+    [else (error "hott-type-eliminator: unknown type constructor" type)]))
+
+;; ============================================================================
+;; AUTOMATIC ELIMINATOR GENERATION
+;; ============================================================================
+;; Given an inductive type definition, generate its eliminator automatically
+
+(define (generate-eliminator inductive-type-def)
+  "Automatically generate an eliminator for any inductive type"
+  (unless (inductive-type? inductive-type-def)
+    (error "generate-eliminator: argument must be an inductive type definition" inductive-type-def))
+  
+  (let* ([type-name (inductive-type-name inductive-type-def)]
+         [constructors (inductive-type-constructors inductive-type-def)]
+         [eliminator-name (string-append type-name "-eliminator")])
+    
+    ;; Return a lambda that takes case functions for each constructor
+    (lambda (value . case-functions)
+      (unless (= (length case-functions) (length constructors))
+        (error (format "~a: expected ~a case functions, got ~a" 
+                      eliminator-name (length constructors) (length case-functions))))
+      
+      (let ([cases (map (lambda (constructor case-fn)
+                          (cons (type-constructor-name constructor) case-fn))
+                        constructors case-functions)])
+        (constructor-value-eliminator value cases 
+          (lambda (val) 
+            (error (format "~a: unknown constructor for ~a" eliminator-name type-name))))))))
+
+;; ============================================================================
+;; ELIMINATOR COMBINATORS
+;; ============================================================================
+;; Higher-order functions for composing eliminators
+
+;; Map operation using eliminators
+(define (eliminator-map eliminator transform-fn)
+  "Apply transform-fn to each element using the provided eliminator"
+  (lambda (value)
+    (eliminator value
+      ;; For list: nil case
+      '()
+      ;; For list: cons case  
+      (lambda (head tail)
+        (cons (transform-fn head) ((eliminator-map eliminator transform-fn) tail))))))
+
+;; Fold operation using eliminators
+(define (eliminator-fold eliminator combine-fn initial)
+  "Fold over structure using eliminator"
+  (lambda (value)
+    (eliminator value
+      ;; Base case (e.g., nil for lists, zero for nats)
+      initial
+      ;; Recursive case - simplified for now
+      (lambda args
+        (apply combine-fn args)))))
