@@ -1,0 +1,404 @@
+-- ============================================================================
+-- PURE MATHEMATICAL HOTT-NATIVE STRING TYPE DEFINITION
+-- ============================================================================
+-- This replaces string-type.rkt with pure mathematical HoTT notation.
+-- Strings as inductive types: String = EmptyString | StringCons Char String
+-- Characters as Unicode codepoints: Char = MkChar ℕ
+
+-- Import dependencies
+import pure-types
+import pure-values
+
+-- ============================================================================
+-- CHARACTER TYPE DEFINITION
+-- ============================================================================
+
+-- Character type: Char = MkChar ℕ (where ℕ is the Unicode codepoint)
+data Char : 𝒰₀ where
+  char : ℕ → Char
+
+-- Character constructor and destructor
+make-char : ℕ → Char
+make-char := λ(codepoint : ℕ), char(codepoint)
+
+char-codepoint : Char → ℕ  
+char-codepoint := λ(ch : Char),
+  Char-elim(ch, λ(cp : ℕ), cp)
+
+-- ============================================================================
+-- STRING TYPE DEFINITION
+-- ============================================================================
+
+-- String type: String = EmptyString | StringCons Char String
+data String : 𝒰₀ where
+  empty-string : String
+  string-cons : Char → String → String
+
+-- ============================================================================
+-- STRING CONSTRUCTORS
+-- ============================================================================
+
+-- Create a single-character string
+make-singleton-string : Char → String
+make-singleton-string := λ(ch : Char), string-cons(ch, empty-string)
+
+-- ============================================================================
+-- STRING OPERATIONS (HoTT-Native)
+-- ============================================================================
+
+-- String length: String → ℕ
+string-length : String → ℕ
+string-length := λ(str : String),
+  String-elim(str,
+    -- empty-string case
+    zero,
+    -- string-cons case
+    λ(ch : Char), λ(rest : String), λ(rec : ℕ), succ(rec))
+
+-- String append: String → String → String
+string-append : String → String → String
+string-append := λ(s1 s2 : String),
+  String-elim(s1,
+    -- empty-string case: append(empty, s2) = s2
+    s2,
+    -- string-cons case: append(cons(ch, rest), s2) = cons(ch, append(rest, s2))
+    λ(ch : Char), λ(rest : String), λ(rec : String),
+      string-cons(ch, rec))
+
+-- String equality using HoTT identity types
+string-equal? : String → String → 𝟚
+string-equal? := λ(s1 s2 : String),
+  String-elim(s1,
+    -- empty-string case for s1
+    String-elim(s2,
+      -- both empty: equal
+      ₁,
+      -- s1 empty, s2 cons: not equal  
+      λ(ch2 : Char), λ(rest2 : String), λ(rec2 : 𝟚), ₀),
+    -- string-cons case for s1
+    λ(ch1 : Char), λ(rest1 : String), λ(rec1 : 𝟚),
+      String-elim(s2,
+        -- s1 cons, s2 empty: not equal
+        ₀,
+        -- both cons: compare heads and tails
+        λ(ch2 : Char), λ(rest2 : String), λ(rec2 : 𝟚),
+          𝟚-elim(char-equal?(ch1, ch2), 𝟚,
+            string-equal?(rest1, rest2),
+            ₀)))
+
+-- Character equality
+char-equal? : Char → Char → 𝟚
+char-equal? := λ(c1 c2 : Char),
+  Char-elim(c1,
+    λ(cp1 : ℕ),
+      Char-elim(c2,
+        λ(cp2 : ℕ), nat-equal?(cp1, cp2)))
+
+-- ============================================================================
+-- SAFE STRING OPERATIONS WITH PROOFS
+-- ============================================================================
+
+-- Non-empty string type with proof
+NonEmptyString : Type
+NonEmptyString := Σ(str : String), ¬(Id String str empty-string)
+
+-- Extract first character (head) with proof
+string-head : NonEmptyString → Char
+string-head := λ(nes : NonEmptyString),
+  let str := first(nes) in
+  let proof := second(nes) in
+  String-elim(str,
+    -- empty-string case: impossible due to proof
+    ⊥-elim(Char, proof(refl)),
+    -- string-cons case: return head
+    λ(ch : Char), λ(rest : String), ch)
+
+-- Extract tail with proof
+string-tail : NonEmptyString → String
+string-tail := λ(nes : NonEmptyString),
+  let str := first(nes) in
+  let proof := second(nes) in
+  String-elim(str,
+    -- empty-string case: impossible due to proof
+    ⊥-elim(String, proof(refl)),
+    -- string-cons case: return tail
+    λ(ch : Char), λ(rest : String), rest)
+
+-- Safe tail that preserves non-emptiness when possible
+string-safe-tail : NonEmptyString → Maybe NonEmptyString
+string-safe-tail := λ(nes : NonEmptyString),
+  let tail := string-tail(nes) in
+  try-string-to-nonempty(tail)
+
+-- Convert to non-empty string with proof
+try-string-to-nonempty : String → Maybe NonEmptyString
+try-string-to-nonempty := λ(str : String),
+  String-elim(str,
+    -- empty-string case: cannot convert
+    nothing,
+    -- string-cons case: create proof
+    λ(ch : Char), λ(rest : String),
+      let proof := string-cons-not-empty-proof(ch, rest) in
+      just(pair(string-cons(ch, rest), proof)))
+
+-- ============================================================================
+-- STRING PREDICATES AND CHECKS
+-- ============================================================================
+
+-- Check if string is empty
+string-empty? : String → 𝟚
+string-empty? := λ(str : String),
+  String-elim(str,
+    -- empty-string case
+    ₁,
+    -- string-cons case  
+    λ(ch : Char), λ(rest : String), ₀)
+
+-- Check if two strings have same length
+strings-same-length? : String → String → 𝟚
+strings-same-length? := λ(s1 s2 : String),
+  nat-equal?(string-length(s1), string-length(s2))
+
+-- ============================================================================
+-- STRING ITERATION AND MAPPING
+-- ============================================================================
+
+-- Map over string characters
+string-map : (Char → Char) → String → String
+string-map := λ(f : Char → Char), λ(str : String),
+  String-elim(str,
+    -- empty-string case
+    empty-string,
+    -- string-cons case
+    λ(ch : Char), λ(rest : String), λ(rec : String),
+      string-cons(f(ch), rec))
+
+-- String fold (reduce)
+string-fold : ∀(A : Type), A → (Char → A → A) → String → A
+string-fold := λ(A : Type), λ(initial : A), λ(f : Char → A → A), λ(str : String),
+  String-elim(str,
+    -- empty-string case
+    initial,
+    -- string-cons case
+    λ(ch : Char), λ(rest : String), λ(rec : A),
+      f(ch, rec))
+
+-- String filter
+string-filter : (Char → 𝟚) → String → String
+string-filter := λ(pred : Char → 𝟚), λ(str : String),
+  String-elim(str,
+    -- empty-string case
+    empty-string,
+    -- string-cons case
+    λ(ch : Char), λ(rest : String), λ(rec : String),
+      𝟚-elim(pred(ch), String,
+        string-cons(ch, rec),  -- include character
+        rec))                  -- skip character
+
+-- ============================================================================
+-- STRING COMPARISON AND ORDERING
+-- ============================================================================
+
+-- Lexicographic string comparison
+string-compare : String → String → Ordering
+string-compare := λ(s1 s2 : String),
+  String-elim(s1,
+    -- empty-string case for s1
+    String-elim(s2,
+      -- both empty: equal
+      equal,
+      -- s1 empty, s2 non-empty: s1 < s2
+      λ(ch2 : Char), λ(rest2 : String), less-than),
+    -- string-cons case for s1
+    λ(ch1 : Char), λ(rest1 : String), λ(rec1 : Ordering),
+      String-elim(s2,
+        -- s1 non-empty, s2 empty: s1 > s2
+        greater-than,
+        -- both non-empty: compare heads, then tails
+        λ(ch2 : Char), λ(rest2 : String), λ(rec2 : Ordering),
+          let char-cmp := char-compare(ch1, ch2) in
+          Ordering-elim(char-cmp,
+            -- characters equal: compare tails
+            string-compare(rest1, rest2),
+            -- ch1 < ch2
+            less-than,
+            -- ch1 > ch2
+            greater-than)))
+
+-- Character comparison
+char-compare : Char → Char → Ordering
+char-compare := λ(c1 c2 : Char),
+  Char-elim(c1,
+    λ(cp1 : ℕ),
+      Char-elim(c2,
+        λ(cp2 : ℕ), nat-compare(cp1, cp2)))
+
+-- String less-than predicate
+string-less-than? : String → String → 𝟚
+string-less-than? := λ(s1 s2 : String),
+  Ordering-elim(string-compare(s1, s2),
+    ₀,  -- equal
+    ₁,  -- less-than
+    ₀)  -- greater-than
+
+-- ============================================================================
+-- STRING INDEXING AND SLICING
+-- ============================================================================
+
+-- String indexing with bounds checking
+string-nth : String → ℕ → Maybe Char
+string-nth := λ(str : String), λ(n : ℕ),
+  String-elim(str,
+    -- empty-string case: index out of bounds
+    nothing,
+    -- string-cons case
+    λ(ch : Char), λ(rest : String),
+      ℕ-elim(n,
+        -- n = 0: return head
+        just(ch),
+        -- n = succ(k): recurse on tail
+        λ(k : ℕ), λ(rec : Maybe Char),
+          string-nth(rest, k)))
+
+-- Safe string indexing with proof
+string-nth-safe : (str : String) → (n : ℕ) → n < string-length(str) → Char
+string-nth-safe := λ(str : String), λ(n : ℕ), λ(bounds-proof : n < string-length(str)),
+  String-elim(str,
+    -- empty-string case: impossible since n < 0 is false
+    ⊥-elim(Char, nat-not-less-than-zero(n, bounds-proof)),
+    -- string-cons case
+    λ(ch : Char), λ(rest : String),
+      ℕ-elim(n,
+        -- n = 0: return head
+        ch,
+        -- n = succ(k): recurse on tail
+        λ(k : ℕ), λ(rec : n < string-length(str) → Char),
+          rec(string-succ-bounds-theorem(ch, rest, k, bounds-proof))))
+
+-- String substring with bounds
+string-substring : String → ℕ → ℕ → String
+string-substring := λ(str : String), λ(start length : ℕ),
+  let dropped := string-drop(str, start) in
+  string-take(dropped, length)
+
+-- Drop first n characters
+string-drop : String → ℕ → String
+string-drop := λ(str : String), λ(n : ℕ),
+  ℕ-elim(n,
+    -- drop 0: return original
+    str,
+    -- drop succ(k): drop one and recurse
+    λ(k : ℕ), λ(rec : String),
+      String-elim(str,
+        -- empty string: return empty
+        empty-string,
+        -- non-empty: drop head and recurse
+        λ(ch : Char), λ(rest : String),
+          string-drop(rest, k)))
+
+-- Take first n characters
+string-take : String → ℕ → String
+string-take := λ(str : String), λ(n : ℕ),
+  ℕ-elim(n,
+    -- take 0: return empty
+    empty-string,
+    -- take succ(k): take head if available and recurse
+    λ(k : ℕ), λ(rec : String),
+      String-elim(str,
+        -- empty string: return empty
+        empty-string,
+        -- non-empty: take head and recurse on tail
+        λ(ch : Char), λ(rest : String),
+          string-cons(ch, string-take(rest, k))))
+
+-- ============================================================================
+-- STRING UTILITIES AND CONSTANTS
+-- ============================================================================
+
+-- Common character constants
+newline-char : Char
+newline-char := char(10)  -- Unicode newline
+
+space-char : Char  
+space-char := char(32)   -- Unicode space
+
+tab-char : Char
+tab-char := char(9)      -- Unicode tab
+
+-- String from single character
+char-to-string : Char → String
+char-to-string := λ(ch : Char), string-cons(ch, empty-string)
+
+-- ============================================================================
+-- NATURAL NUMBER ARITHMETIC UTILITIES
+-- ============================================================================
+
+-- Natural number ordering type
+data Ordering : 𝒰₀ where
+  less-than : Ordering
+  equal : Ordering
+  greater-than : Ordering
+
+-- Natural number comparison
+nat-compare : ℕ → ℕ → Ordering
+nat-compare := λ(m n : ℕ),
+  ℕ-elim(m,
+    -- m = 0
+    ℕ-elim(n,
+      equal,        -- 0 = 0
+      λ(k : ℕ), λ(rec : Ordering), less-than),  -- 0 < succ(k)
+    -- m = succ(j)
+    λ(j : ℕ), λ(rec : Ordering),
+      ℕ-elim(n,
+        greater-than,  -- succ(j) > 0
+        λ(k : ℕ), λ(rec2 : Ordering), nat-compare(j, k)))  -- compare predecessors
+
+-- Natural number equality
+nat-equal? : ℕ → ℕ → 𝟚
+nat-equal? := λ(m n : ℕ),
+  Ordering-elim(nat-compare(m, n),
+    ₁,  -- equal
+    ₀,  -- less-than
+    ₀)  -- greater-than
+
+-- ============================================================================
+-- PROOF OBLIGATIONS AND THEOREMS
+-- ============================================================================
+
+-- Proof that string-cons creates non-empty strings
+string-cons-not-empty-proof : ∀(ch : Char), ∀(rest : String), ¬(Id String (string-cons ch rest) empty-string)
+string-cons-not-empty-proof := λ(ch : Char), λ(rest : String), λ(eq : Id String (string-cons ch rest) empty-string),
+  -- This contradicts the disjointness of constructors
+  string-constructor-disjoint(ch, rest, eq)
+
+-- Bounds theorem for string indexing
+string-succ-bounds-theorem : ∀(ch : Char), ∀(rest : String), ∀(k : ℕ), 
+                            succ k < string-length(string-cons ch rest) → 
+                            k < string-length(rest)
+string-succ-bounds-theorem := λ(ch : Char), λ(rest : String), λ(k : ℕ), λ(bounds : succ k < string-length(string-cons ch rest)),
+  -- This follows from the definition of string-length and successor properties
+  string-length-succ-theorem(ch, rest, k, bounds)
+
+-- ============================================================================
+-- AUXILIARY PROOF STUBS
+-- ============================================================================
+
+-- These would be proven using HoTT axioms and induction principles
+string-constructor-disjoint : ∀(ch : Char), ∀(rest : String), 
+                             Id String (string-cons ch rest) empty-string → ⊥
+string-constructor-disjoint := sorry
+
+string-length-succ-theorem : ∀(ch : Char), ∀(rest : String), ∀(k : ℕ),
+                            succ k < string-length(string-cons ch rest) →
+                            k < string-length(rest)
+string-length-succ-theorem := sorry
+
+nat-not-less-than-zero : ∀(n : ℕ), n < zero → ⊥
+nat-not-less-than-zero := sorry
+
+-- Eliminator for ordering type
+Ordering-elim : ∀(A : Type), Ordering → A → A → A → A
+Ordering-elim := λ(A : Type), λ(ord : Ordering), λ(eq-case lt-case gt-case : A),
+  sorry  -- Implementation depends on Ordering structure
+
+-- This establishes the pure mathematical string type system for PathFinder

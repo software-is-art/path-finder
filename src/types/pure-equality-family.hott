@@ -1,0 +1,510 @@
+-- ============================================================================
+-- PURE MATHEMATICAL GENERIC EQUALITY TYPE FAMILY (HoTT-Native)
+-- ============================================================================
+-- This replaces equality-family.rkt with pure mathematical HoTT notation.
+-- Implements generic decidable equality using PathFinder's tier-aware type 
+-- family system with universe polymorphism and identity type proofs.
+
+-- Import dependencies
+import pure-types
+import pure-values
+import pure-type-families
+
+-- ============================================================================
+-- DECIDABLE EQUALITY TYPE FAMILY
+-- ============================================================================
+
+-- Decidable equality type: a type with an equality decision procedure
+data DecidableEqualityType : Type → 𝒰₀ where
+  decidable-equality-type : ∀(A : Type), (A → A → EqualityResult A) → 
+                           (∀(x y : A), EqualityEvidence A x y) → 
+                           DecidableEqualityType A
+
+-- Equality evidence: computational proof of equality or inequality
+data EqualityEvidence : Type → Value → Value → 𝒰₀ where
+  equality-evidence : ∀(A : Type), ∀(x y : Value), 
+                     ((Id A x y) + ¬(Id A x y)) → EqualityEvidence A x y
+
+-- Equality result with computational proof
+data EqualityResult : Type → 𝒰₀ where
+  equal-with-proof : ∀(A : Type), ∀(x y : A), Id A x y → EqualityResult A
+  different-with-proof : ∀(A : Type), ∀(x y : A), ¬(Id A x y) → EqualityResult A
+
+-- ============================================================================
+-- DECIDABLE EQUALITY TYPE FAMILY INSTANTIATION
+-- ============================================================================
+
+-- DecEq type family: Type₀ → Type₁
+-- For any type A : Type₀, DecEq A provides decidable equality for A
+DecEq : Type → Type
+DecEq := λ(A : Type), DecidableEqualityType A
+
+-- Type family instantiation function
+equality-type-instantiation : Type → DecidableEqualityType Type
+equality-type-instantiation := λ(base-type : Type),
+  Type-elim(DecidableEqualityType Type, base-type,
+    -- universe case: universes have decidable equality
+    λ(n : ℕ), decidable-equality-type(Type, universe-equal?, universe-eq-evidence),
+    
+    -- pi-type case: functions have undecidable equality in general
+    λ(var : String), λ(domain codomain : Type), 
+      undecidable-equality-error("Pi types do not have decidable equality"),
+    
+    -- sigma-type case: pairs have decidable equality if components do
+    λ(var : String), λ(first second : Type),
+      decidable-equality-type(Type,
+        λ(p1 p2 : Σ(x : first), second),
+          sigma-equal?(first, second, p1, p2),
+        sigma-eq-evidence(first, second)),
+    
+    -- sum-type case: sums have decidable equality if components do
+    λ(left right : Type),
+      decidable-equality-type(Type,
+        λ(s1 s2 : left + right),
+          sum-equal?(left, right, s1, s2),
+        sum-eq-evidence(left, right)),
+    
+    -- identity-type case: identity types have decidable equality
+    λ(A : Type), λ(x y : Value),
+      decidable-equality-type(Type,
+        λ(p1 p2 : Id A x y),
+          identity-equal?(A, x, y, p1, p2),
+        identity-eq-evidence(A, x, y)),
+    
+    -- unit-type case: unit has trivial equality
+    decidable-equality-type(Type, unit-equal?, unit-eq-evidence),
+    
+    -- empty-type case: empty type has vacuous equality
+    decidable-equality-type(Type, empty-equal?, empty-eq-evidence),
+    
+    -- inductive-type case: dispatch based on type name
+    λ(name : String), λ(constructors : List Constructor),
+      inductive-type-equality-instantiation(name, constructors),
+    
+    -- effect-type case: effects have undecidable equality in general
+    λ(base : Type), λ(req opt : EffectSet),
+      undecidable-equality-error("Effect types do not have decidable equality"))
+
+-- Instantiation for inductive types
+inductive-type-equality-instantiation : String → List Constructor → DecidableEqualityType Type
+inductive-type-equality-instantiation := λ(name : String), λ(constructors : List Constructor),
+  if-then-else(DecidableEqualityType Type,
+    string-equal?(name, "ℕ"),
+    -- Natural numbers have decidable equality
+    decidable-equality-type(Type, nat-equal-with-proof, nat-eq-evidence),
+    if-then-else(DecidableEqualityType Type,
+      string-equal?(name, "𝟚"),
+      -- Booleans have decidable equality
+      decidable-equality-type(Type, bool-equal-with-proof, bool-eq-evidence),
+      if-then-else(DecidableEqualityType Type,
+        string-prefix?(name, "List"),
+        -- Lists have decidable equality if their elements do
+        list-equality-instantiation(name, constructors),
+        if-then-else(DecidableEqualityType Type,
+          string-equal?(name, "String"),
+          -- Strings have decidable equality
+          decidable-equality-type(Type, string-equal-with-proof, string-eq-evidence),
+          if-then-else(DecidableEqualityType Type,
+            string-equal?(name, "Char"),
+            -- Characters have decidable equality
+            decidable-equality-type(Type, char-equal-with-proof, char-eq-evidence),
+            -- Generic constructor-based equality
+            decidable-equality-type(Type, 
+              generic-constructor-equal-with-proof(constructors),
+              generic-constructor-eq-evidence(constructors)))))))
+
+-- List equality instantiation (parametric)
+list-equality-instantiation : String → List Constructor → DecidableEqualityType Type
+list-equality-instantiation := λ(name : String), λ(constructors : List Constructor),
+  let element-type := extract-list-element-type(name) in
+  let element-eq := equality-type-instantiation(element-type) in
+  decidable-equality-type(Type,
+    λ(lst1 lst2 : List element-type),
+      list-equal-with-element-eq(element-type, element-eq, lst1, lst2),
+    list-eq-evidence(element-type, element-eq))
+
+-- ============================================================================
+-- UNIVERSE POLYMORPHIC EQUALITY INTERFACE
+-- ============================================================================
+
+-- Universe polymorphic equality type: (A : Type₀) → A → A → Type₀
+-- This is the HoTT-native way to express generic equality
+make-equality-type : ∀(A : Type), A → A → Type
+make-equality-type := λ(A : Type), λ(x y : A), Id A x y
+
+-- Generic equality proof type: decidable equality for A
+-- Either constructs Id A x y or ¬(Id A x y)
+data EqualityProof : Type → 𝒰₀ where
+  equality-proof : ∀(A : Type), 𝟚 → ((Id A sorry sorry) + ¬(Id A sorry sorry)) → EqualityProof A
+
+-- Decidable equality result with computational evidence
+data DecEqResult : Type → 𝒰₀ where
+  dec-eq-result : ∀(A : Type), 𝟚 → EqualityEvidence A sorry sorry → DecEqResult A
+
+-- ============================================================================
+-- TIER-AWARE EQUALITY INSTANTIATION
+-- ============================================================================
+
+-- Get decidable equality instance for a type (tier-aware)
+get-decidable-equality : Type → List Value → DecidableEqualityType Type
+get-decidable-equality := λ(A : Type), λ(values : List Value),
+  let tier := determine-tier(cons(A, nil), values) in
+  Tier-elim(DecidableEqualityType Type, tier,
+    -- tier0: Axiom level equality
+    tier0-equality-instance(A),
+    -- tier1: Compile-time full specialization
+    tier1-equality-instance(A, values),
+    -- tier2: Type-resolution with compile-time effects
+    tier2-equality-instance(A),
+    -- tier3: Runtime dispatch
+    tier3-equality-instance(A))
+
+-- Tier 0: Axiom level equality (pure mathematical)
+tier0-equality-instance : Type → DecidableEqualityType Type
+tier0-equality-instance := λ(A : Type),
+  equality-type-instantiation(A)
+
+-- Tier 1: Compile-time equality specialization
+tier1-equality-instance : Type → List Value → DecidableEqualityType Type
+tier1-equality-instance := λ(A : Type), λ(values : List Value),
+  let eq-type := equality-type-instantiation(A) in
+  -- Cache specialized equality functions for these specific values
+  let cached-result := cache-specialized-equality(A, values) in
+  enhance-with-specialization(eq-type, cached-result)
+
+-- Tier 2: Type-resolution equality (uses compile-time effects)
+tier2-equality-instance : Type → DecidableEqualityType Type
+tier2-equality-instance := λ(A : Type),
+  -- Type known at compile-time, can specialize the equality function
+  equality-type-instantiation(A)
+
+-- Tier 3: Runtime equality dispatch
+tier3-equality-instance : Type → DecidableEqualityType Type
+tier3-equality-instance := λ(A : Type),
+  -- Runtime type dispatch - create generic equality wrapper
+  decidable-equality-type(Type, 
+    runtime-equal-dispatcher(A),
+    runtime-eq-evidence(A))
+
+-- ============================================================================
+-- SPECIALIZED EQUALITY CACHING (Performance Optimization)
+-- ============================================================================
+
+-- Compile-time equality specialization cache
+data SpecializationCache : 𝒰₀ where
+  empty-cache : SpecializationCache
+  cache-insert : Type → List Value → EqualityResult Type → SpecializationCache → SpecializationCache
+
+-- Cache a specialized equality computation
+cache-specialized-equality : Type → List Value → EqualityResult Type
+cache-specialized-equality := λ(A : Type), λ(values : List Value),
+  List-elim(values,
+    -- Empty values: no specialization
+    default-equality-result(A),
+    -- Non-empty: try to compute at compile time
+    λ(val1 : Value), λ(rest : List Value),
+      List-elim(rest,
+        -- Single value: return reflexivity
+        equal-with-proof(A, val1, val1, refl),
+        -- Two or more values: compute equality
+        λ(val2 : Value), λ(rest2 : List Value),
+          compute-equality-at-compile-time(A, val1, val2)))
+
+-- Compute equality at compile time (when values are constructor-values)
+compute-equality-at-compile-time : Type → Value → Value → EqualityResult Type
+compute-equality-at-compile-time := λ(A : Type), λ(val1 val2 : Value),
+  Type-elim(EqualityResult Type, A,
+    -- universe case
+    λ(n : ℕ), universe-compile-time-equality(val1, val2),
+    -- pi-type case: undecidable
+    λ(var : String), λ(domain codomain : Type),
+      different-with-proof(Type, val1, val2, pi-not-decidable-proof),
+    -- sigma-type case: component-wise
+    λ(var : String), λ(first second : Type),
+      sigma-compile-time-equality(first, second, val1, val2),
+    -- sum-type case: constructor-based
+    λ(left right : Type),
+      sum-compile-time-equality(left, right, val1, val2),
+    -- identity-type case: path equality
+    λ(id-type : Type), λ(x y : Value),
+      identity-compile-time-equality(id-type, x, y, val1, val2),
+    -- unit-type case: always equal
+    equal-with-proof(Type, val1, val2, unit-eq-proof),
+    -- empty-type case: vacuously equal (no inhabitants)
+    equal-with-proof(Type, val1, val2, empty-eq-proof),
+    -- inductive-type case: use generic constructor equality
+    λ(name : String), λ(constructors : List Constructor),
+      inductive-compile-time-equality(name, constructors, val1, val2),
+    -- effect-type case: undecidable
+    λ(base : Type), λ(req opt : EffectSet),
+      different-with-proof(Type, val1, val2, effect-not-decidable-proof))
+
+-- ============================================================================
+-- TYPE-SPECIFIC EQUALITY IMPLEMENTATIONS
+-- ============================================================================
+
+-- Natural number equality with proof
+nat-equal-with-proof : Value → Value → EqualityResult ℕ
+nat-equal-with-proof := λ(n1 n2 : Value),
+  Value-elim(EqualityResult ℕ, n1,
+    -- constructor-value case for n1
+    λ(name1 : String), λ(args1 : List Value), λ(type1 : Type),
+      Value-elim(EqualityResult ℕ, n2,
+        -- constructor-value case for n2
+        λ(name2 : String), λ(args2 : List Value), λ(type2 : Type),
+          nat-constructor-equality(name1, args1, name2, args2),
+        -- Other cases: not equal
+        λ(p : List String), λ(b : AST), λ(e : Environment),
+          different-with-proof(ℕ, n1, n2, nat-not-closure-proof),
+        λ(n : String), λ(a : ℕ), λ(t : Type),
+          different-with-proof(ℕ, n1, n2, nat-not-builtin-proof),
+        different-with-proof(ℕ, n1, n2, nat-not-unit-proof),
+        λ(s : String), different-with-proof(ℕ, n1, n2, nat-not-string-proof),
+        λ(eff : Effect), different-with-proof(ℕ, n1, n2, nat-not-effect-proof),
+        λ(t : Type), λ(s e : Value), λ(pr : Proof),
+          different-with-proof(ℕ, n1, n2, nat-not-path-proof),
+        λ(ta tb : Type), λ(f qi : Value),
+          different-with-proof(ℕ, n1, n2, nat-not-equiv-proof)),
+    -- Other cases for n1: similar pattern
+    λ(p : List String), λ(b : AST), λ(e : Environment),
+      different-with-proof(ℕ, n1, n2, nat-not-closure-proof),
+    λ(n : String), λ(a : ℕ), λ(t : Type),
+      different-with-proof(ℕ, n1, n2, nat-not-builtin-proof),
+    different-with-proof(ℕ, n1, n2, nat-not-unit-proof),
+    λ(s : String), different-with-proof(ℕ, n1, n2, nat-not-string-proof),
+    λ(eff : Effect), different-with-proof(ℕ, n1, n2, nat-not-effect-proof),
+    λ(t : Type), λ(s e : Value), λ(pr : Proof),
+      different-with-proof(ℕ, n1, n2, nat-not-path-proof),
+    λ(ta tb : Type), λ(f qi : Value),
+      different-with-proof(ℕ, n1, n2, nat-not-equiv-proof))
+
+-- Natural number constructor equality
+nat-constructor-equality : String → List Value → String → List Value → EqualityResult ℕ
+nat-constructor-equality := λ(name1 : String), λ(args1 : List Value), λ(name2 : String), λ(args2 : List Value),
+  if-then-else(EqualityResult ℕ,
+    string-equal?(name1, "zero"),
+    if-then-else(EqualityResult ℕ,
+      string-equal?(name2, "zero"),
+      equal-with-proof(ℕ, zero-value, zero-value, refl),
+      different-with-proof(ℕ, zero-value, sorry, zero-not-succ-proof)),
+    if-then-else(EqualityResult ℕ,
+      string-equal?(name1, "succ"),
+      if-then-else(EqualityResult ℕ,
+        string-equal?(name2, "succ"),
+        -- Both succ: recursively compare predecessors
+        nat-succ-equality-helper(args1, args2),
+        different-with-proof(ℕ, sorry, zero-value, succ-not-zero-proof)),
+      different-with-proof(ℕ, sorry, sorry, unknown-nat-constructor-proof)))
+
+-- Boolean equality with proof
+bool-equal-with-proof : Value → Value → EqualityResult 𝟚
+bool-equal-with-proof := λ(b1 b2 : Value),
+  -- Similar structure to nat-equal-with-proof but for boolean constructors
+  bool-constructor-comparison(b1, b2)
+
+-- String equality with proof
+string-equal-with-proof : Value → Value → EqualityResult String
+string-equal-with-proof := λ(s1 s2 : Value),
+  string-recursive-equality(s1, s2)
+
+-- Character equality with proof
+char-equal-with-proof : Value → Value → EqualityResult Char
+char-equal-with-proof := λ(c1 c2 : Value),
+  char-codepoint-equality(c1, c2)
+
+-- ============================================================================
+-- GENERIC CONSTRUCTOR-BASED EQUALITY
+-- ============================================================================
+
+-- Generic constructor-based equality for any inductive type
+generic-constructor-equal-with-proof : List Constructor → Value → Value → EqualityResult Value
+generic-constructor-equal-with-proof := λ(constructors : List Constructor), λ(val1 val2 : Value),
+  Value-elim(EqualityResult Value, val1,
+    -- constructor-value case
+    λ(name1 : String), λ(args1 : List Value), λ(type1 : Type),
+      Value-elim(EqualityResult Value, val2,
+        -- constructor-value case for val2
+        λ(name2 : String), λ(args2 : List Value), λ(type2 : Type),
+          if-then-else(EqualityResult Value,
+            string-equal?(name1, name2),
+            -- Same constructor: compare arguments recursively
+            constructor-args-equality(args1, args2),
+            -- Different constructors: not equal
+            different-with-proof(Value, val1, val2, constructor-disjoint-proof(name1, name2))),
+        -- Other cases: not equal
+        λ(p : List String), λ(b : AST), λ(e : Environment),
+          different-with-proof(Value, val1, val2, constructor-not-closure-proof),
+        λ(n : String), λ(a : ℕ), λ(t : Type),
+          different-with-proof(Value, val1, val2, constructor-not-builtin-proof),
+        different-with-proof(Value, val1, val2, constructor-not-unit-proof),
+        λ(s : String), different-with-proof(Value, val1, val2, constructor-not-string-proof),
+        λ(eff : Effect), different-with-proof(Value, val1, val2, constructor-not-effect-proof),
+        λ(t : Type), λ(s e : Value), λ(pr : Proof),
+          different-with-proof(Value, val1, val2, constructor-not-path-proof),
+        λ(ta tb : Type), λ(f qi : Value),
+          different-with-proof(Value, val1, val2, constructor-not-equiv-proof)),
+    -- Other cases for val1: symmetric
+    λ(p : List String), λ(b : AST), λ(e : Environment),
+      different-with-proof(Value, val1, val2, constructor-not-closure-proof),
+    λ(n : String), λ(a : ℕ), λ(t : Type),
+      different-with-proof(Value, val1, val2, constructor-not-builtin-proof),
+    different-with-proof(Value, val1, val2, constructor-not-unit-proof),
+    λ(s : String), different-with-proof(Value, val1, val2, constructor-not-string-proof),
+    λ(eff : Effect), different-with-proof(Value, val1, val2, constructor-not-effect-proof),
+    λ(t : Type), λ(s e : Value), λ(pr : Proof),
+      different-with-proof(Value, val1, val2, constructor-not-path-proof),
+    λ(ta tb : Type), λ(f qi : Value),
+      different-with-proof(Value, val1, val2, constructor-not-equiv-proof))
+
+-- ============================================================================
+-- UTILITY FUNCTIONS AND EVIDENCE CONSTRUCTORS
+-- ============================================================================
+
+-- Check if type has decidable equality
+has-decidable-equality? : Type → 𝟚
+has-decidable-equality? := λ(A : Type),
+  equality-decidability-test(A)
+
+-- Extract element type from list type name
+extract-list-element-type : String → Type
+extract-list-element-type := λ(name : String),
+  if-then-else(Type,
+    string-equal?(name, "List-ℕ"),
+    ℕ,
+    if-then-else(Type,
+      string-equal?(name, "List-𝟚"),
+      𝟚,
+      if-then-else(Type,
+        string-equal?(name, "List-String"),
+        String,
+        -- Default to generic value type
+        Value)))
+
+-- Default equality result
+default-equality-result : Type → EqualityResult Type
+default-equality-result := λ(A : Type),
+  different-with-proof(A, sorry, sorry, default-inequality-proof)
+
+-- Runtime equality dispatcher
+runtime-equal-dispatcher : Type → Value → Value → EqualityResult Type
+runtime-equal-dispatcher := λ(A : Type), λ(val1 val2 : Value),
+  -- Runtime type analysis and dispatch
+  runtime-type-dispatch(A, val1, val2)
+
+-- ============================================================================
+-- EVIDENCE CONSTRUCTORS (PROOF OBLIGATIONS)
+-- ============================================================================
+
+-- Natural number equality evidence
+nat-eq-evidence : ∀(x y : Value), EqualityEvidence ℕ x y
+nat-eq-evidence := λ(x y : Value),
+  equality-evidence(ℕ, x, y, nat-equality-decision(x, y))
+
+-- Boolean equality evidence
+bool-eq-evidence : ∀(x y : Value), EqualityEvidence 𝟚 x y
+bool-eq-evidence := λ(x y : Value),
+  equality-evidence(𝟚, x, y, bool-equality-decision(x, y))
+
+-- String equality evidence
+string-eq-evidence : ∀(x y : Value), EqualityEvidence String x y
+string-eq-evidence := λ(x y : Value),
+  equality-evidence(String, x, y, string-equality-decision(x, y))
+
+-- Character equality evidence
+char-eq-evidence : ∀(x y : Value), EqualityEvidence Char x y
+char-eq-evidence := λ(x y : Value),
+  equality-evidence(Char, x, y, char-equality-decision(x, y))
+
+-- Unit equality evidence
+unit-eq-evidence : ∀(x y : Value), EqualityEvidence 𝟙 x y
+unit-eq-evidence := λ(x y : Value),
+  equality-evidence(𝟙, x, y, inl(unit-always-equal-proof))
+
+-- Empty equality evidence
+empty-eq-evidence : ∀(x y : Value), EqualityEvidence 𝟘 x y
+empty-eq-evidence := λ(x y : Value),
+  equality-evidence(𝟘, x, y, inl(empty-vacuous-proof))
+
+-- Generic constructor equality evidence
+generic-constructor-eq-evidence : List Constructor → ∀(x y : Value), EqualityEvidence Value x y
+generic-constructor-eq-evidence := λ(constructors : List Constructor), λ(x y : Value),
+  equality-evidence(Value, x, y, constructor-equality-decision(constructors, x, y))
+
+-- ============================================================================
+-- HELPER FUNCTIONS FOR SPECIFIC TYPES
+-- ============================================================================
+
+-- Constructor argument equality
+constructor-args-equality : List Value → List Value → EqualityResult Value
+constructor-args-equality := λ(args1 args2 : List Value),
+  list-pointwise-equality(Value, generic-value-equal?, args1, args2)
+
+-- Succ equality helper
+nat-succ-equality-helper : List Value → List Value → EqualityResult ℕ
+nat-succ-equality-helper := λ(args1 args2 : List Value),
+  List-elim(args1,
+    different-with-proof(ℕ, sorry, sorry, malformed-succ-proof),
+    λ(pred1 : Value), λ(rest1 : List Value),
+      List-elim(args2,
+        different-with-proof(ℕ, sorry, sorry, malformed-succ-proof),
+        λ(pred2 : Value), λ(rest2 : List Value),
+          let rec-result := nat-equal-with-proof(pred1, pred2) in
+          EqualityResult-elim(rec-result,
+            λ(proof : Id ℕ pred1 pred2),
+              equal-with-proof(ℕ, succ-value(pred1), succ-value(pred2),
+                cong(ℕ, ℕ, succ-value, proof)),
+            λ(neg-proof : ¬(Id ℕ pred1 pred2)),
+              different-with-proof(ℕ, succ-value(pred1), succ-value(pred2),
+                λ(succ-eq : Id ℕ (succ-value pred1) (succ-value pred2)),
+                  neg-proof(succ-injective(pred1, pred2, succ-eq))))))
+
+-- ============================================================================
+-- PROOF STUBS AND AUXILIARY FUNCTIONS
+-- ============================================================================
+
+-- These would be proven using HoTT axioms and induction principles
+nat-equality-decision : Value → Value → (Id ℕ sorry sorry) + ¬(Id ℕ sorry sorry)
+nat-equality-decision := sorry
+
+bool-equality-decision : Value → Value → (Id 𝟚 sorry sorry) + ¬(Id 𝟚 sorry sorry)
+bool-equality-decision := sorry
+
+string-equality-decision : Value → Value → (Id String sorry sorry) + ¬(Id String sorry sorry)
+string-equality-decision := sorry
+
+char-equality-decision : Value → Value → (Id Char sorry sorry) + ¬(Id Char sorry sorry)
+char-equality-decision := sorry
+
+constructor-equality-decision : List Constructor → Value → Value → (Id Value sorry sorry) + ¬(Id Value sorry sorry)
+constructor-equality-decision := sorry
+
+-- Error handling for undecidable types
+undecidable-equality-error : String → DecidableEqualityType Type
+undecidable-equality-error := λ(msg : String), sorry
+
+-- Enhance equality with specialization
+enhance-with-specialization : DecidableEqualityType Type → EqualityResult Type → DecidableEqualityType Type
+enhance-with-specialization := λ(eq-type : DecidableEqualityType Type), λ(cached : EqualityResult Type), eq-type
+
+-- Test if type has decidable equality
+equality-decidability-test : Type → 𝟚
+equality-decidability-test := sorry
+
+-- Runtime type dispatch
+runtime-type-dispatch : Type → Value → Value → EqualityResult Type
+runtime-type-dispatch := sorry
+
+-- Additional proof stubs
+zero-not-succ-proof : ¬(Id ℕ zero-value sorry)
+zero-not-succ-proof := sorry
+
+succ-not-zero-proof : ¬(Id ℕ sorry zero-value)
+succ-not-zero-proof := sorry
+
+succ-injective : ∀(m n : Value), Id ℕ (succ-value m) (succ-value n) → Id ℕ m n
+succ-injective := sorry
+
+constructor-disjoint-proof : String → String → ¬(Id Value sorry sorry)
+constructor-disjoint-proof := sorry
+
+-- This establishes the pure mathematical generic equality type family for PathFinder

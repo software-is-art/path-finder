@@ -1,0 +1,484 @@
+-- ============================================================================
+-- PURE MATHEMATICAL GENERIC LIST TYPE IMPLEMENTATION
+-- ============================================================================
+-- This replaces list-type-generic.rkt with pure mathematical HoTT notation.
+-- Uses tier-aware generic type family system with universe polymorphism.
+
+-- Import dependencies
+import pure-types
+import pure-values
+import pure-type-families
+
+-- ============================================================================
+-- GENERIC LIST TYPE DEFINITION (Universe Polymorphic)
+-- ============================================================================
+
+-- Universe polymorphic List type: List : Type → Type
+data List : Type → Type where
+  nil : ∀(A : Type), List A
+  cons : ∀(A : Type), A → List A → List A
+
+-- ============================================================================
+-- GENERIC LIST OPERATIONS (Tier-Aware)
+-- ============================================================================
+
+-- List append: Tier-aware concatenation
+list-append : ∀(A : Type), List A → List A → List A
+list-append := λ(A : Type), λ(lst1 lst2 : List A),
+  List-elim(lst1,
+    -- nil case: append(nil, lst2) = lst2
+    lst2,
+    -- cons case: append(cons(h, t), lst2) = cons(h, append(t, lst2))
+    λ(head : A), λ(tail : List A), λ(rec : List A),
+      cons(A, head, rec))
+
+-- List map: Higher-order function with tier awareness
+list-map : ∀(A B : Type), (A → B) → List A → List B
+list-map := λ(A B : Type), λ(func : A → B), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: map(f, nil) = nil
+    nil(B),
+    -- cons case: map(f, cons(h, t)) = cons(f(h), map(f, t))
+    λ(head : A), λ(tail : List A), λ(rec : List B),
+      cons(B, func(head), rec))
+
+-- List fold: Structural recursion with tier awareness
+list-fold : ∀(A B : Type), (A → B → B) → B → List A → B
+list-fold := λ(A B : Type), λ(func : A → B → B), λ(initial : B), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: fold(f, init, nil) = init
+    initial,
+    -- cons case: fold(f, init, cons(h, t)) = f(h, fold(f, init, t))
+    λ(head : A), λ(tail : List A), λ(rec : B),
+      func(head, rec))
+
+-- List length: Size computation
+list-length : ∀(A : Type), List A → ℕ
+list-length := λ(A : Type), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: length(nil) = 0
+    zero,
+    -- cons case: length(cons(h, t)) = 1 + length(t)
+    λ(head : A), λ(tail : List A), λ(rec : ℕ),
+      succ(rec))
+
+-- List reverse: Reverse order of elements
+list-reverse : ∀(A : Type), List A → List A
+list-reverse := λ(A : Type), λ(lst : List A),
+  list-fold(A, List A, λ(x : A), λ(acc : List A), cons(A, x, acc), nil(A), lst)
+
+-- ============================================================================
+-- SAFE LIST ACCESS (Generic with Proofs)
+-- ============================================================================
+
+-- Non-empty list type with proof
+NonEmptyList : Type → Type
+NonEmptyList := λ(A : Type), Σ(lst : List A), ¬(Id (List A) lst (nil A))
+
+-- Safe head - extract first element with proof
+list-safe-head : ∀(A : Type), NonEmptyList A → A
+list-safe-head := λ(A : Type), λ(nel : NonEmptyList A),
+  let lst := first(nel) in
+  let proof := second(nel) in
+  List-elim(lst,
+    -- nil case: impossible due to proof
+    ⊥-elim(A, proof(refl)),
+    -- cons case: return head
+    λ(head : A), λ(tail : List A), head)
+
+-- Safe tail - extract rest with proof
+list-safe-tail : ∀(A : Type), NonEmptyList A → List A
+list-safe-tail := λ(A : Type), λ(nel : NonEmptyList A),
+  let lst := first(nel) in
+  let proof := second(nel) in
+  List-elim(lst,
+    -- nil case: impossible due to proof
+    ⊥-elim(List A, proof(refl)),
+    -- cons case: return tail
+    λ(head : A), λ(tail : List A), tail)
+
+-- Try to construct proof that list is non-empty
+try-prove-list-non-empty : ∀(A : Type), List A → Maybe (NonEmptyList A)
+try-prove-list-non-empty := λ(A : Type), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: cannot prove non-empty
+    nothing,
+    -- cons case: can prove non-empty
+    λ(head : A), λ(tail : List A),
+      let proof := cons-not-nil-proof(A, head, tail) in
+      just(pair(cons(A, head, tail), proof)))
+
+-- Auto-safe head: tries to construct proof automatically
+list-auto-safe-head : ∀(A : Type), List A → Maybe A
+list-auto-safe-head := λ(A : Type), λ(lst : List A),
+  let nel-maybe := try-prove-list-non-empty(A, lst) in
+  Maybe-elim(nel-maybe,
+    nothing,
+    λ(nel : NonEmptyList A), just(list-safe-head(A, nel)))
+
+-- ============================================================================
+-- LIST PREDICATES (Generic)
+-- ============================================================================
+
+-- Is list empty? - Pure HoTT predicate
+list-empty? : ∀(A : Type), List A → 𝟚
+list-empty? := λ(A : Type), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: empty
+    ₁,
+    -- cons case: not empty
+    λ(head : A), λ(tail : List A), ₀)
+
+-- List equality - Structural equality using element equality
+list-equal? : ∀(A : Type), (A → A → 𝟚) → List A → List A → 𝟚
+list-equal? := λ(A : Type), λ(element-equal : A → A → 𝟚), λ(lst1 lst2 : List A),
+  List-elim(lst1,
+    -- nil case for lst1
+    List-elim(lst2,
+      -- both nil: equal
+      ₁,
+      -- lst1 nil, lst2 cons: not equal
+      λ(h2 : A), λ(t2 : List A), ₀),
+    -- cons case for lst1
+    λ(h1 : A), λ(t1 : List A), λ(rec1 : 𝟚),
+      List-elim(lst2,
+        -- lst1 cons, lst2 nil: not equal
+        ₀,
+        -- both cons: compare heads and tails
+        λ(h2 : A), λ(t2 : List A), λ(rec2 : 𝟚),
+          𝟚-elim(element-equal(h1, h2), 𝟚,
+            list-equal?(A, element-equal, t1, t2),
+            ₀)))
+
+-- List membership predicate
+list-member? : ∀(A : Type), (A → A → 𝟚) → A → List A → 𝟚
+list-member? := λ(A : Type), λ(element-equal : A → A → 𝟚), λ(x : A), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: not member
+    ₀,
+    -- cons case: check if equal to head or member of tail
+    λ(head : A), λ(tail : List A), λ(rec : 𝟚),
+      𝟚-elim(element-equal(x, head), 𝟚,
+        ₁,  -- found in head
+        rec))  -- check tail
+
+-- ============================================================================
+-- LIST INDEXING AND ACCESS
+-- ============================================================================
+
+-- List indexing with bounds checking
+list-nth : ∀(A : Type), List A → ℕ → Maybe A
+list-nth := λ(A : Type), λ(lst : List A), λ(n : ℕ),
+  List-elim(lst,
+    -- nil case: index out of bounds
+    nothing,
+    -- cons case
+    λ(head : A), λ(tail : List A),
+      ℕ-elim(n,
+        -- n = 0: return head
+        just(head),
+        -- n = succ(k): recurse on tail
+        λ(k : ℕ), λ(rec : Maybe A),
+          list-nth(A, tail, k)))
+
+-- Safe list indexing with proof
+list-nth-safe : ∀(A : Type), (lst : List A) → (n : ℕ) → n < list-length(A, lst) → A
+list-nth-safe := λ(A : Type), λ(lst : List A), λ(n : ℕ), λ(bounds-proof : n < list-length(A, lst)),
+  List-elim(lst,
+    -- nil case: impossible since n < 0 is false
+    ⊥-elim(A, nat-not-less-than-zero(n, bounds-proof)),
+    -- cons case
+    λ(head : A), λ(tail : List A),
+      ℕ-elim(n,
+        -- n = 0: return head
+        head,
+        -- n = succ(k): recurse on tail
+        λ(k : ℕ), λ(rec : n < list-length(A, lst) → A),
+          rec(list-succ-bounds-theorem(A, head, tail, k, bounds-proof))))
+
+-- List update at index
+list-update : ∀(A : Type), List A → ℕ → A → List A
+list-update := λ(A : Type), λ(lst : List A), λ(n : ℕ), λ(new-val : A),
+  List-elim(lst,
+    -- nil case: return nil (no update possible)
+    nil(A),
+    -- cons case
+    λ(head : A), λ(tail : List A),
+      ℕ-elim(n,
+        -- n = 0: update head
+        cons(A, new-val, tail),
+        -- n = succ(k): update in tail
+        λ(k : ℕ), λ(rec : List A),
+          cons(A, head, list-update(A, tail, k, new-val))))
+
+-- ============================================================================
+-- LIST CONSTRUCTION AND CONVERSION
+-- ============================================================================
+
+-- Create list from repeated element
+list-repeat : ∀(A : Type), A → ℕ → List A
+list-repeat := λ(A : Type), λ(x : A), λ(n : ℕ),
+  ℕ-elim(n,
+    -- n = 0: empty list
+    nil(A),
+    -- n = succ(k): cons x to repeat of k
+    λ(k : ℕ), λ(rec : List A),
+      cons(A, x, rec))
+
+-- Create list from range [0, n)
+list-range : ℕ → List ℕ
+list-range := λ(n : ℕ),
+  ℕ-elim(n,
+    -- n = 0: empty list
+    nil(ℕ),
+    -- n = succ(k): append k to range(k)
+    λ(k : ℕ), λ(rec : List ℕ),
+      list-append(ℕ, rec, cons(ℕ, k, nil(ℕ))))
+
+-- Take first n elements
+list-take : ∀(A : Type), ℕ → List A → List A
+list-take := λ(A : Type), λ(n : ℕ), λ(lst : List A),
+  ℕ-elim(n,
+    -- n = 0: take nothing
+    nil(A),
+    -- n = succ(k): take head if available
+    λ(k : ℕ), λ(rec : List A),
+      List-elim(lst,
+        -- empty list: return empty
+        nil(A),
+        -- non-empty: take head and recurse
+        λ(head : A), λ(tail : List A),
+          cons(A, head, list-take(A, k, tail))))
+
+-- Drop first n elements
+list-drop : ∀(A : Type), ℕ → List A → List A
+list-drop := λ(A : Type), λ(n : ℕ), λ(lst : List A),
+  ℕ-elim(n,
+    -- n = 0: drop nothing
+    lst,
+    -- n = succ(k): drop head if available
+    λ(k : ℕ), λ(rec : List A),
+      List-elim(lst,
+        -- empty list: return empty
+        nil(A),
+        -- non-empty: drop head and recurse
+        λ(head : A), λ(tail : List A),
+          list-drop(A, k, tail)))
+
+-- ============================================================================
+-- LIST FILTERING AND SELECTION
+-- ============================================================================
+
+-- Filter list by predicate
+list-filter : ∀(A : Type), (A → 𝟚) → List A → List A
+list-filter := λ(A : Type), λ(pred : A → 𝟚), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: empty result
+    nil(A),
+    -- cons case: include element if predicate holds
+    λ(head : A), λ(tail : List A), λ(rec : List A),
+      𝟚-elim(pred(head), List A,
+        cons(A, head, rec),  -- include head
+        rec))                -- skip head
+
+-- Find first element satisfying predicate
+list-find : ∀(A : Type), (A → 𝟚) → List A → Maybe A
+list-find := λ(A : Type), λ(pred : A → 𝟚), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: not found
+    nothing,
+    -- cons case: check head, then tail
+    λ(head : A), λ(tail : List A), λ(rec : Maybe A),
+      𝟚-elim(pred(head), Maybe A,
+        just(head),  -- found in head
+        rec))        -- search tail
+
+-- Check if any element satisfies predicate
+list-any? : ∀(A : Type), (A → 𝟚) → List A → 𝟚
+list-any? := λ(A : Type), λ(pred : A → 𝟚), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: vacuously false
+    ₀,
+    -- cons case: check head or tail
+    λ(head : A), λ(tail : List A), λ(rec : 𝟚),
+      𝟚-elim(pred(head), 𝟚,
+        ₁,   -- head satisfies
+        rec))  -- check tail
+
+-- Check if all elements satisfy predicate
+list-all? : ∀(A : Type), (A → 𝟚) → List A → 𝟚
+list-all? := λ(A : Type), λ(pred : A → 𝟚), λ(lst : List A),
+  List-elim(lst,
+    -- nil case: vacuously true
+    ₁,
+    -- cons case: check head and tail
+    λ(head : A), λ(tail : List A), λ(rec : 𝟚),
+      𝟚-elim(pred(head), 𝟚,
+        rec,  -- head ok, check tail
+        ₀))   -- head fails
+
+-- ============================================================================
+-- LIST ZIPING AND COMBINING
+-- ============================================================================
+
+-- Zip two lists into pairs
+list-zip : ∀(A B : Type), List A → List B → List (A × B)
+list-zip := λ(A B : Type), λ(lst1 : List A), λ(lst2 : List B),
+  List-elim(lst1,
+    -- nil case for lst1
+    nil(A × B),
+    -- cons case for lst1
+    λ(h1 : A), λ(t1 : List A), λ(rec : List (A × B)),
+      List-elim(lst2,
+        -- lst2 empty: result empty
+        nil(A × B),
+        -- both non-empty: pair heads and recurse
+        λ(h2 : B), λ(t2 : List B),
+          cons(A × B, pair(h1, h2), list-zip(A, B, t1, t2))))
+
+-- Zip two lists with a function
+list-zip-with : ∀(A B C : Type), (A → B → C) → List A → List B → List C
+list-zip-with := λ(A B C : Type), λ(f : A → B → C), λ(lst1 : List A), λ(lst2 : List B),
+  list-map(A × B, C, λ(p : A × B), f(first(p), second(p)), list-zip(A, B, lst1, lst2))
+
+-- Concatenate list of lists
+list-concat : ∀(A : Type), List (List A) → List A
+list-concat := λ(A : Type), λ(lists : List (List A)),
+  List-elim(lists,
+    -- nil case: empty result
+    nil(A),
+    -- cons case: append head to concat of tail
+    λ(head : List A), λ(tail : List (List A)), λ(rec : List A),
+      list-append(A, head, rec))
+
+-- ============================================================================
+-- TIER-AWARE UTILITY FUNCTIONS
+-- ============================================================================
+
+-- Create list from values with tier awareness
+values-to-list : ∀(A : Type), List A → List A
+values-to-list := λ(A : Type), λ(values : List A), values
+
+-- Convert list to individual elements (identity for type compatibility)
+list-to-values : ∀(A : Type), List A → List A
+list-to-values := λ(A : Type), λ(lst : List A), lst
+
+-- Tier-aware list construction based on available information
+adaptive-list-construction : ∀(A : Type), Tier → List Value → List A
+adaptive-list-construction := λ(A : Type), λ(tier : Tier), λ(values : List Value),
+  Tier-elim(List A, tier,
+    -- tier0: pure mathematical construction
+    tier0-list-construction(A, values),
+    -- tier1: compile-time optimization
+    tier1-list-construction(A, values),
+    -- tier2: type-specialized construction
+    tier2-list-construction(A, values),
+    -- tier3: runtime polymorphic construction
+    tier3-list-construction(A, values))
+
+-- ============================================================================
+-- TIER-SPECIFIC IMPLEMENTATIONS
+-- ============================================================================
+
+-- Tier 0: Pure mathematical construction
+tier0-list-construction : ∀(A : Type), List Value → List A
+tier0-list-construction := λ(A : Type), λ(values : List Value),
+  list-map(Value, A, value-to-A, values)
+
+-- Tier 1: Compile-time construction with full optimization
+tier1-list-construction : ∀(A : Type), List Value → List A
+tier1-list-construction := λ(A : Type), λ(values : List Value),
+  -- Full compile-time specialization and optimization
+  compile-time-optimize(A, list-map(Value, A, value-to-A, values))
+
+-- Tier 2: Type-specialized construction
+tier2-list-construction : ∀(A : Type), List Value → List A
+tier2-list-construction := λ(A : Type), λ(values : List Value),
+  -- Type-aware but runtime values
+  type-specialized-map(A, values)
+
+-- Tier 3: Runtime polymorphic construction
+tier3-list-construction : ∀(A : Type), List Value → List A
+tier3-list-construction := λ(A : Type), λ(values : List Value),
+  -- Full runtime dispatch
+  runtime-polymorphic-map(A, values)
+
+-- ============================================================================
+-- BACKWARDS COMPATIBILITY AND LEGACY INTERFACE
+-- ============================================================================
+
+-- Legacy constructors for gradual migration
+make-list-nil : ∀(A : Type), List A
+make-list-nil := λ(A : Type), nil(A)
+
+make-list-cons : ∀(A : Type), A → List A → List A
+make-list-cons := λ(A : Type), λ(elem : A), λ(tail : List A), cons(A, elem, tail)
+
+-- Legacy type creation
+make-list-type : Type → Type
+make-list-type := λ(A : Type), List A
+
+-- ============================================================================
+-- PROOF OBLIGATIONS AND THEOREMS
+-- ============================================================================
+
+-- Proof that cons creates non-empty lists
+cons-not-nil-proof : ∀(A : Type), ∀(head : A), ∀(tail : List A), 
+                    ¬(Id (List A) (cons A head tail) (nil A))
+cons-not-nil-proof := λ(A : Type), λ(head : A), λ(tail : List A), 
+  λ(eq : Id (List A) (cons A head tail) (nil A)),
+    -- This contradicts constructor disjointness
+    list-constructor-disjoint(A, head, tail, eq)
+
+-- Bounds theorem for list indexing
+list-succ-bounds-theorem : ∀(A : Type), ∀(head : A), ∀(tail : List A), ∀(k : ℕ),
+                          succ k < list-length(A, cons A head tail) →
+                          k < list-length(A, tail)
+list-succ-bounds-theorem := λ(A : Type), λ(head : A), λ(tail : List A), λ(k : ℕ),
+  λ(bounds : succ k < list-length(A, cons A head tail)),
+    -- This follows from the definition of list-length
+    list-length-succ-theorem(A, head, tail, k, bounds)
+
+-- ============================================================================
+-- AUXILIARY UTILITY FUNCTIONS
+-- ============================================================================
+
+-- Convert value to type A (simplified)
+value-to-A : ∀(A : Type), Value → A
+value-to-A := λ(A : Type), λ(v : Value), sorry  -- Implementation depends on runtime system
+
+-- Compile-time optimization
+compile-time-optimize : ∀(A : Type), List A → List A
+compile-time-optimize := λ(A : Type), λ(lst : List A), lst  -- Simplified
+
+-- Type-specialized mapping
+type-specialized-map : ∀(A : Type), List Value → List A
+type-specialized-map := λ(A : Type), λ(values : List Value),
+  list-map(Value, A, value-to-A(A), values)
+
+-- Runtime polymorphic mapping
+runtime-polymorphic-map : ∀(A : Type), List Value → List A
+runtime-polymorphic-map := λ(A : Type), λ(values : List Value),
+  runtime-dispatch-map(A, values)
+
+-- ============================================================================
+-- PROOF STUBS (TO BE PROVEN)
+-- ============================================================================
+
+-- These would be proven using HoTT axioms and induction principles
+list-constructor-disjoint : ∀(A : Type), ∀(head : A), ∀(tail : List A),
+                           Id (List A) (cons A head tail) (nil A) → ⊥
+list-constructor-disjoint := sorry
+
+list-length-succ-theorem : ∀(A : Type), ∀(head : A), ∀(tail : List A), ∀(k : ℕ),
+                          succ k < list-length(A, cons A head tail) →
+                          k < list-length(A, tail)
+list-length-succ-theorem := sorry
+
+nat-not-less-than-zero : ∀(n : ℕ), n < zero → ⊥
+nat-not-less-than-zero := sorry
+
+runtime-dispatch-map : ∀(A : Type), List Value → List A
+runtime-dispatch-map := sorry
+
+-- This establishes the pure mathematical generic list type system for PathFinder
