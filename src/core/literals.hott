@@ -1,0 +1,455 @@
+-- ============================================================================
+-- PURE MATHEMATICAL HOTT LITERAL CONSTRUCTION
+-- ============================================================================
+-- This replaces hott-literals-pure.rkt with pure mathematical HoTT notation.
+-- Pure constructor building with no host language arithmetic operations.
+
+-- Import dependencies
+import pure-types
+import pure-values
+
+-- ============================================================================
+-- NATURAL NUMBER LITERALS
+-- ============================================================================
+
+-- Build natural number from zero using successor
+build-nat : ℕ → Value
+build-nat := λ(n : ℕ),
+  ℕ-elim(n,
+    zero-value,                           -- Base case: 0
+    λ(k : ℕ), λ(rec : Value), succ-value(rec))  -- Recursive case: succ
+
+-- Common small natural numbers
+one : Value := succ-value(zero-value)
+two : Value := succ-value(one)
+three : Value := succ-value(two)
+four : Value := succ-value(three)
+five : Value := succ-value(four)
+six : Value := succ-value(five)
+seven : Value := succ-value(six)
+eight : Value := succ-value(seven)
+nine : Value := succ-value(eight)
+ten : Value := succ-value(nine)
+
+-- Build larger numbers by addition (pure HoTT)
+twenty : Value := nat-add(ten, ten)
+thirty : Value := nat-add(twenty, ten)
+forty : Value := nat-add(thirty, ten)
+fifty : Value := nat-add(forty, ten)
+hundred : Value := nat-multiply(ten, ten)
+
+-- Natural number addition (pure HoTT)
+nat-add : Value → Value → Value
+nat-add := λ(m n : Value),
+  Value-elim(Value, m,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "zero"),
+        n,  -- 0 + n = n
+        if-then-else(Value,
+          string-equal?(name, "succ"),
+          List-elim(Value, Value, args,
+            n,  -- No args (shouldn't happen)
+            λ(pred : Value), λ(rest : List Value),
+              succ-value(nat-add(pred, n))),  -- succ(m) + n = succ(m + n)
+          unit-value)),  -- Not a nat
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), unit-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), unit-value,
+    unit-value,
+    λ(content : String), unit-value,
+    λ(effect : Effect), unit-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), unit-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), unit-value)
+
+-- Natural number multiplication (pure HoTT)
+nat-multiply : Value → Value → Value
+nat-multiply := λ(m n : Value),
+  Value-elim(Value, m,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "zero"),
+        zero-value,  -- 0 × n = 0
+        if-then-else(Value,
+          string-equal?(name, "succ"),
+          List-elim(Value, Value, args,
+            zero-value,  -- No args
+            λ(pred : Value), λ(rest : List Value),
+              nat-add(n, nat-multiply(pred, n))),  -- succ(m) × n = n + (m × n)
+          unit-value)),
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), unit-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), unit-value,
+    unit-value,
+    λ(content : String), unit-value,
+    λ(effect : Effect), unit-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), unit-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), unit-value)
+
+-- ============================================================================
+-- BOOLEAN LITERALS
+-- ============================================================================
+
+-- Boolean literals are already defined in pure-values:
+-- true-value : Value := constructor-value("₁", nil, 𝟚)
+-- false-value : Value := constructor-value("₀", nil, 𝟚)
+
+-- ============================================================================
+-- CHARACTER AND STRING LITERALS
+-- ============================================================================
+
+-- Create character from Unicode codepoint
+make-char : Value → Value
+make-char := λ(codepoint : Value),
+  constructor-value("char", cons(codepoint, nil), Char)
+
+-- Common ASCII characters
+char-space : Value := make-char(thirty-two)
+char-newline : Value := make-char(ten)
+char-tab : Value := make-char(nine)
+char-zero : Value := make-char(forty-eight)
+char-nine : Value := make-char(fifty-seven)
+char-A : Value := make-char(sixty-five)
+char-Z : Value := make-char(ninety)
+char-a : Value := make-char(ninety-seven)
+char-z : Value := make-char(one-two-two)
+
+-- Helper numbers for characters
+thirty-two : Value := nat-add(thirty, two)
+forty-eight : Value := nat-add(forty, eight)
+fifty-seven : Value := nat-add(fifty, seven)
+sixty-five : Value := nat-add(sixty, five)
+ninety : Value := nat-add(nat-multiply(nine, ten), zero-value)
+ninety-seven : Value := nat-add(ninety, seven)
+one-two-two : Value := nat-add(hundred, nat-add(twenty, two))
+
+-- Empty string
+empty-string : Value := constructor-value("empty-string", nil, String)
+
+-- String cons
+string-cons : Value → Value → Value
+string-cons := λ(char str : Value),
+  constructor-value("string-cons", cons(char, cons(str, nil)), String)
+
+-- Build string from list of characters
+build-string : List Value → Value
+build-string := λ(chars : List Value),
+  List-elim(chars,
+    empty-string,  -- nil case
+    λ(char : Value), λ(rest : List Value),
+      string-cons(char, build-string(rest)))
+
+-- Common string literals
+string-true : Value := build-string(cons(make-char(one-one-six), 
+                                   cons(make-char(one-one-four),
+                                   cons(make-char(one-one-seven),
+                                   cons(make-char(one-zero-one), nil)))))
+
+string-false : Value := build-string(cons(make-char(one-zero-two),
+                                    cons(make-char(ninety-seven),
+                                    cons(make-char(one-zero-eight),
+                                    cons(make-char(one-one-five),
+                                    cons(make-char(one-zero-one), nil))))))
+
+-- More helper numbers
+one-zero-one : Value := nat-add(hundred, one)
+one-zero-two : Value := nat-add(hundred, two)
+one-zero-eight : Value := nat-add(hundred, eight)
+one-one-four : Value := nat-add(hundred, nat-add(ten, four))
+one-one-five : Value := nat-add(hundred, nat-add(ten, five))
+one-one-six : Value := nat-add(hundred, nat-add(ten, six))
+one-one-seven : Value := nat-add(hundred, nat_add(ten, seven))
+
+-- ============================================================================
+-- DIGIT TO NAT CONVERSION
+-- ============================================================================
+
+-- Convert digit character to natural number
+digit-to-nat : Value → Value
+digit-to-nat := λ(digit-char : Value),
+  Value-elim(Value, digit-char,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "char"),
+        List-elim(Value, Value, args,
+          zero-value,
+          λ(codepoint : Value), λ(rest : List Value),
+            nat-subtract(codepoint, forty-eight)),
+        zero-value),
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), zero-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), zero-value,
+    zero-value,
+    λ(content : String), zero-value,
+    λ(effect : Effect), zero-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), zero-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), zero-value)
+
+-- Natural number subtraction (bounded at zero)
+nat-subtract : Value → Value → Value
+nat-subtract := λ(m n : Value),
+  Value-elim(Value, n,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "zero"),
+        m,  -- m - 0 = m
+        if-then-else(Value,
+          string-equal?(name, "succ"),
+          List-elim(Value, Value, args,
+            zero-value,
+            λ(pred-n : Value), λ(rest : List Value),
+              nat-pred(nat-subtract(m, pred-n))),
+          zero-value)),
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), zero-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), zero-value,
+    zero-value,
+    λ(content : String), zero-value,
+    λ(effect : Effect), zero-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), zero-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), zero-value)
+
+-- Natural number predecessor (bounded at zero)
+nat-pred : Value → Value
+nat-pred := λ(n : Value),
+  Value-elim(Value, n,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "zero"),
+        zero-value,  -- pred(0) = 0
+        if-then-else(Value,
+          string-equal?(name, "succ"),
+          List-elim(Value, Value, args,
+            zero-value,
+            λ(pred : Value), λ(rest : List Value), pred),  -- pred(succ(n)) = n
+          zero-value)),
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), zero-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), zero-value,
+    zero-value,
+    λ(content : String), zero-value,
+    λ(effect : Effect), zero-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), zero-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), zero-value)
+
+-- ============================================================================
+-- PARSE DECIMAL NUMBER STRING
+-- ============================================================================
+
+-- Parse string of digits to natural number
+parse-decimal : Value → Value
+parse-decimal := λ(str : Value),
+  parse-decimal-acc(str, zero-value)
+
+-- Accumulator version
+parse-decimal-acc : Value → Value → Value
+parse-decimal-acc := λ(str acc : Value),
+  Value-elim(Value, str,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "empty-string"),
+        acc,
+        if-then-else(Value,
+          string-equal?(name, "string-cons"),
+          List-elim(Value, Value, args,
+            acc,
+            λ(char : Value), λ(tail-args : List Value),
+              List-elim(Value, Value, tail-args,
+                acc,
+                λ(tail : Value), λ(rest : List Value),
+                  let digit := digit-to-nat(char) in
+                  let new-acc := nat-add(nat-multiply(acc, ten), digit) in
+                  parse-decimal-acc(tail, new-acc))),
+          acc)),
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), acc,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), acc,
+    acc,
+    λ(content : String), acc,
+    λ(effect : Effect), acc,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), acc,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), acc)
+
+-- ============================================================================
+-- ADVANCED MATHEMATICAL LITERAL OPERATIONS
+-- ============================================================================
+
+-- Integer division (using natural number division)
+nat-divide : Value → Value → Value
+nat-divide := λ(dividend divisor : Value),
+  nat-divide-helper(dividend, divisor, zero-value)
+
+-- Division helper with accumulator
+nat-divide-helper : Value → Value → Value → Value
+nat-divide-helper := λ(dividend divisor quotient : Value),
+  if-then-else(Value,
+    nat-less?(dividend, divisor),
+    quotient,
+    nat-divide-helper(nat-subtract(dividend, divisor), divisor, succ-value(quotient)))
+
+-- Natural number less-than comparison
+nat-less? : Value → Value → Value
+nat-less? := λ(m n : Value),
+  Value-elim(Value, m,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "zero"),
+        Value-elim(Value, n,
+          λ(n-name : String), λ(n-args : List Value), λ(n-type : Type),
+            if-then-else(Value,
+              string-equal?(n-name, "zero"),
+              false-value,  -- 0 < 0 is false
+              true-value),  -- 0 < succ(_) is true
+          λ(params : List String), λ(body : AST), λ(env : Environment), false-value,
+          λ(name : String), λ(arity : ℕ), λ(type : Type), false-value,
+          false-value,
+          λ(content : String), false-value,
+          λ(effect : Effect), false-value,
+          λ(type : Type), λ(start end : Value), λ(proof : Proof), false-value,
+          λ(type-a type-b : Type), λ(func quasi-inv : Value), false-value),
+        if-then-else(Value,
+          string-equal?(name, "succ"),
+          List-elim(Value, Value, args,
+            false-value,
+            λ(pred-m : Value), λ(rest : List Value),
+              Value-elim(Value, n,
+                λ(n-name : String), λ(n-args : List Value), λ(n-type : Type),
+                  if-then-else(Value,
+                    string-equal?(n-name, "zero"),
+                    false-value,  -- succ(_) < 0 is false
+                    if-then-else(Value,
+                      string-equal?(n-name, "succ"),
+                      List-elim(Value, Value, n-args,
+                        false-value,
+                        λ(pred-n : Value), λ(n-rest : List Value),
+                          nat-less?(pred-m, pred-n)),
+                      false-value)),
+                λ(params : List String), λ(body : AST), λ(env : Environment), false-value,
+                λ(name : String), λ(arity : ℕ), λ(type : Type), false-value,
+                false-value,
+                λ(content : String), false-value,
+                λ(effect : Effect), false-value,
+                λ(type : Type), λ(start end : Value), λ(proof : Proof), false-value,
+                λ(type-a type-b : Type), λ(func quasi-inv : Value), false-value)),
+          false-value)),
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), false-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), false-value,
+    false-value,
+    λ(content : String), false-value,
+    λ(effect : Effect), false-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), false-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), false-value)
+
+-- ============================================================================
+-- RATIONAL NUMBERS (AS PAIRS OF NATURALS)
+-- ============================================================================
+
+-- Rational number as pair (numerator, denominator)
+make-rational : Value → Value → Value
+make-rational := λ(numerator denominator : Value),
+  constructor-value("rational", cons(numerator, cons(denominator, nil)), Rational)
+
+-- Rational addition: a/b + c/d = (ad + bc)/(bd)
+rational-add : Value → Value → Value
+rational-add := λ(r1 r2 : Value),
+  let a := rational-numerator(r1) in
+  let b := rational-denominator(r1) in
+  let c := rational-numerator(r2) in
+  let d := rational-denominator(r2) in
+  let numerator := nat-add(nat-multiply(a, d), nat-multiply(b, c)) in
+  let denominator := nat-multiply(b, d) in
+  make-rational(numerator, denominator)
+
+-- Extract numerator from rational
+rational-numerator : Value → Value
+rational-numerator := λ(r : Value),
+  Value-elim(Value, r,
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "rational"),
+        List-elim(Value, Value, args,
+          zero-value,
+          λ(num : Value), λ(rest : List Value), num),
+        zero-value),
+    λ(params : List String), λ(body : AST), λ(env : Environment), zero-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), zero-value,
+    zero-value,
+    λ(content : String), zero-value,
+    λ(effect : Effect), zero-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), zero-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), zero-value)
+
+-- Extract denominator from rational
+rational-denominator : Value → Value
+rational-denominator := λ(r : Value),
+  Value-elim(Value, r,
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "rational"),
+        List-elim(Value, Value, args,
+          one,
+          λ(num : Value), λ(rest : List Value),
+            List-elim(Value, Value, rest,
+              one,
+              λ(den : Value), λ(final : List Value), den)),
+        one),
+    λ(params : List String), λ(body : AST), λ(env : Environment), one,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), one,
+    one,
+    λ(content : String), one,
+    λ(effect : Effect), one,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), one,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), one)
+
+-- ============================================================================
+-- COMPILE-TIME LITERAL EVALUATION
+-- ============================================================================
+
+-- Evaluate numeric literal at compile time for constant folding
+eval-literal-constant : Value → Value
+eval-literal-constant := λ(lit : Value),
+  Value-elim(Value, lit,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "literal-nat"),
+        List-elim(Value, Value, args,
+          zero-value,
+          λ(val : Value), λ(rest : List Value), val),
+        if-then-else(Value,
+          string-equal?(name, "literal-string"),
+          List-elim(Value, Value, args,
+            empty-string,
+            λ(val : Value), λ(rest : List Value), val),
+          lit)),
+    -- Other cases: return as-is
+    λ(params : List String), λ(body : AST), λ(env : Environment), lit,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), lit,
+    lit,
+    λ(content : String), lit,
+    λ(effect : Effect), lit,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), lit,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), lit)
+
+-- Create literal wrapper for compile-time constants
+make-literal-nat : Value → Value
+make-literal-nat := λ(n : Value),
+  constructor-value("literal-nat", cons(n, nil), LiteralType)
+
+make-literal-string : Value → Value
+make-literal-string := λ(s : Value),
+  constructor-value("literal-string", cons(s, nil), LiteralType)
+
+make-literal-bool : Value → Value
+make-literal-bool := λ(b : Value),
+  constructor-value("literal-bool", cons(b, nil), LiteralType)
+
+-- This establishes pure mathematical literal construction for PathFinder

@@ -1,137 +1,217 @@
-#lang racket/base
+-- ============================================================================
+-- PURE MATHEMATICAL HOTT FOUNDATIONS
+-- ============================================================================
+-- This replaces foundations.hott with pure mathematical HoTT notation.
+-- No Racket dependencies - pure HoTT mathematics only.
 
-;; ============================================================================
-;; HOTT IL FOUNDATIONS - LAYER 1: PURE DEFINITIONS
-;; ============================================================================
-;; This module contains only struct definitions and basic predicates.
-;; NO circular dependencies - this is the foundation layer.
+-- Universe hierarchy (standard HoTT)
+𝒰₀ : 𝒰₁
+𝒰₁ : 𝒰₂ 
+𝒰₂ : 𝒰₃
 
-(provide (all-defined-out))
+-- Identity type (central to HoTT)
+Id : Π(A : 𝒰₀), A → A → 𝒰₀
 
-;; ============================================================================
-;; CORE VALUE STRUCTURES
-;; ============================================================================
-;; These are the fundamental data structures for HoTT IL
+-- Basic inductive types
+data ℕ : 𝒰₀ where
+  zero : ℕ
+  succ : ℕ → ℕ
 
-;; Base value type
-(struct value () #:transparent)
+data 𝟚 : 𝒰₀ where
+  ₀ : 𝟚  
+  ₁ : 𝟚
 
-;; Constructor applications (for inductive types)
-(struct constructor-value value (constructor-name args type) #:transparent)
+data 𝟙 : 𝒰₀ where
+  ⋆ : 𝟙
 
-;; Function closures 
-(struct closure-value value (params body env) #:transparent)
+data 𝟘 : 𝒰₀ where
+  -- no constructors (empty type)
 
-;; Built-in function values
-(struct builtin-value value (name proc type) #:transparent)
+-- HoTT value hierarchy (pure mathematical)
+data Value : 𝒰₁ where
+  constructor-value : String → List Value → Type → Value
+  closure-value : List String → AST → Environment → Value  
+  builtin-value : String → ℕ → Type → Value
+  unit-value : Value
+  path-value : Type → Value → Value → Proof → Value
+  string-value : String → Value
+  effect-value : Effect → Value
 
-;; Unit value (the unique inhabitant of 𝟙)
-(struct unit-value value () #:transparent)
+-- HoTT type hierarchy  
+data Type : 𝒰₁ where
+  universe : ℕ → Type
+  pi-type : String → Type → Type → Type
+  sigma-type : String → Type → Type → Type
+  sum-type : Type → Type → Type
+  id-type : Type → Value → Value → Type
+  unit-type : Type
+  empty-type : Type
+  inductive-type : String → List Constructor → Type
+  effect-type : Type → List String → List String → Type
 
-;; Path values (inhabitants of identity types)
-(struct path-runtime-value value (type start end proof) #:transparent)
+-- Constructor for inductive types
+data Constructor : 𝒰₀ where
+  type-constructor : String → List Type → String → Constructor
 
-;; Equivalence values (inhabitants of equivalence types)
-(struct equivalence-runtime-value value (type-a type-b function quasi-inv) #:transparent)
+-- Abstract Syntax Tree (pure HoTT)
+data AST : 𝒰₀ where
+  var : String → AST
+  app : AST → AST → AST
+  lambda : String → AST → AST
+  pi-type-expr : String → AST → AST → AST
+  sigma-type-expr : String → AST → AST → AST
+  id-type-expr : AST → AST → AST → AST
+  constructor-expr : String → List AST → AST
+  eliminator-expr : AST → List AST → AST
+  literal-expr : Value → AST
+  effect-expr : Effect → AST
 
-;; String values (for host bridge communication)
-(struct string-value value (content) #:transparent)
+-- Environment for variable bindings
+data Environment : 𝒰₀ where
+  empty-env : Environment
+  extended-env : String → Value → Environment → Environment
 
-;; Effect values (algebraic effects that signal operations)
-(struct effect-value value (effect) #:transparent)
+-- Effects (algebraic effects as pure mathematical objects)
+data Effect : 𝒰₀ where
+  io-effect : String → List Value → Effect
+  computation-effect : String → Value → Effect
+  composite-effect : List Effect → Effect
 
-;; ============================================================================
-;; CORE TYPE STRUCTURES  
-;; ============================================================================
-;; Basic HoTT type system structures
+-- Proof objects (central to HoTT)
+data Proof : 𝒰₀ where
+  refl-proof : Π(A : Type), Π(x : Value), Proof
+  j-proof : Π(A : Type), Π(x : Value), Π(C : Π(y : Value), Proof → Type),
+           Π(d : Type), Π(y : Value), Π(p : Proof), Proof
+  transport-proof : Π(A : Type), Π(P : Value → Type), 
+                   Π(x y : Value), Π(p : Proof), Type → Type
+  cong-proof : Π(A B : Type), Π(f : Value), Π(x y : Value),
+              Π(p : Proof), Proof
 
-;; Base type structure
-(struct hott-type () #:transparent)
+-- Basic HoTT operations using eliminators
+ℕ-elim : Π(n : ℕ), Π(z : Type), Π(s : ℕ → Type → Type), Type
+ℕ-elim := λ(n : ℕ), λ(z : Type), λ(s : ℕ → Type → Type),
+  ℕ-eliminator(n, z, s)
 
-;; Universe hierarchy: Type₀ : Type₁ : Type₂ : ...
-(struct universe hott-type (level) #:transparent)
+𝟚-elim : Π(b : 𝟚), Π(A : Type), A → A → A  
+𝟚-elim := λ(b : 𝟚), λ(A : Type), λ(x y : A),
+  𝟚-eliminator(b, A, x, y)
 
-;; Π-types (dependent function types): (Π (x : A) B(x))
-(struct pi-type hott-type (var-name domain codomain) #:transparent)
+-- Identity type operations (fundamental to HoTT)
+refl : Π(A : Type), Π(x : Value), Id(A, x, x)
+refl := λ(A : Type), λ(x : Value), refl-proof(A, x)
 
-;; Σ-types (dependent pair types): (Σ (x : A) B(x))  
-(struct sigma-type hott-type (var-name first-type second-type) #:transparent)
+J : Π(A : Type), Π(x : Value), Π(C : Π(y : Value), Id(A, x, y) → Type),
+    C(x, refl(A, x)) → Π(y : Value), Π(p : Id(A, x, y)), C(y, p)
+J := λ(A : Type), λ(x : Value), λ(C : Π(y : Value), Id(A, x, y) → Type),
+     λ(d : C(x, refl(A, x))), λ(y : Value), λ(p : Id(A, x, y)),
+     j-eliminator(A, x, C, d, y, p)
 
-;; Sum types: A + B
-(struct sum-type hott-type (left-type right-type) #:transparent)
+-- Transport (covariant functoriality of type families)
+transport : Π(A : Type), Π(P : Value → Type), Π(x y : Value), 
+           Id(A, x, y) → P(x) → P(y)
+transport := λ(A : Type), λ(P : Value → Type), λ(x y : Value), λ(p : Id(A, x, y)),
+             J(A, x, λ(z : Value), λ(q : Id(A, x, z)), P(z) → P(z), 
+               id(P(x)), y, p)
 
-;; Identity types: Id A x y (paths/equality)
-(struct identity-type hott-type (type-expr left-term right-term) #:transparent)
+-- Function extensionality (weak)
+funext : Π(A B : Type), Π(f g : A → B), 
+         (Π(x : A), Id(B, f(x), g(x))) → Id(A → B, f, g)
 
-;; Unit type: 𝟙 (has exactly one element)
-(struct unit-type hott-type () #:transparent)
+-- Univalence axiom (the heart of HoTT)
+univalence : Π(A B : Type), Id(Type, A, B) ≃ (A ≃ B)
 
-;; Empty type: 𝟘 (has no elements)
-(struct empty-type hott-type () #:transparent)
+-- Dependent pair type operations
+pair : Π(A : Type), Π(B : A → Type), Π(a : A), B(a) → Σ(x : A), B(x)
+pair := λ(A : Type), λ(B : A → Type), λ(a : A), λ(b : B(a)), ⟨a, b⟩
 
-;; Inductive type definitions
-(struct inductive-type hott-type (name constructors) #:transparent)
+fst : Π(A : Type), Π(B : A → Type), Σ(x : A), B(x) → A
+fst := λ(A : Type), λ(B : A → Type), λ(p : Σ(x : A), B(x)),
+       Σ-elim(A, B, λ(z : Σ(x : A), B(x)), A, λ(a : A), λ(b : B(a)), a, p)
 
-;; Effect-aware types: types that carry effect requirements
-(struct effect-type hott-type (base-type required-effects optional-effects) #:transparent)
+snd : Π(A : Type), Π(B : A → Type), Π(p : Σ(x : A), B(x)), B(fst(A, B, p))
+snd := λ(A : Type), λ(B : A → Type), λ(p : Σ(x : A), B(x)),
+       Σ-elim(A, B, λ(z : Σ(x : A), B(x)), B(fst(A, B, z)),
+              λ(a : A), λ(b : B(a)), b, p)
 
-;; Constructor for inductive types
-(struct type-constructor (name param-types result-type) #:transparent)
+-- Higher-order functions
+id : Π(A : Type), A → A
+id := λ(A : Type), λ(x : A), x
 
-;; ============================================================================
-;; BASIC PREDICATES
-;; ============================================================================
-;; Simple predicates that only check struct types
+const : Π(A B : Type), A → B → A  
+const := λ(A B : Type), λ(x : A), λ(y : B), x
 
-;; HoTT-native value predicate
-(define (hott-value? x)
-  (or (constructor-value? x) (closure-value? x) (builtin-value? x) (unit-value? x)
-      (path-runtime-value? x) (equivalence-runtime-value? x) (string-value? x) (effect-value? x)))
+compose : Π(A B C : Type), (B → C) → (A → B) → (A → C)
+compose := λ(A B C : Type), λ(g : B → C), λ(f : A → B), λ(x : A), g(f(x))
 
-;; HoTT type predicate (avoiding conflict with auto-generated predicates)
-(define (valid-hott-type? x)
-  (or (universe? x) (pi-type? x) (sigma-type? x) (sum-type? x) 
-      (identity-type? x) (unit-type? x) (empty-type? x) 
-      (inductive-type? x) (effect-type? x)))
+-- Natural number arithmetic (using eliminators)
+add : ℕ → ℕ → ℕ
+add := λ(m n : ℕ), ℕ-elim(m, n, λ(k : ℕ), λ(rec : ℕ), succ(rec))
 
-;; Extended type predicate (includes higher-level constructs)
-(define (extended-hott-type? x)
-  (valid-hott-type? x))  ; Can be extended later
+mul : ℕ → ℕ → ℕ
+mul := λ(m n : ℕ), ℕ-elim(m, zero, λ(k : ℕ), λ(rec : ℕ), add(n, rec))
 
-;; Compatibility contracts
-(define value/c hott-value?)
-(define hott-type/c valid-hott-type?)
-(define extended-hott-type/c extended-hott-type?)
+-- Boolean operations
+if-then-else : Π(A : Type), 𝟚 → A → A → A
+if-then-else := λ(A : Type), λ(b : 𝟚), λ(x y : A), 𝟚-elim(b, A, x, y)
 
-;; ============================================================================
-;; PREDEFINED VALUES AND TYPES
-;; ============================================================================
+not : 𝟚 → 𝟚
+not := λ(b : 𝟚), 𝟚-elim(b, 𝟚, ₀, ₁)
 
-;; Universe levels
-(define Type0 (universe 0))
-(define Type1 (universe 1))
-(define Type2 (universe 2))
+and : 𝟚 → 𝟚 → 𝟚
+and := λ(b₁ b₂ : 𝟚), 𝟚-elim(b₁, 𝟚, ₀, b₂)
 
-;; Fundamental types
-(define Unit (unit-type))
-(define Empty (empty-type))
+-- Predefined values
+one : ℕ := succ(zero)
+two : ℕ := succ(one)
+three : ℕ := succ(two)
 
-;; Predefined values
-(define unit (unit-value))
+true : 𝟚 := ₁
+false : 𝟚 := ₀
 
-;; Natural number constructors
-(define Nat-constructors
-  (list (type-constructor "zero" '() 'Nat)
-        (type-constructor "next" '(Nat) 'Nat)))
-(define Nat (inductive-type "Nat" Nat-constructors))
+-- Type family examples
+Equal : Π(A : Type), A → A → Type
+Equal := λ(A : Type), λ(x y : A), Id(A, x, y)
 
-;; Boolean constructors  
-(define Bool-constructors
-  (list (type-constructor "true" '() 'Bool)
-        (type-constructor "false" '() 'Bool)))
-(define Bool (inductive-type "Bool" Bool-constructors))
+List : Type → Type
+List := λ(A : Type), 
+  data List A : Type where
+    nil : List A
+    cons : A → List A → List A
 
-;; Predefined values for basic types
-(define zero-value (constructor-value "zero" '() Nat))
-(define true-value (constructor-value "true" '() Bool))
-(define false-value (constructor-value "false" '() Bool))
+-- Effect examples (pure mathematical descriptions)
+print-effect : String → Effect
+print-effect := λ(s : String), io-effect("print", [string-value(s)])
+
+read-file-effect : String → Effect  
+read-file-effect := λ(path : String), io-effect("read-file", [string-value(path)])
+
+-- Path examples (identity type inhabitants)
+zero-eq-zero : Id(ℕ, zero, zero)
+zero-eq-zero := refl(ℕ, zero)
+
+one-eq-succ-zero : Id(ℕ, one, succ(zero))
+one-eq-succ-zero := refl(ℕ, succ(zero))
+
+-- Transport example
+ℕ-property : ℕ → Type := λ(n : ℕ), Id(ℕ, add(n, zero), n)
+
+transport-example : ℕ-property(zero) → ℕ-property(zero)
+transport-example := transport(ℕ, ℕ-property, zero, zero, zero-eq-zero)
+
+-- Higher inductive type (circle)
+data S¹ : Type where
+  base : S¹
+  loop : Id(S¹, base, base)
+
+-- Function type as abbreviation
+_→_ : Type → Type → Type
+A → B := Π(_ : A), B
+
+-- Equivalence type (isomorphism in HoTT)
+data _≃_ : Type → Type → Type where
+  equiv : Π(A B : Type), (A → B) → (B → A) → 
+          (Π(x : A), Id(A, x, g(f(x)))) →
+          (Π(y : B), Id(B, y, f(g(y)))) → (A ≃ B)
+
+-- This demonstrates that the foundations are now pure HoTT mathematics
+-- with no dependencies on the host language (Racket).

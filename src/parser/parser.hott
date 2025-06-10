@@ -1,0 +1,672 @@
+-- ============================================================================
+-- PURE HOTT PARSER IMPLEMENTATION
+-- ============================================================================
+-- Mathematical syntax analysis using only HoTT constructors
+-- Recursive descent parsing with formal grammar rules
+
+import pure-foundations.hott
+import pure-operations.hott
+import pure-hott-lexer.hott
+
+-- ============================================================================
+-- ABSTRACT SYNTAX TREE (AST) AS INDUCTIVE TYPE
+-- ============================================================================
+
+-- Complete AST representation for HoTT language constructs
+data AST : 𝒰₀ where
+  -- Variables and literals
+  var-node : String → AST
+  literal-node : LiteralValue → AST
+  
+  -- Function application and abstraction
+  app-node : AST → List AST → AST
+  lambda-node : List String → AST → AST
+  
+  -- Let bindings and conditionals
+  let-node : List (String × AST) → AST → AST
+  if-node : AST → AST → AST → AST
+  
+  -- Type annotations and declarations
+  ann-node : AST → Type → AST
+  data-node : String → List (String × Type) → List (String × List Type) → AST
+  
+  -- HoTT-specific constructs
+  pi-node : String → Type → AST → AST
+  sigma-node : String → Type → AST → AST
+  identity-node : Type → AST → AST → AST
+  
+  -- Effects and operations
+  effect-node : Effect → List AST → AST
+  perform-node : String → List AST → AST
+  handle-node : AST → List (String × AST) → AST
+  
+  -- Module system
+  import-node : String → AST
+  module-node : String → List AST → AST
+
+-- Literal values as separate inductive type
+data LiteralValue : 𝒰₀ where
+  nat-literal : ℕ → LiteralValue
+  string-literal : String → LiteralValue
+  bool-literal : 𝟚 → LiteralValue
+  char-literal : Char → LiteralValue
+
+-- ============================================================================
+-- PARSER STATE AND OPERATIONS
+-- ============================================================================
+
+-- Parser state tracking token stream and position
+data ParserState : 𝒰₀ where
+  parser-state :
+    (tokens : List Token) →
+    (position : ℕ) →
+    (errors : List String) →
+    ParserState
+
+-- Parser state accessors
+state-tokens : ParserState → List Token
+state-tokens = λ(state : ParserState),
+  match state with
+  | parser-state tokens _ _ => tokens
+
+state-position : ParserState → ℕ
+state-position = λ(state : ParserState),
+  match state with
+  | parser-state _ position _ => position
+
+state-errors : ParserState → List String
+state-errors = λ(state : ParserState),
+  match state with
+  | parser-state _ _ errors => errors
+
+-- Parser operations
+current-token : ParserState → Option Token
+current-token = λ(state : ParserState),
+  let tokens : List Token := state-tokens state in
+  let pos : ℕ := state-position state in
+  list-nth Token tokens pos (none Token)
+
+advance-parser : ParserState → ParserState
+advance-parser = λ(state : ParserState),
+  match state with
+  | parser-state tokens position errors =>
+    parser-state tokens (succ position) errors
+
+add-error : ParserState → String → ParserState
+add-error = λ(state : ParserState), λ(error : String),
+  match state with
+  | parser-state tokens position errors =>
+    parser-state tokens position (cons error errors)
+
+at-end : ParserState → 𝟚
+at-end = λ(state : ParserState),
+  let current : Option Token := current-token state in
+  option-eliminator current
+    𝟚-true                               -- No current token: at end
+    (λ(token : Token),
+      token-type-equal (token-type token) eof)
+
+-- ============================================================================
+-- PARSING RESULT TYPE
+-- ============================================================================
+
+-- Parsing result with success/failure information
+data ParseResult (A : 𝒰₀) : 𝒰₀ where
+  parse-success : A → ParserState → ParseResult A
+  parse-failure : String → ParserState → ParseResult A
+
+-- ParseResult operations
+is-success : ∀(A : 𝒰₀), ParseResult A → 𝟚
+is-success = λ(A : 𝒰₀), λ(result : ParseResult A),
+  match result with
+  | parse-success _ _ => 𝟚-true
+  | parse-failure _ _ => 𝟚-false
+
+extract-success : ∀(A : 𝒰₀), ParseResult A → Option (A × ParserState)
+extract-success = λ(A : 𝒰₀), λ(result : ParseResult A),
+  match result with
+  | parse-success value state => some (value, state)
+  | parse-failure _ _ => none (A × ParserState)
+
+extract-error : ∀(A : 𝒰₀), ParseResult A → Option String
+extract-error = λ(A : 𝒰₀), λ(result : ParseResult A),
+  match result with
+  | parse-success _ _ => none String
+  | parse-failure error _ => some error
+
+-- ============================================================================
+-- MAIN PARSING FUNCTION
+-- ============================================================================
+
+-- Parse complete program from token list
+parse : List Token → ParseResult (List AST)
+parse = λ(tokens : List Token),
+  let initial-state : ParserState := parser-state tokens zero (nil String) in
+  parse-program initial-state
+
+-- Parse program (sequence of declarations)
+parse-program : ParserState → ParseResult (List AST)
+parse-program = λ(state : ParserState),
+  parse-declarations state (nil AST)
+
+-- Parse declarations accumulator
+parse-declarations : ParserState → List AST → ParseResult (List AST)
+parse-declarations = λ(state : ParserState), λ(acc : List AST),
+  bool-eliminator (at-end state)
+    -- At end: return accumulated declarations
+    (parse-success (list-reverse AST acc) state)
+    
+    -- Not at end: parse next declaration
+    (let decl-result : ParseResult AST := parse-declaration state in
+     match decl-result with
+     | parse-success decl new-state =>
+       parse-declarations new-state (cons decl acc)
+     | parse-failure error error-state =>
+       parse-failure error error-state)
+
+-- ============================================================================
+-- DECLARATION PARSING
+-- ============================================================================
+
+-- Parse top-level declaration
+parse-declaration : ParserState → ParseResult AST
+parse-declaration = λ(state : ParserState),
+  let state1 : ParserState := skip-whitespace state in
+  let current : Option Token := current-token state1 in
+  option-eliminator current
+    -- No token: unexpected end
+    (parse-failure "Unexpected end of input" state1)
+    
+    -- Token available: classify and parse
+    (λ(token : Token),
+      token-type-eliminator (token-type token)
+        -- Data declaration
+        (bool-eliminator (token-type-equal (token-type token) data-kw)
+          (parse-data-declaration state1)
+          
+          -- Import declaration
+          (bool-eliminator (token-type-equal (token-type token) import-kw)
+            (parse-import-declaration state1)
+            
+            -- Function definition or expression
+            (parse-expression state1)))
+
+-- Parse data type declaration
+parse-data-declaration : ParserState → ParseResult AST
+parse-data-declaration = λ(state : ParserState),
+  -- Expect 'data' keyword
+  let state1 : ParserState := expect-token state data-kw in
+  -- Parse type name
+  let name-result : ParseResult String := parse-identifier state1 in
+  match name-result with
+  | parse-failure error error-state => parse-failure error error-state
+  | parse-success type-name state2 =>
+    -- Parse type parameters
+    let params-result : ParseResult (List (String × Type)) := parse-type-parameters state2 in
+    match params-result with
+    | parse-failure error error-state => parse-failure error error-state
+    | parse-success params state3 =>
+      -- Expect 'where' keyword
+      let state4 : ParserState := expect-token state3 where-kw in
+      -- Parse constructors
+      let constrs-result : ParseResult (List (String × List Type)) := parse-constructors state4 in
+      match constrs-result with
+      | parse-failure error error-state => parse-failure error error-state
+      | parse-success constructors state5 =>
+        let data-ast : AST := data-node type-name params constructors in
+        parse-success data-ast state5
+
+-- Parse import declaration
+parse-import-declaration : ParserState → ParseResult AST
+parse-import-declaration = λ(state : ParserState),
+  -- Expect 'import' keyword
+  let state1 : ParserState := expect-token state import-kw in
+  -- Parse module name
+  let name-result : ParseResult String := parse-identifier state1 in
+  match name-result with
+  | parse-failure error error-state => parse-failure error error-state
+  | parse-success module-name state2 =>
+    let import-ast : AST := import-node module-name in
+    parse-success import-ast state2
+
+-- ============================================================================
+-- EXPRESSION PARSING (RECURSIVE DESCENT)
+-- ============================================================================
+
+-- Parse expression with precedence handling
+parse-expression : ParserState → ParseResult AST
+parse-expression = λ(state : ParserState),
+  parse-lambda-or-application state
+
+-- Parse lambda expression or function application
+parse-lambda-or-application : ParserState → ParseResult AST
+parse-lambda-or-application = λ(state : ParserState),
+  let state1 : ParserState := skip-whitespace state in
+  let current : Option Token := current-token state1 in
+  option-eliminator current
+    (parse-failure "Expected expression" state1)
+    
+    (λ(token : Token),
+      -- Check for lambda keyword
+      bool-eliminator (token-type-equal (token-type token) lambda-kw)
+        (parse-lambda state1)
+        
+        -- Check for let keyword
+        (bool-eliminator (token-type-equal (token-type token) let-kw)
+          (parse-let state1)
+          
+          -- Check for if keyword
+          (bool-eliminator (token-type-equal (token-type token) if-kw)
+            (parse-if state1)
+            
+            -- Otherwise parse application
+            (parse-application state1))))
+
+-- Parse lambda expression
+parse-lambda : ParserState → ParseResult AST
+parse-lambda = λ(state : ParserState),
+  -- Expect lambda keyword
+  let state1 : ParserState := expect-token state lambda-kw in
+  -- Parse parameter list
+  let params-result : ParseResult (List String) := parse-parameter-list state1 in
+  match params-result with
+  | parse-failure error error-state => parse-failure error error-state
+  | parse-success params state2 =>
+    -- Expect arrow or dot
+    let state3 : ParserState := expect-token state2 arrow in
+    -- Parse body
+    let body-result : ParseResult AST := parse-expression state3 in
+    match body-result with
+    | parse-failure error error-state => parse-failure error error-state
+    | parse-success body state4 =>
+      let lambda-ast : AST := lambda-node params body in
+      parse-success lambda-ast state4
+
+-- Parse let expression
+parse-let : ParserState → ParseResult AST
+parse-let = λ(state : ParserState),
+  -- Expect 'let' keyword
+  let state1 : ParserState := expect-token state let-kw in
+  -- Parse bindings
+  let bindings-result : ParseResult (List (String × AST)) := parse-let-bindings state1 in
+  match bindings-result with
+  | parse-failure error error-state => parse-failure error error-state
+  | parse-success bindings state2 =>
+    -- Expect 'in' keyword
+    let state3 : ParserState := expect-token state2 in-kw in
+    -- Parse body
+    let body-result : ParseResult AST := parse-expression state3 in
+    match body-result with
+    | parse-failure error error-state => parse-failure error error-state
+    | parse-success body state4 =>
+      let let-ast : AST := let-node bindings body in
+      parse-success let-ast state4
+
+-- Parse if expression
+parse-if : ParserState → ParseResult AST
+parse-if = λ(state : ParserState),
+  -- Expect 'if' keyword
+  let state1 : ParserState := expect-token state if-kw in
+  -- Parse condition
+  let cond-result : ParseResult AST := parse-expression state1 in
+  match cond-result with
+  | parse-failure error error-state => parse-failure error error-state
+  | parse-success condition state2 =>
+    -- Expect 'then' keyword
+    let state3 : ParserState := expect-token state2 then-kw in
+    -- Parse then branch
+    let then-result : ParseResult AST := parse-expression state3 in
+    match then-result with
+    | parse-failure error error-state => parse-failure error error-state
+    | parse-success then-branch state4 =>
+      -- Expect 'else' keyword
+      let state5 : ParserState := expect-token state4 else-kw in
+      -- Parse else branch
+      let else-result : ParseResult AST := parse-expression state5 in
+      match else-result with
+      | parse-failure error error-state => parse-failure error error-state
+      | parse-success else-branch state6 =>
+        let if-ast : AST := if-node condition then-branch else-branch in
+        parse-success if-ast state6
+
+-- Parse function application
+parse-application : ParserState → ParseResult AST
+parse-application = λ(state : ParserState),
+  -- Parse function (atomic expression)
+  let func-result : ParseResult AST := parse-atomic state in
+  match func-result with
+  | parse-failure error error-state => parse-failure error error-state
+  | parse-success func state1 =>
+    -- Parse argument list
+    let args-result : ParseResult (List AST) := parse-argument-list state1 in
+    match args-result with
+    | parse-failure error error-state => parse-failure error error-state
+    | parse-success args state2 =>
+      -- Create application node
+      let app-ast : AST := 
+        bool-eliminator (list-is-empty AST args)
+          func                           -- No arguments: return function
+          (app-node func args) in        -- Has arguments: create application
+      parse-success app-ast state2
+
+-- ============================================================================
+-- ATOMIC EXPRESSION PARSING
+-- ============================================================================
+
+-- Parse atomic expressions (variables, literals, parenthesized expressions)
+parse-atomic : ParserState → ParseResult AST
+parse-atomic = λ(state : ParserState),
+  let state1 : ParserState := skip-whitespace state in
+  let current : Option Token := current-token state1 in
+  option-eliminator current
+    (parse-failure "Expected atomic expression" state1)
+    
+    (λ(token : Token),
+      -- Variable or constructor
+      bool-eliminator (token-type-equal (token-type token) identifier)
+        (parse-variable state1)
+        
+        (bool-eliminator (token-type-equal (token-type token) constructor-id)
+          (parse-variable state1)
+          
+          -- Number literal
+          (bool-eliminator (token-type-equal (token-type token) number-lit)
+            (parse-number-literal state1)
+            
+            -- String literal
+            (bool-eliminator (token-type-equal (token-type token) string-lit)
+              (parse-string-literal state1)
+              
+              -- Boolean literal
+              (bool-eliminator (token-type-equal (token-type token) bool-lit)
+                (parse-bool-literal state1)
+                
+                -- Parenthesized expression
+                (bool-eliminator (token-type-equal (token-type token) lparen)
+                  (parse-parenthesized state1)
+                  
+                  (parse-failure "Unexpected token in atomic expression" state1)))))))
+
+-- Parse variable reference
+parse-variable : ParserState → ParseResult AST
+parse-variable = λ(state : ParserState),
+  let current : Option Token := current-token state in
+  option-eliminator current
+    (parse-failure "Expected identifier" state)
+    
+    (λ(token : Token),
+      let name : String := token-value token in
+      let var-ast : AST := var-node name in
+      let new-state : ParserState := advance-parser state in
+      parse-success var-ast new-state)
+
+-- Parse number literal
+parse-number-literal : ParserState → ParseResult AST
+parse-number-literal = λ(state : ParserState),
+  let current : Option Token := current-token state in
+  option-eliminator current
+    (parse-failure "Expected number" state)
+    
+    (λ(token : Token),
+      let value-str : String := token-value token in
+      let value : ℕ := string-to-nat value-str in
+      let lit : LiteralValue := nat-literal value in
+      let lit-ast : AST := literal-node lit in
+      let new-state : ParserState := advance-parser state in
+      parse-success lit-ast new-state)
+
+-- Parse string literal
+parse-string-literal : ParserState → ParseResult AST
+parse-string-literal = λ(state : ParserState),
+  let current : Option Token := current-token state in
+  option-eliminator current
+    (parse-failure "Expected string" state)
+    
+    (λ(token : Token),
+      let value : String := token-value token in
+      let lit : LiteralValue := string-literal value in
+      let lit-ast : AST := literal-node lit in
+      let new-state : ParserState := advance-parser state in
+      parse-success lit-ast new-state)
+
+-- Parse boolean literal
+parse-bool-literal : ParserState → ParseResult AST
+parse-bool-literal = λ(state : ParserState),
+  let current : Option Token := current-token state in
+  option-eliminator current
+    (parse-failure "Expected boolean" state)
+    
+    (λ(token : Token),
+      let value-str : String := token-value token in
+      let value : 𝟚 := string-to-bool value-str in
+      let lit : LiteralValue := bool-literal value in
+      let lit-ast : AST := literal-node lit in
+      let new-state : ParserState := advance-parser state in
+      parse-success lit-ast new-state)
+
+-- Parse parenthesized expression
+parse-parenthesized : ParserState → ParseResult AST
+parse-parenthesized = λ(state : ParserState),
+  -- Expect opening parenthesis
+  let state1 : ParserState := expect-token state lparen in
+  -- Parse inner expression
+  let expr-result : ParseResult AST := parse-expression state1 in
+  match expr-result with
+  | parse-failure error error-state => parse-failure error error-state
+  | parse-success expr state2 =>
+    -- Expect closing parenthesis
+    let state3 : ParserState := expect-token state2 rparen in
+    parse-success expr state3
+
+-- ============================================================================
+-- HELPER PARSING FUNCTIONS
+-- ============================================================================
+
+-- Parse identifier and return string
+parse-identifier : ParserState → ParseResult String
+parse-identifier = λ(state : ParserState),
+  let current : Option Token := current-token state in
+  option-eliminator current
+    (parse-failure "Expected identifier" state)
+    
+    (λ(token : Token),
+      bool-eliminator (token-type-equal (token-type token) identifier)
+        (let name : String := token-value token in
+         let new-state : ParserState := advance-parser state in
+         parse-success name new-state)
+        (parse-failure "Expected identifier" state))
+
+-- Parse parameter list for lambda
+parse-parameter-list : ParserState → ParseResult (List String)
+parse-parameter-list = λ(state : ParserState),
+  parse-parameter-list-acc state (nil String)
+
+-- Accumulator version of parameter list parsing
+parse-parameter-list-acc : ParserState → List String → ParseResult (List String)
+parse-parameter-list-acc = λ(state : ParserState), λ(acc : List String),
+  let state1 : ParserState := skip-whitespace state in
+  let current : Option Token := current-token state1 in
+  option-eliminator current
+    (parse-success (list-reverse String acc) state1)
+    
+    (λ(token : Token),
+      -- Check if next token is arrow (end of parameters)
+      bool-eliminator (token-type-equal (token-type token) arrow)
+        (parse-success (list-reverse String acc) state1)
+        
+        -- Otherwise try to parse identifier
+        (bool-eliminator (token-type-equal (token-type token) identifier)
+          (let name : String := token-value token in
+           let new-state : ParserState := advance-parser state1 in
+           parse-parameter-list-acc new-state (cons name acc))
+          
+          (parse-success (list-reverse String acc) state1)))
+
+-- Parse argument list for application
+parse-argument-list : ParserState → ParseResult (List AST)
+parse-argument-list = λ(state : ParserState),
+  parse-argument-list-acc state (nil AST)
+
+-- Accumulator version of argument list parsing
+parse-argument-list-acc : ParserState → List AST → ParseResult (List AST)
+parse-argument-list-acc = λ(state : ParserState), λ(acc : List AST),
+  let state1 : ParserState := skip-whitespace state in
+  -- Try to parse atomic expression
+  let arg-result : ParseResult AST := parse-atomic state1 in
+  match arg-result with
+  | parse-failure _ _ =>
+    -- No more arguments: return accumulated list
+    parse-success (list-reverse AST acc) state1
+  | parse-success arg state2 =>
+    -- Found argument: continue parsing
+    parse-argument-list-acc state2 (cons arg acc)
+
+-- ============================================================================
+-- UTILITY PARSING FUNCTIONS
+-- ============================================================================
+
+-- Skip whitespace tokens
+skip-whitespace : ParserState → ParserState
+skip-whitespace = λ(state : ParserState),
+  let current : Option Token := current-token state in
+  option-eliminator current
+    state                                -- No token: return state
+    
+    (λ(token : Token),
+      bool-eliminator (token-type-equal (token-type token) whitespace)
+        (skip-whitespace (advance-parser state))  -- Whitespace: skip and continue
+        state)                           -- Not whitespace: return state
+
+-- Expect specific token type
+expect-token : ParserState → TokenType → ParserState
+expect-token = λ(state : ParserState), λ(expected : TokenType),
+  let state1 : ParserState := skip-whitespace state in
+  let current : Option Token := current-token state1 in
+  option-eliminator current
+    -- No token: error but continue
+    state1
+    
+    (λ(token : Token),
+      bool-eliminator (token-type-equal (token-type token) expected)
+        (advance-parser state1)          -- Expected token: consume and advance
+        state1)                          -- Wrong token: error but continue
+
+-- Token type equality
+token-type-equal : TokenType → TokenType → 𝟚
+token-type-equal = λ(t1 : TokenType), λ(t2 : TokenType),
+  -- This would be a large case analysis over all token type constructors
+  -- For now, simplified to structural equality placeholder
+  𝟚-true  -- Placeholder implementation
+
+-- ============================================================================
+-- CONVERSION FUNCTIONS
+-- ============================================================================
+
+-- Convert string to natural number
+string-to-nat : String → ℕ
+string-to-nat = λ(str : String),
+  -- Parse decimal digits from string
+  string-eliminator str
+    zero                                 -- Empty string: 0
+    (λ(ch : Char), λ(rest : String), λ(ih : ℕ),
+      let digit-val : ℕ := char-to-digit ch in
+      let rest-val : ℕ := ih in
+      let base : ℕ := succ (succ (succ (succ (succ (succ (succ (succ (succ (succ zero))))))))) in
+      nat-add (nat-mult rest-val base) digit-val)
+
+-- Convert character to digit value
+char-to-digit : Char → ℕ
+char-to-digit = λ(ch : Char),
+  char-eliminator ch (λ(codepoint : ℕ),
+    bool-eliminator (bool-and 
+                      (nat-greater-equal codepoint (char-code-0))
+                      (nat-less-equal codepoint (char-code-9)))
+      (nat-subtract codepoint (char-code-0))
+      zero)
+
+-- Convert string to boolean
+string-to-bool : String → 𝟚
+string-to-bool = λ(str : String),
+  bool-eliminator (string-equal str "true")
+    𝟚-true
+    (bool-eliminator (string-equal str "false")
+      𝟚-false
+      𝟚-false)                          -- Default to false
+
+-- List operations
+list-is-empty : ∀(A : 𝒰₀), List A → 𝟚
+list-is-empty = λ(A : 𝒰₀), λ(xs : List A),
+  list-eliminator xs
+    𝟚-true                               -- Empty list
+    (λ(_ : A), λ(_ : List A), λ(_ : 𝟚), 𝟚-false)  -- Non-empty list
+
+list-reverse : ∀(A : 𝒰₀), List A → List A
+list-reverse = λ(A : 𝒰₀), λ(xs : List A),
+  list-reverse-acc A xs (nil A)
+
+list-reverse-acc : ∀(A : 𝒰₀), List A → List A → List A
+list-reverse-acc = λ(A : 𝒰₀), λ(xs : List A), λ(acc : List A),
+  list-eliminator xs
+    acc                                  -- Empty: return accumulator
+    (λ(head : A), λ(tail : List A), λ(_ : List A → List A),
+      list-reverse-acc A tail (cons head acc))
+
+-- Natural number arithmetic
+nat-add : ℕ → ℕ → ℕ
+nat-add = λ(n : ℕ), λ(m : ℕ),
+  nat-eliminator n
+    m                                    -- 0 + m = m
+    (λ(pred : ℕ), λ(ih : ℕ), succ ih)   -- (succ k) + m = succ (k + m)
+
+nat-mult : ℕ → ℕ → ℕ
+nat-mult = λ(n : ℕ), λ(m : ℕ),
+  nat-eliminator n
+    zero                                 -- 0 * m = 0
+    (λ(pred : ℕ), λ(ih : ℕ), nat-add m ih)  -- (succ k) * m = m + (k * m)
+
+nat-subtract : ℕ → ℕ → ℕ
+nat-subtract = λ(n : ℕ), λ(m : ℕ),
+  nat-eliminator m
+    n                                    -- n - 0 = n
+    (λ(pred : ℕ), λ(ih : ℕ), nat-pred ih)  -- n - (succ k) = pred(n - k)
+
+nat-pred : ℕ → ℕ
+nat-pred = λ(n : ℕ),
+  nat-eliminator n
+    zero                                 -- pred(0) = 0
+    (λ(pred : ℕ), λ(_ : ℕ), pred)       -- pred(succ k) = k
+
+-- Natural number comparisons (from lexer)
+nat-greater-equal : ℕ → ℕ → 𝟚
+nat-greater-equal = λ(n : ℕ), λ(m : ℕ),
+  bool-or (nat-equal n m) (nat-greater n m)
+
+nat-less-equal : ℕ → ℕ → 𝟚  
+nat-less-equal = λ(n : ℕ), λ(m : ℕ),
+  bool-or (nat-equal n m) (nat-less n m)
+
+nat-greater : ℕ → ℕ → 𝟚
+nat-greater = λ(n : ℕ), λ(m : ℕ),
+  nat-less m n
+
+nat-less : ℕ → ℕ → 𝟚
+nat-less = λ(n : ℕ), λ(m : ℕ),
+  nat-eliminator n
+    (nat-eliminator m
+      𝟚-false                            -- 0 < 0 is false
+      (λ(_ : ℕ), λ(_ : 𝟚), 𝟚-true))     -- 0 < succ k is true
+    (λ(pred-n : ℕ), λ(ih : ℕ → 𝟚),
+      nat-eliminator m
+        𝟚-false                          -- succ j < 0 is false
+        (λ(pred-m : ℕ), λ(_ : 𝟚), ih pred-m))  -- succ j < succ k iff j < k
+
+nat-equal : ℕ → ℕ → 𝟚
+nat-equal = λ(n : ℕ), λ(m : ℕ),
+  nat-eliminator n
+    (nat-eliminator m
+      𝟚-true                             -- 0 = 0 is true
+      (λ(_ : ℕ), λ(_ : 𝟚), 𝟚-false))    -- 0 = succ k is false
+    (λ(pred-n : ℕ), λ(ih : ℕ → 𝟚),
+      nat-eliminator m
+        𝟚-false                          -- succ j = 0 is false
+        (λ(pred-m : ℕ), λ(_ : 𝟚), ih pred-m))  -- succ j = succ k iff j = k

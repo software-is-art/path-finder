@@ -1,0 +1,323 @@
+-- ============================================================================
+-- PURE MATHEMATICAL TIER-AWARE TYPE FAMILY SYSTEM
+-- ============================================================================
+-- This replaces type-families.rkt with pure mathematical HoTT notation.
+-- Type families that can adapt their behavior based on when information
+-- is available: compile-time (Tier 1), type-resolution (Tier 2), or runtime (Tier 3).
+
+-- Import dependencies
+import pure-types
+import pure-values
+
+-- ============================================================================
+-- TIER SYSTEM
+-- ============================================================================
+
+-- Compilation tiers
+data Tier : 𝒰₀ where
+  tier0 : Tier  -- Axiom/Universe level (most abstract)
+  tier1 : Tier  -- Compile-time constants (types and values known)
+  tier2 : Tier  -- Type-resolution time (types known, values runtime)
+  tier3 : Tier  -- Runtime (dynamic dispatch)
+
+-- Compilation context
+data CompilationContext : 𝒰₀ where
+  compilation-context : Tier → List Value → List (String × Value) → CompilationContext
+
+-- ============================================================================
+-- TYPE FAMILY STRUCTURE
+-- ============================================================================
+
+-- Type family definition
+data TypeFamily : 𝒰₀ where
+  type-family : String →                                    -- name
+               ℕ →                                         -- arity
+               (List Type → Type) →                       -- instantiation function
+               List TypeInstance →                        -- cache
+               TypeFamily
+
+-- Type family instance for caching
+data TypeInstance : 𝒰₀ where
+  type-instance : TypeFamily →                             -- family
+                 List Type →                              -- type arguments
+                 Type →                                   -- resolved type
+                 List Specialization →                   -- tier-specific specializations
+                 TypeInstance
+
+-- Tier-specific specializations
+data Specialization : 𝒰₀ where
+  tier-specialization : Tier →                            -- tier level
+                       List Value →                       -- example values
+                       Value →                            -- specialized implementation
+                       Specialization
+
+-- ============================================================================
+-- TYPE FAMILY REGISTRY
+-- ============================================================================
+
+-- Global type family registry (conceptual - would be part of environment)
+data TypeFamilyRegistry : 𝒰₀ where
+  empty-registry : TypeFamilyRegistry
+  registry-insert : String → TypeFamily → TypeFamilyRegistry → TypeFamilyRegistry
+
+-- Register a type family
+register-type-family : TypeFamilyRegistry → TypeFamily → TypeFamilyRegistry
+register-type-family := λ(registry : TypeFamilyRegistry), λ(family : TypeFamily),
+  TypeFamily-elim(family,
+    λ(name : String), λ(arity : ℕ), λ(inst-fn : List Type → Type), λ(cache : List TypeInstance),
+      registry-insert(name, family, registry))
+
+-- Get a type family from registry
+get-type-family : TypeFamilyRegistry → String → Maybe TypeFamily
+get-type-family := λ(registry : TypeFamilyRegistry), λ(name : String),
+  TypeFamilyRegistry-elim(registry,
+    nothing,  -- empty registry
+    λ(reg-name : String), λ(family : TypeFamily), λ(rest : TypeFamilyRegistry),
+      if-then-else(Maybe TypeFamily,
+        string-equal?(reg-name, name),
+        just(family),
+        get-type-family(rest, name)))
+
+-- ============================================================================
+-- TIER DETERMINATION
+-- ============================================================================
+
+-- Check if value is compile-time constant
+compile-time-constant? : Value → 𝟚
+compile-time-constant? := λ(v : Value),
+  Value-elim(𝟚, v,
+    -- constructor-value case: constants
+    λ(name : String), λ(args : List Value), λ(type : Type), ₁,
+    -- closure-value case: not constant (depends on environment)
+    λ(params : List String), λ(body : AST), λ(env : Environment), ₀,
+    -- builtin-value case: constants
+    λ(name : String), λ(arity : ℕ), λ(type : Type), ₁,
+    -- unit-value case: constant
+    ₁,
+    -- string-value case: constant
+    λ(content : String), ₁,
+    -- effect-value case: not constant (computational)
+    λ(effect : Effect), ₀,
+    -- path-runtime-value case: constant
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), ₁,
+    -- equivalence-runtime-value case: constant
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), ₁)
+
+-- Check if type is compile-time constant
+type-compile-time-constant? : Type → 𝟚
+type-compile-time-constant? := λ(t : Type),
+  Type-elim(𝟚, t,
+    λ(n : ℕ), ₁,                                          -- universe: constant
+    λ(var : String), λ(A B : Type),                       -- pi-type: depends on components
+      𝟚-elim(type-compile-time-constant?(A), 𝟚,
+        type-compile-time-constant?(B),
+        ₀),
+    λ(var : String), λ(A B : Type),                       -- sigma-type: depends on components
+      𝟚-elim(type-compile-time-constant?(A), 𝟚,
+        type-compile-time-constant?(B),
+        ₀),
+    λ(A B : Type),                                        -- sum-type: depends on components
+      𝟚-elim(type-compile-time-constant?(A), 𝟚,
+        type-compile-time-constant?(B),
+        ₀),
+    λ(A : Type), λ(x y : Value), ₁,                       -- identity-type: constant structure
+    ₁, ₁,                                                 -- unit-type, empty-type: constants
+    λ(name : String), λ(cs : List Constructor), ₁,       -- inductive-type: constant
+    λ(base : Type), λ(req opt : EffectSet),               -- effect-type: depends on base
+      type-compile-time-constant?(base))
+
+-- Determine appropriate tier for computation
+determine-tier : List Type → List Value → Tier
+determine-tier := λ(type-args : List Type), λ(values : List Value),
+  if-then-else(Tier,
+    -- Tier 1: All types and values known at compile time AND we have actual values
+    𝟚-elim(list-all?(type-args, type-compile-time-constant?), 𝟚,
+      𝟚-elim(list-non-empty?(values), 𝟚,
+        list-all?(values, compile-time-constant?),
+        ₀),
+      ₀),
+    tier1,
+    if-then-else(Tier,
+      -- Tier 2: Types known, but values may be runtime or absent
+      list-all?(type-args, type-compile-time-constant?),
+      tier2,
+      -- Tier 3: Runtime dispatch needed
+      tier3))
+
+-- ============================================================================
+-- TYPE FAMILY INSTANTIATION
+-- ============================================================================
+
+-- Instantiate type family with given arguments
+instantiate-type-family : TypeFamily → List Type → CompilationContext → TypeInstance
+instantiate-type-family := λ(family : TypeFamily), λ(type-args : List Type), λ(context : CompilationContext),
+  TypeFamily-elim(family,
+    λ(name : String), λ(arity : ℕ), λ(inst-fn : List Type → Type), λ(cache : List TypeInstance),
+      -- Check cache first
+      let cached := lookup-cached-instance(cache, type-args) in
+      Maybe-elim(cached,
+        -- Cache miss: create new instance
+        let resolved-type := inst-fn(type-args) in
+        let tier := CompilationContext-elim(context,
+          λ(current-tier : Tier), λ(available-info : List Value), λ(specializations : List (String × Value)),
+            determine-tier(type-args, available-info)) in
+        type-instance(family, type-args, resolved-type, generate-specializations(tier, type-args)),
+        -- Cache hit: return existing
+        λ(instance : TypeInstance), instance))
+
+-- Look up cached instance
+lookup-cached-instance : List TypeInstance → List Type → Maybe TypeInstance
+lookup-cached-instance := λ(cache : List TypeInstance), λ(type-args : List Type),
+  List-elim(cache,
+    nothing,  -- empty cache
+    λ(instance : TypeInstance), λ(rest : List TypeInstance),
+      TypeInstance-elim(instance,
+        λ(family : TypeFamily), λ(args : List Type), λ(resolved : Type), λ(specs : List Specialization),
+          if-then-else(Maybe TypeInstance,
+            list-equal?(Type, args, type-args, type-equal?),
+            just(instance),
+            lookup-cached-instance(rest, type-args))))
+
+-- Generate tier-specific specializations
+generate-specializations : Tier → List Type → List Specialization
+generate-specializations := λ(tier : Tier), λ(type-args : List Type),
+  Tier-elim(tier,
+    -- tier0: No specializations needed (axiom level)
+    nil,
+    -- tier1: Compile-time specializations
+    cons(tier-specialization(tier1, nil, generate-tier1-impl(type-args)), nil),
+    -- tier2: Type-resolution specializations
+    cons(tier-specialization(tier2, nil, generate-tier2-impl(type-args)), nil),
+    -- tier3: Runtime specializations
+    cons(tier-specialization(tier3, nil, generate-tier3-impl(type-args)), nil))
+
+-- ============================================================================
+-- TIER-SPECIFIC IMPLEMENTATION GENERATORS
+-- ============================================================================
+
+-- Generate Tier 1 implementation (compile-time)
+generate-tier1-impl : List Type → Value
+generate-tier1-impl := λ(type-args : List Type),
+  -- For Tier 1, we can generate optimal specialized code
+  constructor-value("tier1-specialization", 
+    cons(constructor-value("compile-time", type-args-to-values(type-args), make-list-type(Type)), nil),
+    make-function-type(make-list-type(Type), Type))
+
+-- Generate Tier 2 implementation (type-resolution)
+generate-tier2-impl : List Type → Value
+generate-tier2-impl := λ(type-args : List Type),
+  -- For Tier 2, we generate code that dispatches on type structure
+  constructor-value("tier2-specialization",
+    cons(constructor-value("type-dispatch", type-args-to-values(type-args), make-list-type(Type)), nil),
+    make-function-type(make-list-type(Type), Type))
+
+-- Generate Tier 3 implementation (runtime)
+generate-tier3-impl : List Type → Value
+generate-tier3-impl := λ(type-args : List Type),
+  -- For Tier 3, we generate general runtime dispatch
+  constructor-value("tier3-specialization",
+    cons(constructor-value("runtime-dispatch", type-args-to-values(type-args), make-list-type(Type)), nil),
+    make-function-type(make-list-type(Type), Type))
+
+-- ============================================================================
+-- COMMON TYPE FAMILIES
+-- ============================================================================
+
+-- Equality type family: Equal : Type → Type
+Equal-family : TypeFamily
+Equal-family := type-family("Equal", one,
+  λ(args : List Type),
+    List-elim(args,
+      -- No arguments: error type
+      𝟘,
+      -- One argument: create equality type for that type
+      λ(A : Type), λ(rest : List Type),
+        make-function-type(A, make-function-type(A, 𝟚))),
+  nil)
+
+-- Ordering type family: Ord : Type → Type
+Ord-family : TypeFamily
+Ord-family := type-family("Ord", one,
+  λ(args : List Type),
+    List-elim(args,
+      𝟘,
+      λ(A : Type), λ(rest : List Type),
+        make-function-type(A, make-function-type(A, make-sum-type(𝟚, make-sum-type(𝟚, 𝟚))))),
+  nil)
+
+-- Show type family: Show : Type → Type
+Show-family : TypeFamily
+Show-family := type-family("Show", one,
+  λ(args : List Type),
+    List-elim(args,
+      𝟘,
+      λ(A : Type), λ(rest : List Type),
+        make-function-type(A, String)),
+  nil)
+
+-- ============================================================================
+-- TYPE FAMILY COMBINATORS
+-- ============================================================================
+
+-- Compose type families
+compose-type-families : TypeFamily → TypeFamily → TypeFamily
+compose-type-families := λ(f g : TypeFamily),
+  TypeFamily-elim(f,
+    λ(name-f : String), λ(arity-f : ℕ), λ(inst-f : List Type → Type), λ(cache-f : List TypeInstance),
+      TypeFamily-elim(g,
+        λ(name-g : String), λ(arity-g : ℕ), λ(inst-g : List Type → Type), λ(cache-g : List TypeInstance),
+          type-family(string-concat(name-f, "-", string-concat(name-g, "")),
+                     nat-add(arity-f, arity-g),
+                     λ(args : List Type),
+                       let f-args := list-take(args, arity-f) in
+                       let g-args := list-drop(args, arity-f) in
+                       make-function-type(inst-f(f-args), inst-g(g-args)),
+                     nil)))
+
+-- ============================================================================
+-- UTILITY FUNCTIONS
+-- ============================================================================
+
+-- Convert type arguments to values
+type-args-to-values : List Type → List Value
+type-args-to-values := λ(types : List Type),
+  list-map(Type, Value, types, λ(t : Type), constructor-value("type-value", cons(t, nil), Type))
+
+-- List utilities
+list-all? : ∀(A : Type), List A → (A → 𝟚) → 𝟚
+list-all? := λ(A : Type), λ(lst : List A), λ(pred : A → 𝟚),
+  List-elim(lst,
+    ₁,  -- empty list: vacuously true
+    λ(x : A), λ(rest : List A),
+      𝟚-elim(pred(x), 𝟚,
+        list-all?(A, rest, pred),
+        ₀))
+
+list-non-empty? : ∀(A : Type), List A → 𝟚
+list-non-empty? := λ(A : Type), λ(lst : List A),
+  List-elim(lst, ₀, λ(x : A), λ(rest : List A), ₁)
+
+list-take : ∀(A : Type), List A → ℕ → List A
+list-take := λ(A : Type), λ(lst : List A), λ(n : ℕ),
+  ℕ-elim(n,
+    nil,  -- take 0 elements
+    λ(k : ℕ), λ(rec : List A),
+      List-elim(lst,
+        nil,  -- empty list
+        λ(x : A), λ(rest : List A), cons(x, list-take(A, rest, k))))
+
+list-drop : ∀(A : Type), List A → ℕ → List A
+list-drop := λ(A : Type), λ(lst : List A), λ(n : ℕ),
+  ℕ-elim(n,
+    lst,  -- drop 0 elements: return whole list
+    λ(k : ℕ), λ(rec : List A),
+      List-elim(lst,
+        nil,  -- empty list
+        λ(x : A), λ(rest : List A), list-drop(A, rest, k)))
+
+-- Tier eliminator
+Tier-elim : ∀(A : Type), Tier → A → A → A → A → A
+Tier-elim := λ(A : Type), λ(t : Tier), λ(tier0-case tier1-case tier2-case tier3-case : A),
+  sorry  -- Implementation depends on Tier structure
+
+-- This establishes the pure mathematical tier-aware type family system for PathFinder
