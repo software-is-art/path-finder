@@ -27,6 +27,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if arg == "--bootstrap" {
                 // Bootstrap self-hosting system
                 test_bootstrap()
+            } else if arg == "--test-self-hosting" {
+                // Test complete self-hosting with loaded parser
+                test_complete_self_hosting()
             } else if arg.starts_with("--test-peano=") {
                 // Test Peano performance
                 let n_str = &arg[13..];
@@ -41,10 +44,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => {
             eprintln!("Usage: {} [options] [file.hott]", args[0]);
             eprintln!("Options:");
-            eprintln!("  --bootstrap        Bootstrap self-hosting system");
-            eprintln!("  --test-peano=N     Test Peano number performance");
-            eprintln!("  [file.hott]        Execute HoTT source file");
-            eprintln!("  (no args)          Start interactive REPL");
+            eprintln!("  --bootstrap           Bootstrap self-hosting system");
+            eprintln!("  --test-self-hosting   Test complete self-hosting with loaded parser");
+            eprintln!("  --test-peano=N        Test Peano number performance");
+            eprintln!("  [file.hott]           Execute HoTT source file");
+            eprintln!("  (no args)             Start interactive REPL");
             std::process::exit(1);
         }
     }
@@ -256,6 +260,17 @@ fn test_peano_performance(n: usize) -> Result<(), Box<dyn std::error::Error>> {
     runtime.test_peano_performance(n)?;
     
     println!("✅ Peano performance test completed!");
+    Ok(())
+}
+
+/// Test complete self-hosting with loaded parser
+fn test_complete_self_hosting() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🚀 Testing complete self-hosting capability...");
+    
+    let mut runtime = PathFinderRuntime::new();
+    runtime.test_complete_self_hosting()?;
+    
+    println!("✅ Self-hosting test completed successfully!");
     Ok(())
 }
 

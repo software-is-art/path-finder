@@ -208,6 +208,17 @@ impl HottEvaluator {
                     },
                 ))
             }
+            
+            HottAst::Let { var, value, body } => {
+                // Evaluate let expression: let var := value in body
+                let value_result = self.execute_ast_eliminator(*value, context.clone(), loader)?;
+                
+                // Extend environment with the binding
+                let new_context = context.with_binding(var, value_result);
+                
+                // Evaluate body in the extended environment
+                self.execute_ast_eliminator(*body, new_context, loader)
+            }
         }
     }
     

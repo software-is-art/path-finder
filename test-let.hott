@@ -1,0 +1,4 @@
+test-simple-let : String → String
+test-simple-let := λ(x : String),
+  let y := "hello" in
+  y

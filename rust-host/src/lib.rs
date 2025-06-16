@@ -88,6 +88,22 @@ impl PathFinderRuntime {
         self.vm.print_cache_stats();
         Ok(())
     }
+    
+    /// Test complete self-hosting: use loaded parser to parse other .hott files
+    pub fn test_complete_self_hosting(&mut self) -> Result<(), RuntimeError> {
+        // First bootstrap the system
+        self.bootstrap_self_hosting()?;
+        
+        // Check if hott-parse is loaded
+        println!("🔍 Checking if hott-parse function was loaded...");
+        
+        // Then test using loaded parser on other files
+        self.vm.test_self_hosting_parse()
+            .map_err(|e| RuntimeError::Eval(EvalError::RuntimeError(e.to_string())))?;
+        
+        println!("🎯 Complete self-hosting test finished!");
+        Ok(())
+    }
 }
 
 /// Main errors

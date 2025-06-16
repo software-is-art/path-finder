@@ -281,6 +281,15 @@ impl EliminatorEngine {
                     },
                 ))
             }
+            
+            HottAst::Let { var, value, body } => {
+                // TODO: Add let case to eliminator interface
+                Ok(HottValue::constructor(
+                    "let-placeholder".to_string(),
+                    vec![HottValue::String(var.clone())],
+                    HottType::Universe(0),
+                ))
+            }
         }
     }
 }

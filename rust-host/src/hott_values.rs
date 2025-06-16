@@ -154,6 +154,13 @@ pub enum HottAst {
     /// Effect expression
     Effect(EffectDescription),
     
+    /// Let expression: let var := value in body
+    Let {
+        var: String,
+        value: Box<HottAst>,
+        body: Box<HottAst>,
+    },
+    
     /// Digit sequence for number parsing
     DigitSequence(Vec<u8>),
 }
