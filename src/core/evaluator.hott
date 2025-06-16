@@ -6,9 +6,9 @@
 -- No host language evaluation logic - pure mathematical AST interpretation.
 
 -- Import dependencies
-import pure-foundations
-import pure-eliminators
-import pure-hott-ast-native
+import core.foundations
+import core.eliminators
+import core.ast
 
 -- ============================================================================
 -- EVALUATION CONTEXT AS HOTT INDUCTIVE TYPE

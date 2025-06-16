@@ -8,9 +8,9 @@
 -- This leverages HoTT's identity types for truly generic equality.
 
 -- Import dependencies
-import pure-types
-import pure-values
-import pure-type-families
+import types.types
+import evaluator.values
+import types.families
 
 -- ============================================================================
 -- EQUALITY RESULT TYPE

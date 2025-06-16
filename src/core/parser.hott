@@ -6,9 +6,9 @@
 -- No host language dependencies - pure mathematical string processing.
 
 -- Import dependencies
-import pure-foundations
-import pure-eliminators  
-import pure-hott-ast-native
+import core.foundations
+import core.eliminators  
+import core.ast
 
 -- ============================================================================
 -- TOKEN SYSTEM AS HOTT INDUCTIVE TYPES

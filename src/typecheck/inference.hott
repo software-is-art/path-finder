@@ -6,10 +6,10 @@
 -- computational evidence, and universe polymorphism.
 
 -- Import dependencies
-import pure-types
-import pure-values
-import pure-hott-ast-native
-import pure-type-families
+import types.types
+import evaluator.values
+import core.ast
+import types.families
 
 -- ============================================================================
 -- INFERENCE UNIVERSE: HoTT-NATIVE CONSTRAINT SYSTEM

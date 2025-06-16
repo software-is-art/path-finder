@@ -88,7 +88,11 @@ impl PathFinderRuntime {
         println!("🚀 Loading evaluator.hott for complete HoTT system...");
         self.load_hott_file("../src/core/evaluator.hott")?;
         
-        println!("✅ Bootstrap complete! Self-hosting parser AND evaluator loaded");
+        // Load the effects system
+        println!("🚀 Loading effects.hott for pure mathematical effects...");
+        self.load_hott_file("../src/effects/effects.hott")?;
+        
+        println!("✅ Bootstrap complete! Self-hosting parser, evaluator AND effects loaded");
         self.vm.print_cache_stats();
         Ok(())
     }

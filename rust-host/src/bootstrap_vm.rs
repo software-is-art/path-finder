@@ -38,6 +38,9 @@ pub struct BootstrapVM {
     /// Unique ID generators
     next_term_id: AtomicUsize,
     next_value_id: AtomicUsize,
+    
+    /// Loaded files to prevent circular imports
+    loaded_files: std::collections::HashSet<String>,
 }
 
 impl BootstrapVM {
@@ -51,6 +54,7 @@ impl BootstrapVM {
             global_env: HashMap::new(),
             next_term_id: AtomicUsize::new(0),
             next_value_id: AtomicUsize::new(0),
+            loaded_files: std::collections::HashSet::new(),
         };
         
         // Pre-populate with basic constructors
@@ -272,10 +276,29 @@ impl BootstrapVM {
     
     /// Load HoTT file and bind functions to global environment
     pub fn load_hott_file(&mut self, file_path: &str) -> Result<(), std::io::Error> {
+        // Normalize path to prevent duplicate loading
+        let normalized_path = std::path::Path::new(file_path)
+            .canonicalize()
+            .unwrap_or_else(|_| std::path::PathBuf::from(file_path))
+            .to_string_lossy()
+            .to_string();
+            
+        // Check if already loaded
+        if self.loaded_files.contains(&normalized_path) {
+            println!("📋 Already loaded: {}", file_path);
+            return Ok(());
+        }
+        
         use std::fs;
         let content = fs::read_to_string(file_path)?;
         
         println!("🔧 V0 Loading: {}", file_path);
+        
+        // Mark as loaded to prevent circular imports
+        self.loaded_files.insert(normalized_path);
+        
+        // Process imports first
+        self.process_imports(&content, file_path)?;
         
         // Enhanced V0 parsing for HoTT function definitions
         let mut function_signatures: HashMap<String, String> = HashMap::new();
@@ -295,7 +318,7 @@ impl BootstrapVM {
                 println!("  🔍 Will skip this line? {}", trimmed.starts_with("--") || trimmed.is_empty() || trimmed.starts_with("import"));
             }
             
-            // Skip comments and empty lines
+            // Skip comments, empty lines (imports already processed)
             if trimmed.starts_with("--") || trimmed.is_empty() || trimmed.starts_with("import") {
                 if trimmed.contains("hott-parse") {
                     println!("  🔍 DEBUG: Skipping hott-parse line due to comment/empty/import rule");

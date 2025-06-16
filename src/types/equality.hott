@@ -6,9 +6,9 @@
 -- family system with universe polymorphism and identity type proofs.
 
 -- Import dependencies
-import pure-types
-import pure-values
-import pure-type-families
+import types.types
+import evaluator.values
+import types.families
 
 -- ============================================================================
 -- DECIDABLE EQUALITY TYPE FAMILY

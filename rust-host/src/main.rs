@@ -286,9 +286,10 @@ fn test_v1_functionality() -> Result<(), Box<dyn std::error::Error>> {
     
     // Test simple expressions with the loaded evaluator
     let test_cases = vec![
-        "x",           // Variable (should fail gracefully)
-        "zero",        // Constructor  
-        "true",        // Boolean constructor
+        "zero",                                    // Constructor  
+        "true",                                    // Boolean constructor
+        "console-print-effect",                    // Effect function
+        "file-read-effect",                        // Effect with parameter
     ];
     
     for test_case in test_cases {

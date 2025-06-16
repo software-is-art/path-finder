@@ -9,10 +9,10 @@
 -- - Proof obligation generation and AST elaboration
 
 -- Import dependencies
-import pure-types
-import pure-values
-import pure-type-families
-import pure-hott-ast-native
+import types.types
+import evaluator.values
+import types.families
+import core.ast
 
 -- ============================================================================
 -- INFERENCE CONTEXT

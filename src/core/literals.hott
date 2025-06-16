@@ -5,8 +5,8 @@
 -- Pure constructor building with no host language arithmetic operations.
 
 -- Import dependencies
-import pure-types
-import pure-values
+import types.types
+import evaluator.values
 
 -- ============================================================================
 -- NATURAL NUMBER LITERALS
@@ -92,7 +92,7 @@ nat-multiply := λ(m n : Value),
 -- BOOLEAN LITERALS
 -- ============================================================================
 
--- Boolean literals are already defined in pure-values:
+-- Boolean literals are already defined in evaluator.values:
 -- true-value : Value := constructor-value("₁", nil, 𝟚)
 -- false-value : Value := constructor-value("₀", nil, 𝟚)
 

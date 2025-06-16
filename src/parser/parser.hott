@@ -4,9 +4,9 @@
 -- Mathematical syntax analysis using only HoTT constructors
 -- Recursive descent parsing with formal grammar rules
 
-import pure-foundations.hott
-import pure-operations.hott
-import pure-hott-lexer.hott
+import effects.effects
+import core.operations
+import lexer.lexer
 
 -- ============================================================================
 -- ABSTRACT SYNTAX TREE (AST) AS INDUCTIVE TYPE

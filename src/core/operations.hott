@@ -6,8 +6,8 @@
 -- pattern matching with mathematically principled operations.
 
 -- Import pure foundations and eliminators
-import pure-foundations
-import pure-eliminators
+import core.foundations
+import core.eliminators
 
 -- Additional helper functions needed
 type-equal? : Type → Type → 𝟚

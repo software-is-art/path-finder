@@ -6,14 +6,14 @@
 -- All operations are Tier 1 (pure computational proofs).
 
 -- Import dependencies
-import pure-types
-import pure-values
+import types.types
+import evaluator.values
 
 -- ============================================================================
 -- PARAMETERIZED LIST TYPE - HOTT NATIVE
 -- ============================================================================
 
--- List type is already defined in pure-types as:
+-- List type is already defined in types.types as:
 -- make-list-type : Type → Type
 
 -- Common list types

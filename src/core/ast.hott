@@ -5,7 +5,7 @@
 -- The AST itself is mathematical data that can be manipulated by eliminators.
 
 -- Import pure foundations
-import pure-foundations
+import core.foundations
 
 -- ============================================================================
 -- AST AS HOTT INDUCTIVE TYPE

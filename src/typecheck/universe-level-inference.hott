@@ -6,9 +6,9 @@
 -- 𝒰₀ : 𝒰₁ : 𝒰₂ : ... with proper constraint solving and polymorphic inference.
 
 -- Import dependencies
-import pure-types
-import pure-values
-import pure-hott-ast-native
+import types.types
+import evaluator.values
+import core.ast
 
 -- ============================================================================
 -- UNIVERSE LEVEL VARIABLES AND CONSTRAINTS

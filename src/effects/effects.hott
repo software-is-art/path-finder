@@ -1,13 +1,13 @@
 -- ============================================================================
 -- PURE MATHEMATICAL HOTT EFFECTS SYSTEM
 -- ============================================================================
--- This replaces pure-hott-effects.rkt with pure mathematical HoTT notation.
+-- This replaces effects.effects.rkt with pure mathematical HoTT notation.
 -- Effects are pure mathematical objects that can be composed, analyzed, and cached.
 -- Execution happens separately via host bridge.
 
 -- Import dependencies
-import pure-types
-import pure-values
+import types.types
+import evaluator.values
 
 -- ============================================================================
 -- PARAMETRIC EFFECT TYPE FAMILY

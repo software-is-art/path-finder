@@ -5,7 +5,7 @@
 -- Runtime values for PathFinder LISP HoTT-based evaluation.
 
 -- Import the pure type system
-import pure-types
+import types.types
 
 -- ============================================================================
 -- VALUE HIERARCHY AS HOTT INDUCTIVE TYPE
@@ -38,10 +38,10 @@ data Value : 𝒰₀ where
   equivalence-runtime-value : Type → Type → Value → Value → Value
 
 -- Environment for variable bindings (defined in foundations)
--- Imported from pure-foundations
+-- Imported from core.foundations
 
 -- AST type (defined in AST module)
--- Imported from pure-hott-ast-native
+-- Imported from core.ast
 
 -- Effect type
 data Effect : 𝒰₀ where

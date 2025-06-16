@@ -4,11 +4,11 @@
 -- Complete evaluation system using only HoTT mathematical constructs
 -- No host language dependencies - pure constructive mathematics
 
-import pure-foundations.hott
-import pure-operations.hott
-import pure-hott-effects.hott
-import pure-hott-cache.hott
-import pure-values.hott
+import effects.effects
+import core.operations
+import effects.effects
+import core.cache
+import evaluator.values.hott
 
 -- ============================================================================
 -- ENVIRONMENT AS DEPENDENT RECORD TYPE

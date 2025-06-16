@@ -4,9 +4,9 @@
 -- Mathematical lexical analysis using only HoTT constructors
 -- Character-by-character tokenization with formal state transitions
 
-import pure-foundations.hott
-import pure-operations.hott
-import pure-string-type.hott
+import effects.effects
+import core.operations
+import types.string
 
 -- ============================================================================
 -- TOKEN TYPES AS HOTT INDUCTIVE TYPE

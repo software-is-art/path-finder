@@ -6,9 +6,9 @@
 -- and sophisticated proof-carrying operations using HoTT identity types.
 
 -- Import dependencies
-import pure-types
-import pure-values
-import pure-dependent-safety
+import types.types
+import evaluator.values
+import types.dependent-safety
 
 -- ============================================================================
 -- ENHANCED BOUNDED ARRAY TYPE SYSTEM

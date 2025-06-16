@@ -6,8 +6,8 @@
 -- is available: compile-time (Tier 1), type-resolution (Tier 2), or runtime (Tier 3).
 
 -- Import dependencies
-import pure-types
-import pure-values
+import types.types
+import evaluator.values
 
 -- ============================================================================
 -- TIER SYSTEM

@@ -4,9 +4,9 @@
 -- Cache implemented as HoTT inductive types with mathematical operations
 -- Content-addressable computation using identity types and canonical forms
 
-import pure-foundations.hott
-import pure-operations.hott
-import pure-hott-effects.hott
+import effects.effects
+import core.operations
+import effects.effects
 
 -- ============================================================================
 -- CONTENT-ADDRESSABLE COMPUTATION IN HOTT

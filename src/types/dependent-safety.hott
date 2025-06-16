@@ -6,9 +6,9 @@
 -- that safety constraints are satisfied through HoTT identity types and proofs.
 
 -- Import dependencies
-import pure-types
-import pure-values
-import pure-type-families
+import types.types
+import evaluator.values
+import types.families
 
 -- ============================================================================
 -- REFINED TYPE SYSTEM

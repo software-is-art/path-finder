@@ -6,8 +6,8 @@
 -- Characters as Unicode codepoints: Char = MkChar ℕ
 
 -- Import dependencies
-import pure-types
-import pure-values
+import types.types
+import evaluator.values
 
 -- ============================================================================
 -- CHARACTER TYPE DEFINITION

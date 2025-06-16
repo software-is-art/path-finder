@@ -5,7 +5,7 @@
 -- These are the mathematically principled replacement for pattern matching.
 
 -- Import pure foundations
-import pure-foundations
+import core.foundations
 
 -- ============================================================================
 -- GENERAL CONSTRUCTOR-VALUE ELIMINATOR
