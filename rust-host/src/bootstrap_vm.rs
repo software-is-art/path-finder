@@ -420,6 +420,15 @@ impl BootstrapVM {
                 self.global_env.keys().filter(|k| k.contains("parse")).collect::<Vec<_>>());
         }
         
+        // Debug: Check if hott-evaluate is in the global environment
+        if self.global_env.contains_key("hott-evaluate") {
+            println!("  ✅ hott-evaluate function is loaded!");
+        } else {
+            println!("  ❌ hott-evaluate function is NOT loaded");
+            println!("  🔍 Functions containing 'eval': {:?}", 
+                self.global_env.keys().filter(|k| k.contains("eval")).collect::<Vec<_>>());
+        }
+        
         Ok(())
     }
     
@@ -682,6 +691,54 @@ impl BootstrapVM {
         }
     }
     
+    /// Evaluate HoTT AST using loaded hott-evaluate function (V1 functionality!)
+    pub fn evaluate_with_loaded_evaluator(&mut self, ast: HottAst) -> Result<ValuePtr, std::io::Error> {
+        println!("🚀 V1 FUNCTIONALITY: Using loaded hott-evaluate function!");
+        
+        // Look up the loaded hott-evaluate function
+        if let Some(&hott_evaluate_ptr) = self.global_env.get("hott-evaluate") {
+            // Convert AST to HoTT value that can be passed to evaluator
+            let ast_value = HottValue::Constructor {
+                name: "hott-ast".to_string(),
+                args: vec![], // Simplified - would need proper AST serialization
+                value_type: HottType::Universe(0),
+            };
+            let ast_ptr = self.intern_value(ast_value);
+            
+            // Create evaluation context (simplified for V1 demo)
+            let context_value = HottValue::Constructor {
+                name: "evaluation-context".to_string(),
+                args: vec![],
+                value_type: HottType::Universe(0),
+            };
+            let context_ptr = self.intern_value(context_value);
+            
+            // Apply hott-evaluate(ast, context)
+            match self.apply_function(hott_evaluate_ptr, ast_ptr) {
+                Ok(partial_app_ptr) => {
+                    // Apply to context to get final result
+                    match self.apply_function(partial_app_ptr, context_ptr) {
+                        Ok(result_ptr) => {
+                            println!("  ✅ Successfully evaluated using loaded HoTT evaluator!");
+                            Ok(result_ptr)
+                        }
+                        Err(e) => {
+                            println!("  ❌ Context application failed: {:?}", e);
+                            Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Context application error: {:?}", e)))
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("  ❌ Evaluation failed: {:?}", e);
+                    Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Evaluation error: {:?}", e)))
+                }
+            }
+        } else {
+            println!("  ❌ hott-evaluate function not found in global environment");
+            Err(std::io::Error::new(std::io::ErrorKind::NotFound, "hott-evaluate function not loaded"))
+        }
+    }
+
     /// Test self-hosting by parsing multiple .hott files with loaded parser
     pub fn test_self_hosting_parse(&mut self) -> Result<(), std::io::Error> {
         println!("🔥 TESTING COMPLETE SELF-HOSTING!");

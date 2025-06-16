@@ -84,7 +84,11 @@ impl PathFinderRuntime {
         println!("🚀 Loading parser.hott for self-hosting...");
         self.load_hott_file("../src/core/parser.hott")?;
         
-        println!("✅ Bootstrap complete! Self-hosting parser loaded");
+        // Load the HoTT evaluator too!
+        println!("🚀 Loading evaluator.hott for complete HoTT system...");
+        self.load_hott_file("../src/core/evaluator.hott")?;
+        
+        println!("✅ Bootstrap complete! Self-hosting parser AND evaluator loaded");
         self.vm.print_cache_stats();
         Ok(())
     }
@@ -103,6 +107,35 @@ impl PathFinderRuntime {
         
         println!("🎯 Complete self-hosting test finished!");
         Ok(())
+    }
+    
+    /// V1 FUNCTIONALITY: Evaluate HoTT AST using loaded evaluator
+    pub fn evaluate_with_loaded_evaluator(&mut self, ast: HottAst) -> Result<HottValue, RuntimeError> {
+        // First ensure system is bootstrapped
+        self.bootstrap_self_hosting()?;
+        
+        // Use loaded hott-evaluate function
+        let value_ptr = self.vm.evaluate_with_loaded_evaluator(ast)
+            .map_err(|e| RuntimeError::Eval(EvalError::RuntimeError(e.to_string())))?;
+        
+        // Convert ValuePtr back to HottValue for compatibility
+        let value = self.vm.get_value(value_ptr).unwrap().clone();
+        Ok(value)
+    }
+    
+    /// Test V1: Parse AND evaluate a HoTT program using loaded functions
+    pub fn test_v1_complete_evaluation(&mut self, source: &str) -> Result<HottValue, RuntimeError> {
+        println!("🚀 V1 COMPLETE TEST: Parse + Evaluate using loaded HoTT functions");
+        
+        // Parse with loaded parser (self-hosting)
+        let ast = self.parse(source)?;
+        println!("  ✅ Parsed with V0 parser");
+        
+        // Evaluate with loaded evaluator (V1 functionality!)
+        let result = self.evaluate_with_loaded_evaluator(ast)?;
+        println!("  ✅ Evaluated with loaded HoTT evaluator!");
+        
+        Ok(result)
     }
 }
 

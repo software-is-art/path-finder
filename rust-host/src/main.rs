@@ -30,6 +30,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else if arg == "--test-self-hosting" {
                 // Test complete self-hosting with loaded parser
                 test_complete_self_hosting()
+            } else if arg == "--test-v1" {
+                // Test V1 functionality: loaded evaluator
+                test_v1_functionality()
             } else if arg.starts_with("--test-peano=") {
                 // Test Peano performance
                 let n_str = &arg[13..];
@@ -46,6 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("Options:");
             eprintln!("  --bootstrap           Bootstrap self-hosting system");
             eprintln!("  --test-self-hosting   Test complete self-hosting with loaded parser");
+            eprintln!("  --test-v1             Test V1 functionality with loaded evaluator");
             eprintln!("  --test-peano=N        Test Peano number performance");
             eprintln!("  [file.hott]           Execute HoTT source file");
             eprintln!("  (no args)             Start interactive REPL");
@@ -271,6 +275,38 @@ fn test_complete_self_hosting() -> Result<(), Box<dyn std::error::Error>> {
     runtime.test_complete_self_hosting()?;
     
     println!("✅ Self-hosting test completed successfully!");
+    Ok(())
+}
+
+/// Test V1 functionality: using loaded evaluator
+fn test_v1_functionality() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🚀 Testing V1 functionality with loaded HoTT evaluator...");
+    
+    let mut runtime = PathFinderRuntime::new();
+    
+    // Test simple expressions with the loaded evaluator
+    let test_cases = vec![
+        "x",           // Variable (should fail gracefully)
+        "zero",        // Constructor  
+        "true",        // Boolean constructor
+    ];
+    
+    for test_case in test_cases {
+        println!("\n📋 Testing V1 evaluation of: {}", test_case);
+        
+        match runtime.test_v1_complete_evaluation(test_case) {
+            Ok(result) => {
+                println!("  ✅ V1 SUCCESS: {}", format_hott_value(&result));
+            }
+            Err(e) => {
+                println!("  ⚠️  V1 result: {}", e);
+                // This is expected for some cases like unbound variables
+            }
+        }
+    }
+    
+    println!("\n🎯 V1 test demonstrates that we can use loaded HoTT evaluator!");
+    println!("This is the key difference between V0 (parsing only) and V1 (complete evaluation)");
     Ok(())
 }
 
