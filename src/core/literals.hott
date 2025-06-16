@@ -452,4 +452,31 @@ make-literal-bool : Value → Value
 make-literal-bool := λ(b : Value),
   constructor-value("literal-bool", cons(b, nil), LiteralType)
 
+-- ============================================================================
+-- DECIMAL-TO-PEANO: CORE CONVERSION FUNCTION
+-- ============================================================================
+
+-- Primary function used by Rust VM for number parsing
+-- Converts digit sequence to Peano natural number
+decimal-to-peano : Value → Value
+decimal-to-peano := λ(digit-seq : Value),
+  Value-elim(Value, digit-seq,
+    -- constructor-value case
+    λ(name : String), λ(args : List Value), λ(type : Type),
+      if-then-else(Value,
+        string-equal?(name, "digit-sequence"),
+        List-elim(Value, Value, args,
+          zero-value,
+          λ(digit-string : Value), λ(rest : List Value),
+            parse-decimal(digit-string)),
+        zero-value),
+    -- Other cases
+    λ(params : List String), λ(body : AST), λ(env : Environment), zero-value,
+    λ(name : String), λ(arity : ℕ), λ(type : Type), zero-value,
+    zero-value,
+    λ(content : String), zero-value,
+    λ(effect : Effect), zero-value,
+    λ(type : Type), λ(start end : Value), λ(proof : Proof), zero-value,
+    λ(type-a type-b : Type), λ(func quasi-inv : Value), zero-value)
+
 -- This establishes pure mathematical literal construction for PathFinder

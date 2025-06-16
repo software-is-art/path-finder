@@ -8,6 +8,8 @@ pub mod hott_values;
 pub mod hott_eliminators;
 pub mod hott_parser;
 pub mod hott_evaluator;
+pub mod hott_loader;
+pub mod bootstrap_vm;
 
 use std::collections::HashMap;
 
@@ -16,42 +18,71 @@ pub use hott_values::*;
 pub use hott_eliminators::*;
 pub use hott_parser::*;
 pub use hott_evaluator::*;
+pub use hott_loader::*;
+pub use bootstrap_vm::*;
 
-/// The main PathFinder host runtime
+/// PathFinder Runtime using V0 Bootstrap VM
 pub struct PathFinderRuntime {
-    /// Cache for computational values (content-addressable)
-    cache: HashMap<String, HottValue>,
-    /// Effect execution context
-    effect_context: EffectContext,
-    /// Type family registry
-    type_families: HashMap<String, TypeFamily>,
+    /// V0 Bootstrap VM with hash-consing and caching
+    vm: BootstrapVM,
 }
 
 impl PathFinderRuntime {
     pub fn new() -> Self {
         Self {
-            cache: HashMap::new(),
-            effect_context: EffectContext::new(),
-            type_families: HashMap::new(),
+            vm: BootstrapVM::new(),
         }
     }
+    
+    /// Load HoTT file using V0 bootstrap VM
+    pub fn load_hott_file(&mut self, file_path: &str) -> Result<(), RuntimeError> {
+        self.vm.load_hott_file(file_path)
+            .map_err(|e| RuntimeError::Eval(EvalError::RuntimeError(e.to_string())))
+    }
 
-    /// Parse HoTT source code into HoTT AST values
+    /// Parse HoTT source code
     pub fn parse(&mut self, source: &str) -> Result<HottAst, ParseError> {
         HottParser::new().parse(source)
     }
 
-    /// Evaluate HoTT AST using eliminators
+    /// Evaluate HoTT AST using V0 bootstrap VM with caching
     pub fn evaluate(&mut self, ast: HottAst) -> Result<HottValue, EvalError> {
-        let context = EvaluationContext::new();
-        HottEvaluator::new().evaluate(ast, context)
+        let value_ptr = self.vm.eval(ast)?;
+        // Convert ValuePtr back to HottValue for compatibility
+        let value = self.vm.get_value(value_ptr).unwrap().clone();
+        Ok(value)
     }
 
-    /// Execute a HoTT program from source
+    /// Execute a HoTT program from source - V0 Bootstrap
     pub fn run(&mut self, source: &str) -> Result<HottValue, RuntimeError> {
+        println!("🚀 V0 Bootstrap VM with Hash-Consing & Caching");
+        
         let ast = self.parse(source)?;
         let result = self.evaluate(ast)?;
         Ok(result)
+    }
+    
+    /// Test Peano number performance with caching
+    pub fn test_peano_performance(&mut self, n: usize) -> Result<(), RuntimeError> {
+        let value_ptr = self.vm.test_peano_caching(n)
+            .map_err(RuntimeError::Eval)?;
+        
+        println!("🎯 Peano {} created successfully!", n);
+        self.vm.print_cache_stats();
+        Ok(())
+    }
+    
+    /// Load core system to bootstrap self-hosting
+    pub fn bootstrap_self_hosting(&mut self) -> Result<(), RuntimeError> {
+        println!("🔄 Bootstrapping self-hosting system...");
+        
+        // Load minimal files needed for self-hosting
+        self.load_hott_file("../src/core/foundations.hott")?;
+        self.load_hott_file("../src/core/literals.hott")?;
+        
+        println!("✅ Bootstrap complete! Ready for self-hosting");
+        self.vm.print_cache_stats();
+        Ok(())
     }
 }
 
@@ -108,7 +139,8 @@ mod tests {
     #[test]
     fn test_runtime_creation() {
         let runtime = PathFinderRuntime::new();
-        assert_eq!(runtime.cache.len(), 0);
+        // Test that runtime creates successfully
+        drop(runtime);
     }
 
     #[test]

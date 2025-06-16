@@ -104,12 +104,19 @@ impl HottParser {
             return Ok(HottAst::Var(trimmed.to_string()));
         }
         
-        // Parse numbers
+        // Parse numbers as AST expressions (not direct evaluation)
         if trimmed.chars().all(|c| c.is_ascii_digit()) {
-            let n: usize = trimmed.parse().map_err(|_| {
-                ParseError::ParseFailed("Invalid number".to_string())
-            })?;
-            return Ok(HottAst::Literal(self.rust_number_to_hott_nat(n)));
+            // Create AST for decimal-to-peano conversion
+            let digits: Vec<u8> = trimmed.chars()
+                .map(|c| c.to_digit(10).unwrap() as u8)
+                .collect();
+            
+            // Build AST: (decimal-to-peano (digit-sequence [4, 2]))
+            let digit_sequence = HottAst::DigitSequence(digits);
+            return Ok(HottAst::App {
+                func: Box::new(HottAst::Var("decimal-to-peano".to_string())),
+                arg: Box::new(digit_sequence),
+            });
         }
         
         // Parse lambda expressions: \x -> body
@@ -164,14 +171,9 @@ impl HottParser {
         self.invoke_hott_parser(inner)
     }
     
-    /// Convert Rust number to HoTT natural number value
-    fn rust_number_to_hott_nat(&self, n: usize) -> HottValue {
-        if n == 0 {
-            HottValue::zero()
-        } else {
-            HottValue::succ(self.rust_number_to_hott_nat(n - 1))
-        }
-    }
+    /// This function was removed - we now use compositional AST parsing
+    /// Numbers are parsed as: (decimal-to-peano (digit-sequence [digits]))
+    /// This keeps the parser pure and moves evaluation to the evaluator
     
     /// Tokenize source string (mirrors HoTT tokenize-string function)
     /// Now supports mathematical Unicode symbols

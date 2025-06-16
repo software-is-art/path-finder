@@ -69,6 +69,14 @@ impl EliminatorEngine {
             HottValue::String(s) => (cases.string_case)(s.clone()),
             
             HottValue::Effect(effect) => (cases.effect_case)(effect.clone()),
+            
+            HottValue::HottFunction { name, source_body } => {
+                // HoTT functions are values that can be applied, not eliminated
+                Ok(HottValue::HottFunction { 
+                    name: name.clone(), 
+                    source_body: source_body.clone() 
+                })
+            }
         }
     }
     
@@ -255,6 +263,20 @@ impl EliminatorEngine {
                     vec![],
                     HottType::Inductive {
                         name: "Sigma".to_string(),
+                        constructors: vec![],
+                    },
+                ))
+            }
+            
+            HottAst::DigitSequence(digits) => {
+                // DigitSequence is always a literal value for parsing
+                Ok(HottValue::constructor(
+                    "digit-sequence".to_string(),
+                    vec![HottValue::String(
+                        digits.iter().map(|d| char::from_digit(*d as u32, 10).unwrap()).collect()
+                    )],
+                    HottType::Inductive {
+                        name: "DigitSequence".to_string(),
                         constructors: vec![],
                     },
                 ))

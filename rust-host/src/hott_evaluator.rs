@@ -57,28 +57,42 @@ impl HottEvaluator {
         // This is the Rust VM implementing the HoTT evaluator logic
         // The actual logic is defined in HoTT, we just execute it mechanically
         
-        self.execute_ast_eliminator(ast, context)
+        self.execute_ast_eliminator(ast, context, None)
     }
     
-    /// Execute AST eliminator - the core of evaluation
-    fn execute_ast_eliminator(&mut self, ast: HottAst, context: EvaluationContext) -> Result<HottValue, EvalError> {
+    /// Evaluation with HoTT loader for dogfooding bridge
+    pub fn evaluate_with_loader(&mut self, ast: HottAst, context: EvaluationContext, loader: Option<&crate::HottLoader>) -> Result<HottValue, EvalError> {
+        self.execute_ast_eliminator(ast, context, loader)
+    }
+    
+    /// Execute AST eliminator - the core of evaluation with HoTT function bridge
+    fn execute_ast_eliminator(&mut self, ast: HottAst, context: EvaluationContext, loader: Option<&crate::HottLoader>) -> Result<HottValue, EvalError> {
         // Simplified direct evaluation instead of complex closures
         match ast {
             HottAst::Var(name) => {
-                // First check built-ins, then environment
+                // First check built-ins
                 if let Ok(builtin_val) = self.apply_builtin(&name, vec![]) {
-                    Ok(builtin_val)
-                } else {
-                    context.environment.lookup(&name)
-                        .cloned()
-                        .ok_or_else(|| EvalError::UnboundVariable(name))
+                    return Ok(builtin_val);
                 }
+                
+                // Then check loaded HoTT functions - THE DOGFOODING BRIDGE!
+                if let Some(hott_loader) = loader {
+                    if let Some(hott_function) = hott_loader.get_function(&name) {
+                        println!("🔗 Bridging to HoTT function: {}", name);
+                        return Ok(hott_function.clone());
+                    }
+                }
+                
+                // Finally check local environment
+                context.environment.lookup(&name)
+                    .cloned()
+                    .ok_or_else(|| EvalError::UnboundVariable(name))
             }
             
             HottAst::App { func, arg } => {
-                let func_val = self.evaluate(*func, context.clone())?;
-                let arg_val = self.evaluate(*arg, context.clone())?;
-                self.apply_function(func_val, arg_val, context)
+                let func_val = self.execute_ast_eliminator(*func, context.clone(), loader)?;
+                let arg_val = self.execute_ast_eliminator(*arg, context.clone(), loader)?;
+                self.apply_function(func_val, arg_val, context, loader)
             }
             
             HottAst::Lambda { param, body, .. } => {
@@ -179,13 +193,29 @@ impl HottEvaluator {
                     },
                 ))
             }
+            
+            HottAst::DigitSequence(digits) => {
+                // Create HoTT value representing digit sequence
+                // This will be processed by decimal-to-peano builtin
+                Ok(HottValue::constructor(
+                    "digit-sequence".to_string(),
+                    vec![HottValue::String(
+                        digits.iter().map(|d| char::from_digit(*d as u32, 10).unwrap()).collect()
+                    )],
+                    HottType::Inductive {
+                        name: "DigitSequence".to_string(),
+                        constructors: vec![],
+                    },
+                ))
+            }
         }
     }
     
     /// Apply function to argument - implements HoTT function application
-    fn apply_function(&mut self, func: HottValue, arg: HottValue, context: EvaluationContext) -> Result<HottValue, EvalError> {
+    fn apply_function(&mut self, func: HottValue, arg: HottValue, context: EvaluationContext, loader: Option<&crate::HottLoader>) -> Result<HottValue, EvalError> {
         match func {
             HottValue::Closure { params, body, env } => {
+                
                 if params.is_empty() {
                     return Err(EvalError::NotAFunction("closure with no parameters".to_string()));
                 }
@@ -199,7 +229,7 @@ impl HottEvaluator {
                 if remaining_params.is_empty() {
                     // Last parameter: evaluate body
                     let new_context = context.with_binding(param.clone(), arg);
-                    self.evaluate(*body, new_context)
+                    self.execute_ast_eliminator(*body, new_context, loader)
                 } else {
                     // More parameters: return partial application
                     Ok(HottValue::closure(remaining_params.to_vec(), *body, extended_env))
@@ -214,6 +244,17 @@ impl HottEvaluator {
                 // Partial application of constructor
                 args.push(arg);
                 Ok(HottValue::constructor(name, args, value_type))
+            }
+            
+            HottValue::HottFunction { name, source_body: _ } => {
+                // Execute loaded HoTT function - TRUE DOGFOODING!
+                println!("🔗 Executing loaded HoTT function: {}", name);
+                if let Some(hott_loader) = loader {
+                    hott_loader.call_hott_function(&name, vec![arg])
+                        .map_err(|e| EvalError::RuntimeError(e.to_string()))
+                } else {
+                    Err(EvalError::RuntimeError("No HoTT loader available".to_string()))
+                }
             }
             
             _ => Err(EvalError::NotAFunction(format!("{:?}", func))),
@@ -241,7 +282,7 @@ impl HottEvaluator {
     fn apply_case_function(&mut self, case_func: HottValue, args: Vec<HottValue>, context: EvaluationContext) -> Result<HottValue, EvalError> {
         // Apply case function to each argument
         args.into_iter().try_fold(case_func, |func, arg| {
-            self.apply_function(func, arg, context.clone())
+            self.apply_function(func, arg, context.clone(), None)
         })
     }
     
@@ -425,6 +466,41 @@ impl HottEvaluator {
                 ))
             }),
         );
+        
+        // Number parsing and conversion
+        self.builtins.insert(
+            "decimal-to-peano".to_string(),
+            Box::new(|args| {
+                if args.len() != 1 {
+                    return Err(EvalError::WrongArity { expected: 1, actual: args.len() });
+                }
+                
+                // Extract digit sequence from constructor
+                match &args[0] {
+                    HottValue::Constructor { name, args: digit_args, .. } if name == "digit-sequence" => {
+                        if let Some(HottValue::String(digits_str)) = digit_args.first() {
+                            // Convert decimal string to HoTT natural number
+                            let decimal_value: u32 = digits_str.parse().unwrap_or(0);
+                            let result = Self::decimal_to_hott_nat(decimal_value);
+                            Ok(result)
+                        } else {
+                            Err(EvalError::TypeError("Invalid digit sequence format".to_string()))
+                        }
+                    }
+                    _ => Err(EvalError::TypeError("Expected digit-sequence constructor".to_string()))
+                }
+            }),
+        );
+    }
+    
+    /// Convert decimal number to HoTT natural number efficiently 
+    /// This is the optimized version that should replace the recursive parser version
+    fn decimal_to_hott_nat(n: u32) -> HottValue {
+        let mut result = HottValue::zero();
+        for _ in 0..n {
+            result = HottValue::succ(result);
+        }
+        result
     }
     
 }

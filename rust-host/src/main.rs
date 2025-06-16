@@ -14,25 +14,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     match args.len() {
         1 => {
-            // Interactive REPL mode
-            println!("PathFinder HoTT System - Interactive Mode");
-            println!("This demonstrates the world's first self-contained HoTT system!");
-            println!("Type HoTT expressions and see them evaluated by pure mathematical eliminators.");
+            // Interactive REPL mode  
+            println!("PathFinder V0 Bootstrap VM - Interactive Mode");
+            println!("Hash-consing and content-addressable caching enabled!");
+            println!("Type HoTT expressions or 'test-peano N' to test performance.");
             println!("Press Ctrl+C to exit.\n");
             
             run_repl()
         }
         2 => {
-            // File execution mode
-            let filename = &args[1];
-            println!("PathFinder HoTT System - Executing file: {}", filename);
-            
-            run_file(filename)
+            let arg = &args[1];
+            if arg == "--bootstrap" {
+                // Bootstrap self-hosting system
+                test_bootstrap()
+            } else if arg.starts_with("--test-peano=") {
+                // Test Peano performance
+                let n_str = &arg[13..];
+                let n: usize = n_str.parse().unwrap_or(100);
+                test_peano_performance(n)
+            } else {
+                // File execution mode
+                println!("PathFinder V0 Bootstrap VM - Executing file: {}", arg);
+                run_file(arg)
+            }
         }
         _ => {
-            eprintln!("Usage: {} [file.hott]", args[0]);
-            eprintln!("  With no arguments: Start interactive REPL");
-            eprintln!("  With file argument: Execute HoTT source file");
+            eprintln!("Usage: {} [options] [file.hott]", args[0]);
+            eprintln!("Options:");
+            eprintln!("  --bootstrap        Bootstrap self-hosting system");
+            eprintln!("  --test-peano=N     Test Peano number performance");
+            eprintln!("  [file.hott]        Execute HoTT source file");
+            eprintln!("  (no args)          Start interactive REPL");
             std::process::exit(1);
         }
     }
@@ -130,6 +142,9 @@ fn format_hott_value(value: &HottValue) -> String {
         HottValue::Effect(effect) => {
             format!("#<effect:{:?}>", effect)
         }
+        HottValue::HottFunction { name, .. } => {
+            format!("#<hott-function:{}>", name)
+        }
     }
 }
 
@@ -219,6 +234,28 @@ fn demonstrate_hott_system() -> Result<(), Box<dyn std::error::Error>> {
     println!("3. Rust VM executing the eliminator operations");
     println!("4. Complete mathematical correctness guarantees");
     
+    Ok(())
+}
+
+/// Test bootstrap functionality
+fn test_bootstrap() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🔄 Testing V0 Bootstrap VM...");
+    
+    let mut runtime = PathFinderRuntime::new();
+    runtime.bootstrap_self_hosting()?;
+    
+    println!("✅ Bootstrap test completed successfully!");
+    Ok(())
+}
+
+/// Test Peano number performance
+fn test_peano_performance(n: usize) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🧮 Testing Peano number performance with caching...");
+    
+    let mut runtime = PathFinderRuntime::new();
+    runtime.test_peano_performance(n)?;
+    
+    println!("✅ Peano performance test completed!");
     Ok(())
 }
 

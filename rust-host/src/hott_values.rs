@@ -9,7 +9,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 /// Core HoTT Value type - mirrors the HoTT value hierarchy exactly
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HottValue {
     /// Constructor values: (constructor-name args type)
     Constructor {
@@ -39,10 +39,16 @@ pub enum HottValue {
     
     /// Effect values: effect descriptions for the host to execute
     Effect(EffectDescription),
+    
+    /// HoTT Function: loaded from .hott files, executed via eliminators
+    HottFunction {
+        name: String,
+        source_body: Box<HottAst>,
+    },
 }
 
 /// HoTT Type representation
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HottType {
     /// Universe types: Type₀, Type₁, etc.
     Universe(usize),
@@ -68,7 +74,7 @@ pub enum HottType {
 }
 
 /// Type constructor for inductive types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TypeConstructor {
     pub name: String,
     pub param_types: Vec<HottType>,
@@ -76,7 +82,7 @@ pub struct TypeConstructor {
 }
 
 /// HoTT AST representation - mirrors the HoTT AST exactly
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HottAst {
     /// Variable reference
     Var(String),
@@ -147,6 +153,9 @@ pub enum HottAst {
     
     /// Effect expression
     Effect(EffectDescription),
+    
+    /// Digit sequence for number parsing
+    DigitSequence(Vec<u8>),
 }
 
 /// Top-level declarations in HoTT modules
@@ -189,7 +198,7 @@ pub struct HottModule {
 }
 
 /// Environment for variable bindings
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Environment {
     Empty,
     Extended {
@@ -200,7 +209,7 @@ pub enum Environment {
 }
 
 /// Effect descriptions - what the host VM needs to execute
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EffectDescription {
     /// Pure effect: just return the value
     Pure(Box<HottValue>),
