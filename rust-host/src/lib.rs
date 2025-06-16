@@ -80,7 +80,11 @@ impl PathFinderRuntime {
         self.load_hott_file("../src/core/foundations.hott")?;
         self.load_hott_file("../src/core/literals.hott")?;
         
-        println!("✅ Bootstrap complete! Ready for self-hosting");
+        // Load the HoTT parser for true self-hosting!
+        println!("🚀 Loading parser.hott for self-hosting...");
+        self.load_hott_file("../src/core/parser.hott")?;
+        
+        println!("✅ Bootstrap complete! Self-hosting parser loaded");
         self.vm.print_cache_stats();
         Ok(())
     }

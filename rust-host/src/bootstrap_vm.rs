@@ -216,6 +216,15 @@ impl BootstrapVM {
                 self.apply_builtin(&name, vec![arg_value])
             }
             
+            HottValue::HottFunction { name, source_body } => {
+                // Execute loaded HoTT function via AST evaluation
+                println!("🔗 Executing HoTT function: {}", name);
+                
+                // For V0: Simple substitution-based evaluation
+                // In a full implementation, this would handle proper environments
+                self.eval((*source_body).clone())
+            }
+            
             _ => Err(EvalError::NotAFunction("Not a function".to_string())),
         }
     }
@@ -245,27 +254,172 @@ impl BootstrapVM {
         
         println!("🔧 V0 Loading: {}", file_path);
         
-        // Simple parsing for V0 - just look for function definitions
-        for line in content.lines() {
-            let trimmed = line.trim();
+        // Enhanced V0 parsing for HoTT function definitions
+        let mut function_signatures: HashMap<String, String> = HashMap::new();
+        let mut current_function: Option<(String, String)> = None;
+        let mut function_body = String::new();
+        
+        for line_content in content.lines() {
+            let trimmed = line_content.trim();
+            
+            // Skip comments and empty lines
+            if trimmed.starts_with("--") || trimmed.is_empty() || trimmed.starts_with("import") {
+                continue;
+            }
+            
+            // Handle multi-line function definitions
+            if let Some((func_name, _)) = &current_function {
+                if trimmed.ends_with(')') || trimmed.ends_with(',') || 
+                   (!trimmed.contains(':') && !trimmed.contains(":=")) {
+                    // Continue collecting function body
+                    function_body.push(' ');
+                    function_body.push_str(trimmed);
+                    
+                    // Check if this completes the function
+                    if self.is_function_complete(&function_body) {
+                        self.register_hott_function(func_name.clone(), function_body.clone())?;
+                        current_function = None;
+                        function_body.clear();
+                    }
+                    continue;
+                }
+            }
+            
+            // Parse function signature: name : Type
+            if let Some(colon_pos) = trimmed.find(" : ") {
+                if !trimmed.contains(":=") {
+                    let func_name = trimmed[..colon_pos].trim().to_string();
+                    let type_sig = trimmed[colon_pos + 3..].trim().to_string();
+                    function_signatures.insert(func_name.clone(), type_sig);
+                    println!("  📝 Signature: {} : {}", func_name, function_signatures[&func_name]);
+                    continue;
+                }
+            }
+            
+            // Parse function definition: name := body
             if let Some(assign_pos) = trimmed.find(" := ") {
-                let left_part = &trimmed[..assign_pos].trim();
-                let body_part = &trimmed[assign_pos + 4..].trim();
+                let func_name = trimmed[..assign_pos].trim().to_string();
+                let body_start = &trimmed[assign_pos + 4..];
                 
-                if let Some(colon_pos) = left_part.find(" : ") {
-                    let func_name = left_part[..colon_pos].trim().to_string();
+                if self.is_function_complete(body_start) {
+                    // Single-line function
+                    self.register_hott_function(func_name, body_start.to_string())?;
+                } else {
+                    // Multi-line function
+                    current_function = Some((func_name, String::new()));
+                    function_body = body_start.to_string();
+                }
+                continue;
+            }
+        }
+        
+        // Handle any remaining multi-line function
+        if let Some((func_name, _)) = current_function {
+            self.register_hott_function(func_name, function_body)?;
+        }
+        
+        println!("  🎯 V0 loaded {} functions from {}", self.global_env.len() - 4, file_path);
+        Ok(())
+    }
+    
+    /// Check if a function definition is syntactically complete
+    fn is_function_complete(&self, body: &str) -> bool {
+        // Simple heuristic: balanced parentheses and doesn't end with lambda or comma
+        let mut paren_count = 0;
+        for ch in body.chars() {
+            match ch {
+                '(' => paren_count += 1,
+                ')' => paren_count -= 1,
+                _ => {}
+            }
+        }
+        
+        let trimmed = body.trim();
+        paren_count == 0 && 
+        !trimmed.ends_with("λ") && 
+        !trimmed.ends_with(',') && 
+        !trimmed.ends_with("→") &&
+        !trimmed.is_empty()
+    }
+    
+    /// Register a HoTT function with proper AST parsing
+    fn register_hott_function(&mut self, name: String, body: String) -> Result<(), std::io::Error> {
+        // Parse the HoTT function body into AST
+        match self.parse_hott_expression(&body) {
+            Ok(ast) => {
+                let hott_func = HottValue::HottFunction {
+                    name: name.clone(),
+                    source_body: Box::new(ast),
+                };
+                let value_ptr = self.intern_value(hott_func);
+                self.global_env.insert(name.clone(), value_ptr);
+                println!("  ✅ V0 function: {} := {}", name, body.chars().take(50).collect::<String>());
+                Ok(())
+            }
+            Err(e) => {
+                println!("  ❌ Parse error for {}: {:?}", name, e);
+                // Fallback: store as string for now
+                let placeholder = HottValue::String(body);
+                let value_ptr = self.intern_value(placeholder);
+                self.global_env.insert(name, value_ptr);
+                Ok(())
+            }
+        }
+    }
+    
+    /// Parse HoTT expression into AST (simplified for V0)
+    fn parse_hott_expression(&self, expr: &str) -> Result<HottAst, EvalError> {
+        let trimmed = expr.trim();
+        
+        // Lambda expressions: λ(x : T), body
+        if trimmed.starts_with("λ(") {
+            if let Some(close_paren) = trimmed.find("),") {
+                let param_part = &trimmed[2..close_paren];
+                let body_part = &trimmed[close_paren + 2..].trim();
+                
+                if let Some(colon_pos) = param_part.find(" : ") {
+                    let param_name = param_part[..colon_pos].trim().to_string();
+                    let param_type = param_part[colon_pos + 3..].trim();
                     
-                    // For V0, create a simple placeholder
-                    let placeholder = HottValue::String(body_part.to_string());
-                    let value_ptr = self.intern_value(placeholder);
-                    
-                    self.global_env.insert(func_name.clone(), value_ptr);
-                    println!("  ✅ V0 bound: {}", func_name);
+                    let body_ast = self.parse_hott_expression(body_part)?;
+                    return Ok(HottAst::Lambda {
+                        param: param_name,
+                        param_type: Some(Box::new(self.parse_hott_expression(param_type)?)),
+                        body: Box::new(body_ast),
+                    });
                 }
             }
         }
         
-        Ok(())
+        // Function application: f(x) or (f x)
+        if trimmed.starts_with('(') && trimmed.ends_with(')') {
+            let inner = &trimmed[1..trimmed.len()-1];
+            let parts: Vec<&str> = inner.split_whitespace().collect();
+            if parts.len() == 2 {
+                let func_ast = self.parse_hott_expression(parts[0])?;
+                let arg_ast = self.parse_hott_expression(parts[1])?;
+                return Ok(HottAst::App {
+                    func: Box::new(func_ast),
+                    arg: Box::new(arg_ast),
+                });
+            }
+        }
+        
+        // Simple variable or literal
+        if trimmed.chars().all(|c| c.is_alphabetic() || c == '-' || c == '_') {
+            return Ok(HottAst::Var(trimmed.to_string()));
+        }
+        
+        // Number literal
+        if trimmed.chars().all(|c| c.is_ascii_digit()) {
+            let digits: Vec<u8> = trimmed.chars()
+                .map(|c| c.to_digit(10).unwrap() as u8)
+                .collect();
+            return Ok(HottAst::DigitSequence(digits));
+        }
+        
+        // Fallback: treat as variable
+        Ok(HottAst::Var(trimmed.to_string()))
     }
     
     /// Get value from pointer (for debugging/display)
