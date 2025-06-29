@@ -205,6 +205,7 @@ impl HottParser {
                 '⟨' => tokens.push(Token::LAngle),
                 '⟩' => tokens.push(Token::RAngle),
                 ',' => tokens.push(Token::Comma),
+                '.' => tokens.push(Token::Dot),
                 
                 // Mathematical symbols
                 'λ' | '\\' => tokens.push(Token::Lambda),
@@ -221,6 +222,39 @@ impl HottParser {
                         tokens.push(Token::ColonEqual);
                     } else {
                         tokens.push(Token::Colon);
+                    }
+                }
+                
+                // Equals sign and arrow
+                '=' => {
+                    if chars.peek() == Some(&'>') {
+                        chars.next(); // consume >
+                        tokens.push(Token::DoubleArrow);
+                    } else {
+                        tokens.push(Token::Equals);
+                    }
+                }
+                
+                // Pattern matching
+                '|' => tokens.push(Token::Pipe),
+                
+                // Minus/dash (for arrows and identifiers)
+                '-' => {
+                    if chars.peek() == Some(&'>') {
+                        chars.next(); // consume >
+                        tokens.push(Token::Arrow);
+                    } else if chars.peek() == Some(&'-') {
+                        // Start of comment, consume rest of line
+                        let mut comment = String::new();
+                        while let Some(ch) = chars.next() {
+                            if ch == '\n' {
+                                break;
+                            }
+                            comment.push(ch);
+                        }
+                        tokens.push(Token::Comment(comment));
+                    } else {
+                        tokens.push(Token::Minus);
                     }
                 }
                 
@@ -253,6 +287,25 @@ impl HottParser {
                         level_str.parse().unwrap_or(0)
                     };
                     tokens.push(Token::Universe(level));
+                }
+                
+                // Underscore (wildcard in patterns)
+                '_' => {
+                    // Check if it's a standalone underscore or part of identifier
+                    if chars.peek().map_or(true, |&ch| !ch.is_alphanumeric() && ch != '_') {
+                        tokens.push(Token::Underscore);
+                    } else {
+                        // Part of identifier
+                        let mut identifier = String::from("_");
+                        while let Some(&next_char) = chars.peek() {
+                            if next_char.is_alphanumeric() || next_char == '_' || next_char == '-' {
+                                identifier.push(chars.next().unwrap());
+                            } else {
+                                break;
+                            }
+                        }
+                        tokens.push(Token::Identifier(identifier));
+                    }
                 }
                 
                 // ASCII identifiers and keywords
@@ -338,15 +391,21 @@ pub enum Token {
     RParen,          // )
     LAngle,          // ⟨
     RAngle,          // ⟩
+    Dot,             // .
     
     // Mathematical symbols
     Lambda,          // λ
     Arrow,           // → 
+    DoubleArrow,     // ⇒
     Maps,            // ↦
     Times,           // ×
     Colon,           // :
     ColonEqual,      // :=
     Comma,           // ,
+    Equals,          // =
+    Pipe,            // |
+    Underscore,      // _
+    Minus,           // -
     
     // Type theory symbols
     Pi,              // Π
@@ -500,7 +559,7 @@ mod tests {
         match result {
             HottAst::Lambda { param, body, .. } => {
                 assert_eq!(param, "x");
-                assert_eq!(**body, HottAst::Var("x".to_string()));
+                assert_eq!(*body, Box::new(HottAst::Var("x".to_string())));
             }
             _ => panic!("Expected lambda expression"),
         }
@@ -513,8 +572,8 @@ mod tests {
         
         match result {
             HottAst::App { func, arg } => {
-                assert_eq!(**func, HottAst::Var("f".to_string()));
-                assert_eq!(**arg, HottAst::Var("x".to_string()));
+                assert_eq!(*func, Box::new(HottAst::Var("f".to_string())));
+                assert_eq!(*arg, Box::new(HottAst::Var("x".to_string())));
             }
             _ => panic!("Expected application"),
         }

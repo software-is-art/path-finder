@@ -10,6 +10,9 @@ pub mod hott_parser;
 pub mod hott_evaluator;
 pub mod hott_loader;
 pub mod bootstrap_vm;
+pub mod sexp_parser;
+pub mod effect_bridge;
+pub mod initial_env;
 
 use std::collections::HashMap;
 
@@ -64,7 +67,7 @@ impl PathFinderRuntime {
     
     /// Test Peano number performance with caching
     pub fn test_peano_performance(&mut self, n: usize) -> Result<(), RuntimeError> {
-        let value_ptr = self.vm.test_peano_caching(n)
+        let _value_ptr = self.vm.test_peano_caching(n)
             .map_err(RuntimeError::Eval)?;
         
         println!("🎯 Peano {} created successfully!", n);

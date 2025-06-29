@@ -418,7 +418,7 @@ mod tests {
         let mut engine = EliminatorEngine::new();
         
         // Test true case
-        let true_val = HottValue::true_val();
+        let true_val = HottValue::true_value();
         let result = engine.execute_bool_eliminator(
             &true_val,
             || Ok(HottValue::String("yes!".to_string())),
@@ -428,7 +428,7 @@ mod tests {
         assert_eq!(result, HottValue::String("yes!".to_string()));
         
         // Test false case
-        let false_val = HottValue::false_val();
+        let false_val = HottValue::false_value();
         let result = engine.execute_bool_eliminator(
             &false_val,
             || Ok(HottValue::String("yes!".to_string())),
