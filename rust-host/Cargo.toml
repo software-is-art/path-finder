@@ -36,5 +36,37 @@ path = "src/main.rs"
 name = "test_tokenizer"
 path = "src/bin/test_tokenizer.rs"
 
+[[bin]]
+name = "test_parse_sexp"
+path = "src/bin/test_parse_sexp.rs"
+
+[[bin]]
+name = "test_sexp"
+path = "src/bin/test_sexp.rs"
+
+[[bin]]
+name = "bootstrap"
+path = "src/bin/bootstrap.rs"
+
+[[bin]]
+name = "bootstrap_simple"
+path = "src/bin/bootstrap_simple.rs"
+
+[[bin]]
+name = "bootstrap_test"
+path = "src/bin/bootstrap_test.rs"
+
+[[bin]]
+name = "test_parser_deps"
+path = "src/bin/test_parser_deps.rs"
+
+[[bin]]
+name = "test_evaluator_deps"
+path = "src/bin/test_evaluator_deps.rs"
+
+[[bin]]
+name = "test_self_hosting"
+path = "src/bin/test_self_hosting.rs"
+
 [dev-dependencies]
 criterion = "0.5"  # Benchmarking

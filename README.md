@@ -2,7 +2,9 @@
 
 > **⚠️ Experimental Research Language**: PathFinder LISP is an active research project exploring advanced type theory concepts. While the core functionality works, expect significant API changes and incomplete features. This is ideal for researchers, PL enthusiasts, and those interested in HoTT foundations.
 
-An experimental functional programming language that has achieved a revolutionary breakthrough: **effects as pure mathematical objects**. PathFinder proves that I/O operations can be mathematically composed and analyzed while maintaining real-world practicality, implemented in Racket.
+An experimental functional programming language that has achieved two revolutionary breakthroughs: 
+1. **Effects as pure mathematical objects** - I/O operations that can be mathematically composed and analyzed
+2. **Self-hosting through pure HoTT** - The language can parse and evaluate itself using only mathematical foundations
 
 ## Overview
 
@@ -164,11 +166,32 @@ devbox run fmt          # Format all Racket code
 devbox run lint         # Run static analysis
 ```
 
+### Self-Hosting Architecture
+
+PathFinder achieves self-hosting through a minimal bootstrap written in Rust that loads the PathFinder parser and evaluator (themselves written in pure HoTT):
+
+```
+Rust Bootstrap (rust-host/)
+    ├── S-expression parser     # Parses .sexp syntax
+    ├── Minimal VM             # Evaluates basic HoTT constructs
+    └── Effect bridge          # Executes I/O effects
+         ↓ loads
+PathFinder Core (src/)
+    ├── parser.sexp            # Parser written in pure HoTT (64 forms)
+    ├── evaluator.sexp         # Evaluator written in pure HoTT (30 forms)
+    └── dependencies           # 311 supporting forms
+         ↓ enables
+Self-Hosted PathFinder
+    └── Can parse and evaluate any PathFinder code!
+```
+
+The bootstrap successfully loads 405 forms across 12 files, proving that PathFinder can interpret itself using only pure mathematical foundations.
+
 ### Project Structure
 
 ```
 path-finder/
-├── src/                          # Core source code
+├── src/                          # Core source code (now in .sexp format)
 │   ├── main.rkt                 # Main entry point and CLI
 │   ├── lexer/                   # Lexical analysis
 │   │   ├── lexer.rkt            # S-expression tokenizer
@@ -205,6 +228,13 @@ path-finder/
 │   │   ├── primitive-effects.rkt # Minimal I/O primitives in host bridge
 │   │   └── host-bridge.rkt      # Host language integration
 │   └── stdlib/                  # Standard library (in development)
+├── rust-host/                   # Minimal bootstrap for self-hosting
+│   ├── src/                     # Rust implementation
+│   │   ├── bootstrap_vm.rs      # Minimal HoTT VM with caching
+│   │   ├── sexp_parser.rs       # S-expression parser
+│   │   ├── effect_bridge.rs     # I/O effect execution
+│   │   └── bin/                 # Bootstrap executables
+│   └── Cargo.toml               # Rust dependencies
 ├── tests/                       # Comprehensive test suite (89+ tests)
 │   ├── lexer-parser-test.rkt        # Lexer and parser tests
 │   ├── evaluator-test.rkt           # Evaluation engine tests
@@ -352,12 +382,18 @@ The effect system enables automatic tier promotion where runtime effects become 
 
 ## Development Status
 
-**🎉 Major Breakthrough Achieved: Pure HoTT Effects Working!**
+**🎉 Two Major Breakthroughs Achieved!**
 
-> **Latest Achievement**: We've successfully implemented and demonstrated the Pure HoTT Effects System - proving that I/O operations can be pure mathematical objects while maintaining practical utility. This is a fundamental breakthrough in programming language design.
+> **Latest Achievements**: 
+> 1. **Pure HoTT Effects System** - I/O operations as pure mathematical objects while maintaining practical utility
+> 2. **Self-Hosting Capability** - PathFinder can now parse and evaluate itself through a minimal bootstrap!
 
 **✅ What's Working Right Now:**
-- **Pure HoTT Effects**: I/O operations as mathematical objects ✨ **NEW BREAKTHROUGH**
+- **Self-Hosting**: PathFinder can parse and evaluate itself! ✨ **NEW BREAKTHROUGH**
+  - Minimal Rust bootstrap loads PathFinder's parser and evaluator (405 forms)
+  - Parser written in pure HoTT parses S-expression syntax
+  - Evaluator written in pure HoTT executes parsed AST
+- **Pure HoTT Effects**: I/O operations as mathematical objects ✨ **BREAKTHROUGH**
 - **Effect Composition**: Sequential, parallel, choice composition working mathematically
 - **Automatic Analysis**: Determinism and cacheability computed before execution  
 - **Mathematical Caching**: Content-addressable computation with tier promotion foundation

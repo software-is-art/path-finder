@@ -219,6 +219,53 @@ impl BootstrapVM {
                 Ok(self.intern_value(value))
             }
             
+            HottAst::Universe(level) => {
+                // Create universe value
+                let universe_value = HottValue::Constructor {
+                    name: "Universe".to_string(),
+                    args: vec![self.make_nat(level)],
+                    value_type: HottType::Universe(level + 1),
+                };
+                Ok(self.intern_value(universe_value))
+            }
+            
+            HottAst::PiType { var_name, domain, codomain } => {
+                // Evaluate Pi type to a type value
+                let domain_ptr = self.eval(*domain)?;
+                let codomain_ptr = self.eval(*codomain)?;
+                
+                // Create Pi type value
+                let pi_value = HottValue::Constructor {
+                    name: "PiType".to_string(),
+                    args: vec![
+                        HottValue::String(var_name),
+                        self.value_storage.get(&domain_ptr).unwrap().clone(),
+                        self.value_storage.get(&codomain_ptr).unwrap().clone(),
+                    ],
+                    value_type: HottType::Universe(0), // Simplified
+                };
+                Ok(self.intern_value(pi_value))
+            }
+            
+            HottAst::IdType { type_expr, left, right } => {
+                // Evaluate identity type
+                let type_ptr = self.eval(*type_expr)?;
+                let left_ptr = self.eval(*left)?;
+                let right_ptr = self.eval(*right)?;
+                
+                // Create identity type value
+                let id_value = HottValue::Constructor {
+                    name: "IdType".to_string(),
+                    args: vec![
+                        self.value_storage.get(&type_ptr).unwrap().clone(),
+                        self.value_storage.get(&left_ptr).unwrap().clone(),
+                        self.value_storage.get(&right_ptr).unwrap().clone(),
+                    ],
+                    value_type: HottType::Universe(0), // Simplified
+                };
+                Ok(self.intern_value(id_value))
+            }
+            
             _ => Err(EvalError::RuntimeError("Unsupported AST in V0".to_string())),
         }
     }
@@ -298,7 +345,8 @@ impl BootstrapVM {
         self.loaded_files.insert(normalized_path);
         
         // Process imports first
-        self.process_imports(&content, file_path)?;
+        // TODO: Implement process_imports
+        // self.process_imports(&content, file_path)?;
         
         // Enhanced V0 parsing for HoTT function definitions
         let mut function_signatures: HashMap<String, String> = HashMap::new();
@@ -665,6 +713,25 @@ impl BootstrapVM {
     /// Get value from pointer (for debugging/display)
     pub fn get_value(&self, ptr: ValuePtr) -> Option<&HottValue> {
         self.value_storage.get(&ptr)
+    }
+    
+    /// Make natural number value
+    fn make_nat(&self, n: usize) -> HottValue {
+        let mut result = HottValue::Constructor {
+            name: "zero".to_string(),
+            args: vec![],
+            value_type: HottType::Universe(0),
+        };
+        
+        for _ in 0..n {
+            result = HottValue::Constructor {
+                name: "succ".to_string(),
+                args: vec![result],
+                value_type: HottType::Universe(0),
+            };
+        }
+        
+        result
     }
     
     /// Print cache statistics

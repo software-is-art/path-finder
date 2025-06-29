@@ -1,0 +1,33 @@
+;; Natural numbers in PathFinder s-expression syntax
+;; Clean, modern, no LISP legacy
+
+;; Define the natural number type
+(data Nat Type
+  (case zero Nat)
+  (case succ (-> Nat Nat)))
+
+;; Addition function
+(define add (-> Nat Nat Nat)
+  (fn (x y)
+    (rec-Nat x
+      y
+      (fn (n rec-result)
+        (succ rec-result)))))
+
+;; Example: 2 + 3
+(add (succ (succ zero))
+     (succ (succ (succ zero))))
+
+;; Pattern matching example
+(define to-int (-> Nat Int)
+  (fn (n)
+    (match n
+      (case zero 0)
+      (case (succ pred) (+ 1 (to-int pred))))))
+
+;; Type families example  
+(define Vec (-> Type Nat Type)
+  (fn (A n)
+    (match n
+      (case zero Unit)
+      (case (succ m) (Pair A (Vec A m))))))

@@ -1,5 +1,0 @@
--- Mathematical HoTT syntax test
-𝒰₀ 
-ℕ
-λ(x : ℕ), x
-Π(n : ℕ), ℕ
