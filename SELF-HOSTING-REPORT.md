@@ -26,7 +26,7 @@ PathFinder has achieved **true self-hosting readiness** and can serve as a genui
 
 ### **4. Minimal Host Bridge**
 - ✅ **Only I/O touches host** - File operations, console output
-- ✅ **Conversion functions isolated** - All in `host-bridge.rkt`
+- ✅ **Conversion functions isolated** - All in `rust-host/src/effect_bridge.rs`
 - ✅ **Backend abstraction ready** - JavaScript, Python, etc. placeholders
 - ✅ **Clean separation** - Core is 100% HoTT, bridge is 100% host
 

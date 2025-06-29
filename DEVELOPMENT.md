@@ -22,22 +22,27 @@ make ci       # Full CI pipeline
 # Enter development environment
 devbox shell
 
-# Install Racket dependencies
-devbox run setup
+# Build the Rust bootstrap
+cd rust-host
+cargo build
 
-# Install git hooks
-make install-hooks
+# Run self-hosting tests
+cargo test
 ```
 
 ## Available Commands
 
 ### Core Development
 ```bash
-devbox run build       # Check syntax and compile
-devbox run test        # Run comprehensive test suite  
-devbox run fmt         # Format all Racket code
-devbox run lint        # Run static analysis
-devbox run repl        # Start interactive REPL
+# Bootstrap development
+cd rust-host && cargo build    # Build the bootstrap VM
+cd rust-host && cargo run      # Run PathFinder with bootstrap
+cd rust-host && cargo test     # Run self-hosting tests
+
+# PathFinder core files
+ls src/                         # View .sexp source files
+ls src/parser/parser.sexp       # PathFinder parser (self-hosted)
+ls src/core/evaluator.sexp      # PathFinder evaluator (self-hosted)
 ```
 
 ### Code Quality
@@ -59,53 +64,62 @@ make release-check     # Full release validation
 
 ```
 path-finder/
-├── src/                    # Core source code
-│   ├── main.rkt           # Main entry point and CLI ✅
+├── src/                    # Core source code in .sexp format
+│   ├── bootstrap.sexp     # Bootstrap initialization ✅
 │   ├── lexer/             # Lexical analysis ✅
-│   │   ├── lexer.rkt      # S-expression tokenizer
-│   │   └── tokens.rkt     # Token definitions
+│   │   └── lexer.sexp     # S-expression tokenizer
 │   ├── parser/            # Syntax analysis ✅
-│   │   ├── parser.rkt     # Recursive descent parser
-│   │   └── ast.rkt        # Abstract syntax tree nodes
+│   │   ├── parser.sexp    # Self-hosted parser
+│   │   └── module-parser.sexp # Module parsing
 │   ├── types/             # Complete HoTT type system ✅
-│   │   └── types.rkt      # Path computation, univalence, dependent types
+│   │   ├── types.sexp     # Core HoTT types
+│   │   ├── families.sexp  # Type families
+│   │   ├── string.sexp    # String operations
+│   │   ├── list.sexp      # List operations
+│   │   └── equality.sexp  # Equality types
 │   ├── evaluator/         # HoTT-based evaluation engine ✅
-│   │   ├── evaluator.rkt  # Environment-based interpreter
-│   │   └── values.rkt     # HoTT runtime values and operations
+│   │   └── values.sexp    # HoTT runtime values
 │   ├── typecheck/         # Type checking ✅
-│   │   └── typechecker.rkt # HoTT-based type checker
-│   ├── effects/           # Effect system (planned)
-│   └── stdlib/            # Standard library (planned)
-├── tests/                 # Test suites (89 tests) ✅
-│   ├── lexer-parser-test.rkt    # Lexer and parser tests
-│   ├── evaluator-test.rkt       # Evaluation engine tests
-│   ├── types-test.rkt           # Type system tests
-│   ├── path-univalence-test.rkt # Path computation and univalence tests
-│   └── main-test.rkt            # Integration tests
+│   │   ├── bidirectional-inference.sexp # Type checking
+│   │   └── inference.sexp # Type inference
+│   ├── effects/           # Effect system ✅
+│   │   └── effects.sexp   # Pure HoTT effects
+│   └── core/              # HoTT foundation ✅
+│       ├── foundations.sexp # Mathematical foundations
+│       ├── evaluator.sexp # Self-hosted evaluator
+│       └── modules.sexp   # Module system
+├── rust-host/             # Bootstrap implementation ✅
+│   ├── src/               # Rust bootstrap
+│   │   ├── bootstrap_vm.rs # Minimal VM
+│   │   ├── sexp_parser.rs  # S-expression parser
+│   │   └── effect_bridge.rs # I/O bridge
+│   └── Cargo.toml         # Rust dependencies
 ├── docs/                  # Documentation
-│   ├── manual.scrbl       # User manual (to be implemented)
-│   └── internals.scrbl    # Implementation docs (to be implemented)
-├── examples/              # Sample programs
-├── scripts/               # Build/utility scripts
-├── devbox.json           # Development environment configuration
-├── info.rkt              # Package metadata
-└── compiled/             # Generated files (git-ignored)
+│   ├── values-as-proofs.md # HoTT foundations
+│   └── pure-hott-cache-system.md # Cache system
+├── *.md                   # Project documentation
+└── devbox.json           # Development environment configuration
 ```
 
 ## Development Environment Details
 
-### Package Configuration (`info.rkt`)
+### Bootstrap Configuration (`rust-host/Cargo.toml`)
 
-```racket
-#lang info
-(define collection "pathfinder")
-(define deps '("base" "rackunit" "typed-racket"))
-(define build-deps '("scribble-lib" "racket-doc"))
-(define scribblings '(("docs/manual.scrbl" ())))
-(define pkg-desc "PathFinder LISP: HoTT-based functional language with algebraic effects")
-(define version "0.1.0")
-(define pkg-authors '("PathFinder Development Team"))
-(define license '(Apache-2.0 OR MIT))
+```toml
+[package]
+name = "pathfinder-bootstrap"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+env_logger = "0.10"
+
+[[bin]]
+name = "bootstrap"
+path = "src/bin/bootstrap.rs"
 ```
 
 ### Environment Configuration (`devbox.json`)
@@ -126,17 +140,21 @@ Custom scripts provide convenient commands for development workflow.
 
 ## Testing Framework
 
-### Primary Framework: RackUnit
+### Primary Framework: Rust Tests
 
-```racket
-#lang racket/base
-(require rackunit)
-
-;; Example test structure
-(define-test-suite lexer-tests
-  (test-case "tokenize simple symbols"
-    (check-equal? (tokenize "(a b c)")
-                  (list lparen 'a 'b 'c rparen))))
+```rust
+// Self-hosting tests in rust-host/src/bootstrap_vm.rs
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_self_hosting() {
+        // Verifies PathFinder can parse and evaluate itself
+        let result = bootstrap_pathfinder();
+        assert!(result.is_ok());
+    }
+}
 ```
 
 ### Test Organization
@@ -149,16 +167,16 @@ Custom scripts provide convenient commands for development workflow.
 ### Running Tests
 
 ```bash
-# Within devbox environment - runs all 89 tests
-devbox run test
+# Self-hosting tests in Rust bootstrap
+cd rust-host && cargo test
 
-# Run specific test files
-racket tests/path-univalence-test.rkt
-racket tests/types-test.rkt
-racket tests/evaluator-test.rkt
+# Specific self-hosting tests
+cd rust-host && cargo test test_parser_deps
+cd rust-host && cargo test test_evaluator_deps  
+cd rust-host && cargo test test_self_hosting
 
-# Run all tests with detailed output
-raco test tests/
+# View test output with details
+cd rust-host && cargo test -- --nocapture
 ```
 
 ## Development Workflow
@@ -195,20 +213,22 @@ npm run status 1 done
 ### 3. Module Development
 
 Each major component (lexer, parser, type checker, etc.) should be:
-- Implemented as separate Racket modules
-- Thoroughly unit tested
-- Documented with contracts
-- Integrated incrementally
+- Implemented as separate .sexp modules in PathFinder
+- Verified through self-hosting tests
+- Documented with type signatures
+- Integrated through the module system
 
-### 4. REPL-Driven Development
+### 4. Bootstrap-Driven Development
 
 ```bash
-# Start the PathFinder REPL
-devbox run repl
+# Run the PathFinder bootstrap
+cd rust-host && cargo run
 
-# Or run specific files
-racket src/main.rkt --version
-racket src/main.rkt --interactive
+# Debug bootstrap execution
+cd rust-host && RUST_LOG=debug cargo run
+
+# Test specific PathFinder modules
+cd rust-host && cargo test test_module_loading
 ```
 
 ### 5. Syntax Checking
@@ -229,20 +249,19 @@ devbox run build
 
 ### Module Structure
 
-```racket
-#lang racket/base
+```lisp
+;; PathFinder .sexp module structure
 
-;; Imports
-(require racket/contract
-         racket/match
-         racket/file)
+;; Type declarations
+(type parse-expression (-> String ASTNode))
 
-;; Exports with contracts
-(provide/contract
- [parse-expression (-> string? ast-node?)])
+;; Function definitions
+(define parse-expression (fn (str)
+  ;; Implementation using PathFinder syntax
+  ...))
 
-;; Implementation
-(define (parse-expression str) ...)
+;; Export declarations
+(export parse-expression)
 ```
 
 ## Current Implementation Status
@@ -276,9 +295,9 @@ devbox run build
 
 ### Compilation
 
-- Use `racket -c` for syntax checking
-- Consider full Racket installation for advanced compilation features
-- Profile with `racket/profile` when performance becomes critical
+- Use `cargo build` for bootstrap compilation
+- Use `cargo test` for verification
+- Profile with `cargo build --release` for optimized builds
 
 ### Memory Management
 
@@ -290,17 +309,18 @@ devbox run build
 
 ### Common Issues
 
-1. **"racket: command not found"**
+1. **"cargo: command not found"**
    - Ensure you're in the devbox environment: `devbox shell`
+   - Rust toolchain should be available in devbox
 
 2. **"task-master: command not found"**
    - Run `devbox run setup` to install Node.js dependencies
    - Use `npm run tasks` instead of direct `task-master` commands
 
 3. **Missing dependencies**
-   - The minimal Racket installation includes core packages
-   - For advanced features, consider installing full Racket separately
-   - Run `npm install` if task management commands fail
+   - The Rust bootstrap includes all necessary dependencies
+   - Check `rust-host/Cargo.toml` for dependency versions
+   - Run `cargo build` to fetch dependencies
 
 4. **Build failures**
    - Check syntax with `devbox run build`
@@ -315,7 +335,7 @@ devbox run build
 
 - Check `devbox run` for available commands
 - Use `npm run` for task management commands
-- Use `racket --help` for Racket-specific options
+- Use `cargo --help` for Rust toolchain options
 - Run `npm run next` to see what to work on next
 - Refer to task files in `.taskmaster/tasks/` for implementation guidance
 - View task dashboard with `npm run tasks`

@@ -31,19 +31,19 @@ Every cache entry carries:
 
 ### Three-Layer Architecture
 
-#### Layer 1: Pure HoTT Cache (`src/core/hott-cache.rkt`)
+#### Layer 1: Pure HoTT Cache (`src/core/cache.sexp`)
 - Cache as HoTT inductive type
 - Mathematical cache operations
 - Content-addressable computation
 - Proof-carrying cache entries
 
-#### Layer 2: Transparent Integration (`src/evaluator/evaluator.rkt`)
+#### Layer 2: Transparent Integration (`src/core/evaluator.sexp`)
 - Automatic cache lookup during evaluation
 - Silent tier promotion (Tier 2/3 → Tier 1)
 - Zero user complexity
 - Operation-aware caching
 
-#### Layer 3: Persistence Bridge (`src/core/hott-cache-persistence.rkt`)
+#### Layer 3: Persistence Bridge (Rust bootstrap)
 - Serialization of HoTT values to host filesystem
 - Cache validation and repair
 - Version migration
@@ -53,56 +53,55 @@ Every cache entry carries:
 
 ### Type Definition
 
-```racket
+```lisp
 ;; Cache A B = 
 ;;   | empty-cache : Cache A B
 ;;   | cache-entry : (key : ContentAddress A) → (value : B) → 
 ;;                   (proof : CacheProof A B) →
 ;;                   (timestamp : Nat) → (rest : Cache A B) → Cache A B
 
-(define Cache-Type
-  (lambda (A B)
-    (inductive-type "Cache" 
-      (list (list "empty-cache" (list Unit))
-            (list "cache-entry" 
-                  (list (inductive-type "ContentAddress" (list A))
-                        B
-                        (inductive-type "CacheProof" (list A B))
-                        Nat
-                        (inductive-type "Cache" (list A B))))))))
+(data Cache (A B)
+  (empty-cache)
+  (cache-entry (key (ContentAddress A))
+               (value B)
+               (proof (CacheProof A B))
+               (timestamp Nat)
+               (rest (Cache A B))))
 ```
 
 ### Mathematical Operations
 
 The cache supports mathematical operations that preserve computational evidence:
 
-```racket
+```lisp
 ;; Cache lookup: A → Cache A B → Option B
-(hott-cache-lookup input cache)
+(define cache-lookup (fn (input cache) ...))
 
 ;; Cache insertion: ContentAddress A → B → Cache A B → Cache A B  
-(hott-cache-insert key value cache)
+(define cache-insert (fn (key value cache) ...))
 
 ;; Cache union: Cache A B → Cache A B → Cache A B
-(hott-cache-union cache1 cache2)
+(define cache-union (fn (cache1 cache2) ...))
 
 ;; Cache intersection: Cache A B → Cache A B → Cache A B
-(hott-cache-intersection cache1 cache2)
+(define cache-intersection (fn (cache1 cache2) ...))
 
 ;; Cache size: Cache A B → Nat
-(hott-cache-size cache)
+(define cache-size (fn (cache) ...))
 ```
 
 ### Content-Addressable Computation
 
 Content addressing uses HoTT identity types to ensure mathematical consistency:
 
-```racket
+```lisp
 ;; Content address as HoTT identity type
-ContentAddress A x = Id A (canonical-form A x) x
+(data ContentAddress (A x)
+  (content-addr (canonical-form A x) x))
 
 ;; Two computations share cache entries iff they have the same content address
-(content-addresses-equal? addr1 addr2) ≡ (addr1 ≡ addr2)
+(define content-addresses-equal? (fn (addr1 addr2) 
+  (id-equal? addr1 addr2)))
 ```
 
 This means:
