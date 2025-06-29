@@ -193,7 +193,7 @@ path-finder/
 │   │   └── list-type-generic.rkt # Multi-context list type families
 │   ├── effects/                 # Pure HoTT effect system
 │   │   ├── generic-effects.rkt  # Multi-context effect handlers
-│   │   ├── pure-hott-effects.rkt # Effect descriptions as HoTT constructor values
+│   │   ├── effects.effects.rkt # Effect descriptions as HoTT constructor values
 │   │   └── effect-executor.rkt  # Effect execution with caching integration
 │   ├── core/                    # HoTT foundation
 │   │   ├── hott-ast.rkt         # HoTT-specific AST extensions
@@ -224,7 +224,7 @@ path-finder/
 │   ├── unified-effects-demo.rkt     # Cross-tier effect usage
 │   ├── values-as-proofs-demo.rkt    # Computational evidence examples
 │   ├── tier-promotion-demo.rkt      # Cache-based tier promotion demonstration
-│   └── pure-hott-effects-demo.rkt   # Pure HoTT effects system demonstration
+│   └── effects.effects-demo.rkt   # Pure HoTT effects system demonstration
 ├── docs/                        # Theoretical documentation
 │   └── values-as-proofs.md      # HoTT foundations and proof-carrying values
 ├── scripts/                     # Development utilities

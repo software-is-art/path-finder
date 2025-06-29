@@ -46,6 +46,7 @@ package-lock.json
 # Build artifacts
 dist/
 build/
+target/
 
 # Logs
 logs/
@@ -54,3 +55,6 @@ dev-debug.log
 
 # PathFinder cache directory
 .pathfinder-cache/
+
+# Rust build artifacts
+rust-host/target/

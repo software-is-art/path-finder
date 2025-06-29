@@ -1,0 +1,4 @@
+-- Test file for effects in our evaluator
+-- Simple console print effect
+
+console-print-effect("Hello from HoTT effects!")

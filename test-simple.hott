@@ -1,0 +1,7 @@
+-- Simple test for PathFinder HoTT system
+data ℕ : 𝒰₀ where
+  zero : ℕ
+  succ : ℕ → ℕ
+
+x : ℕ := zero
+y : ℕ := succ zero

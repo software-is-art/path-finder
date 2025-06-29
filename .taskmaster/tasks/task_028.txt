@@ -1,6 +1,6 @@
 # Task ID: 28
 # Title: Minimize Racket Dependencies by Replacing Host-Language Features
-# Status: pending
+# Status: in-progress
 # Dependencies: 8, 10, 17, 21
 # Priority: high
 # Description: Replace Racket-specific features like contracts, pattern matching, and mutable data structures with their HoTT-native equivalents. This task is a major step towards making the language self-hosting and reducing reliance on the Racket ecosystem.
@@ -21,7 +21,7 @@ This task involves a systematic refactoring of the existing codebase to eliminat
 5.  **Persistence Tests**: Write tests to confirm that the new persistent data structures are used correctly and that no side-effects or mutations are present in the refactored code sections.
 
 # Subtasks:
-## 1. Refactor Racket Contracts to Compile-Time Dependent Types [pending]
+## 1. Refactor Racket Contracts to Compile-Time Dependent Types [in-progress]
 ### Dependencies: None
 ### Description: Systematically identify and replace all runtime Racket contracts (`provide/contract`, `contract-out`) with the language's native compile-time dependent types. This enforces invariants statically rather than at runtime, a key step in leveraging the HoTT-based type system.
 ### Details:
