@@ -85,11 +85,11 @@ This proves that **mathematical rigor enhances rather than impedes practical pro
 - **Tier Promotion**: Runtime effects become compile-time constants through mathematical caching
 
 🔧 **Language Implementation**
-- S-expression based syntax with comprehensive parser
+- S-expression based syntax with self-hosted parser (written in PathFinder)
 - Complete HoTT-based type system with proof obligations
-- Environment-based evaluator with proper HoTT value representation
-- Interactive Read-Eval-Print Loop (REPL) with mathematical notation
-- MCP server for advanced S-expression manipulation and formatting
+- Self-hosted evaluator with proper HoTT value representation
+- Minimal Rust bootstrap for I/O operations and VM execution
+- Content-addressable module system with caching
 
 🔧 **Development Features**
 - Reproducible development environment with Devbox
@@ -117,14 +117,14 @@ devbox shell
 ### Basic Usage
 
 ```bash
-# Start the interactive REPL
-devbox run repl
+# Run the Rust bootstrap with PathFinder core
+cd rust-host && cargo run
 
-# Check version
-devbox run version
+# Build the bootstrap VM
+cd rust-host && cargo build
 
-# Run a PathFinder file (once implemented)
-devbox run run examples/hello.pf
+# Run PathFinder self-hosting tests
+cd rust-host && cargo test
 ```
 
 ### Example Session
@@ -157,13 +157,15 @@ Goodbye!
 ### Available Commands
 
 ```bash
-devbox run build       # Check syntax and compile
-devbox run run          # Start PathFinder LISP interpreter  
-devbox run repl         # Start interactive REPL
-devbox run version      # Show version information
-devbox run test         # Run comprehensive test suite (89+ tests)
-devbox run fmt          # Format all Racket code
-devbox run lint         # Run static analysis
+# Bootstrap operations
+cd rust-host && cargo run                    # Run PathFinder bootstrap
+cd rust-host && cargo test                   # Run self-hosting tests
+cd rust-host && cargo build --release        # Build optimized bootstrap
+
+# Core PathFinder files are in .sexp format
+ls src/                                       # View PathFinder core modules
+ls src/parser/parser.sexp                    # PathFinder parser (written in PathFinder)
+ls src/core/evaluator.sexp                   # PathFinder evaluator (written in PathFinder)
 ```
 
 ### Self-Hosting Architecture
@@ -177,8 +179,8 @@ Rust Bootstrap (rust-host/)
     └── Effect bridge          # Executes I/O effects
          ↓ loads
 PathFinder Core (src/)
-    ├── parser.sexp            # Parser written in pure HoTT (64 forms)
-    ├── evaluator.sexp         # Evaluator written in pure HoTT (30 forms)
+    ├── parser/parser.sexp     # Parser written in pure HoTT (64 forms)
+    ├── core/evaluator.sexp    # Evaluator written in pure HoTT (30 forms)
     └── dependencies           # 311 supporting forms
          ↓ enables
 Self-Hosted PathFinder
@@ -191,76 +193,59 @@ The bootstrap successfully loads 405 forms across 12 files, proving that PathFin
 
 ```
 path-finder/
-├── src/                          # Core source code (now in .sexp format)
-│   ├── main.rkt                 # Main entry point and CLI
+├── src/                          # Core source code in .sexp format
+│   ├── bootstrap.sexp           # Bootstrap initialization
 │   ├── lexer/                   # Lexical analysis
-│   │   ├── lexer.rkt            # S-expression tokenizer
-│   │   └── tokens.rkt           # Token definitions
+│   │   └── lexer.sexp           # S-expression tokenizer
 │   ├── parser/                  # Syntax analysis  
-│   │   ├── parser.rkt           # Recursive descent parser
-│   │   └── ast.rkt              # Abstract syntax tree nodes
+│   │   ├── parser.sexp          # Parser written in pure HoTT
+│   │   └── module-parser.sexp   # Module parsing
 │   ├── evaluator/               # Evaluation engine
-│   │   ├── evaluator.rkt        # Environment-based interpreter
-│   │   └── values.rkt           # HoTT runtime values and operations
+│   │   └── values.sexp          # HoTT runtime values and operations
 │   ├── typecheck/               # Type checking and effect verification
-│   │   ├── typechecker.rkt      # HoTT-based type checker
-│   │   ├── typechecker-new.rkt  # Enhanced type checker with effect integration
-│   │   ├── effect-checker.rkt   # Multi-tier effect constraint verification
-│   │   └── test-match.rkt       # Pattern matching support
+│   │   ├── bidirectional-inference.sexp # Bidirectional type checking
+│   │   ├── inference.sexp       # Type inference
+│   │   ├── type-family-inference.sexp # Type family inference
+│   │   └── universe-level-inference.sexp # Universe level checking
 │   ├── types/                   # Advanced type system
-│   │   ├── types.rkt            # Core HoTT type system with path computation
-│   │   ├── type-families.rkt    # Parameterized types with adaptive specialization
-│   │   ├── dependent-safety.rkt # NonEmptyList and safety infrastructure
-│   │   ├── bounded-arrays.rkt   # Tier 1 compile-time bounds checking
-│   │   ├── list-type.rkt        # Generic list operations
-│   │   └── list-type-generic.rkt # Multi-context list type families
+│   │   ├── types.sexp           # Core HoTT type system
+│   │   ├── families.sexp        # Type families
+│   │   ├── dependent-safety.sexp # NonEmptyList and safety infrastructure
+│   │   ├── bounded-arrays.sexp  # Tier 1 compile-time bounds checking
+│   │   ├── list.sexp            # List operations
+│   │   ├── string.sexp          # String types and operations
+│   │   ├── string-utils.sexp    # String utilities
+│   │   ├── equality.sexp        # Equality types
+│   │   ├── generic-equality.sexp # Generic equality operations
+│   │   ├── bootstrap-registry.sexp # Type registry for bootstrap
+│   │   ├── type-equal.sexp      # Type equality
+│   │   └── type-family-fix.sexp # Type family fixes
 │   ├── effects/                 # Pure HoTT effect system
-│   │   ├── generic-effects.rkt  # Multi-context effect handlers
-│   │   ├── effects.effects.rkt # Effect descriptions as HoTT constructor values
-│   │   └── effect-executor.rkt  # Effect execution with caching integration
-│   ├── core/                    # HoTT foundation
-│   │   ├── hott-ast.rkt         # HoTT-specific AST extensions
-│   │   ├── hott-evaluator.rkt   # HoTT evaluation semantics
-│   │   ├── hott-literals.rkt    # HoTT literal value handling
-│   │   ├── hott-literals-pure.rkt # Pure HoTT literal operations
-│   │   ├── hott-cache.rkt       # Pure HoTT cache implementation
-│   │   ├── hott-cache-persistence.rkt # Cache persistence bridge
-│   │   ├── primitive-effects.rkt # Minimal I/O primitives in host bridge
-│   │   └── host-bridge.rkt      # Host language integration
-│   └── stdlib/                  # Standard library (in development)
+│   │   └── effects.sexp         # Effect descriptions as HoTT constructor values
+│   └── core/                    # HoTT foundation
+│       ├── foundations.sexp     # Mathematical foundations
+│       ├── eliminators.sexp     # HoTT eliminators
+│       ├── ast.sexp             # AST representation
+│       ├── operations.sexp      # Core operations
+│       ├── literals.sexp        # Literal value handling
+│       ├── cache.sexp           # Content-addressable caching
+│       ├── evaluator.sexp       # Main evaluator written in pure HoTT
+│       ├── modules.sexp         # Module system
+│       └── module-loader.sexp   # Module loading
 ├── rust-host/                   # Minimal bootstrap for self-hosting
 │   ├── src/                     # Rust implementation
 │   │   ├── bootstrap_vm.rs      # Minimal HoTT VM with caching
 │   │   ├── sexp_parser.rs       # S-expression parser
 │   │   ├── effect_bridge.rs     # I/O effect execution
+│   │   ├── hott_values.rs       # HoTT value representation
+│   │   ├── hott_evaluator.rs    # HoTT evaluation engine
 │   │   └── bin/                 # Bootstrap executables
 │   └── Cargo.toml               # Rust dependencies
-├── tests/                       # Comprehensive test suite (89+ tests)
-│   ├── lexer-parser-test.rkt        # Lexer and parser tests
-│   ├── evaluator-test.rkt           # Evaluation engine tests
-│   ├── types-test.rkt               # Type system tests
-│   ├── path-univalence-test.rkt     # Path computation and univalence tests
-│   ├── bounded-arrays-test.rkt      # Tier 1 bounds checking tests
-│   ├── dependent-safety-test.rkt    # NonEmptyList and safety tests
-│   ├── generic-effects-test.rkt     # Multi-context effect tests
-│   ├── type-families-test.rkt       # Type family tests
-│   ├── effect-aware-typechecker-test.rkt # Effect-type integration tests
-│   └── main-test.rkt                # Integration tests
-├── examples/                    # Advanced HoTT demonstrations
-│   ├── dependent-safety-demo.rkt    # Proof-carrying value examples
-│   ├── effect-types-demo.rkt        # Multi-tier effect demonstrations
-│   ├── generic-effects-demo.rkt     # Effect handler examples
-│   ├── type-family-examples.rkt     # Adaptive type specialization
-│   ├── unified-effects-demo.rkt     # Cross-tier effect usage
-│   ├── values-as-proofs-demo.rkt    # Computational evidence examples
-│   ├── tier-promotion-demo.rkt      # Cache-based tier promotion demonstration
-│   └── effects.effects-demo.rkt   # Pure HoTT effects system demonstration
-├── docs/                        # Theoretical documentation
-│   └── values-as-proofs.md      # HoTT foundations and proof-carrying values
-├── scripts/                     # Development utilities
+├── docs/                        # Documentation
+│   ├── values-as-proofs.md      # HoTT foundations and proof-carrying values
+│   └── pure-hott-cache-system.md # Cache system documentation
+├── *.md                         # Project documentation files
 ├── devbox.json                  # Environment configuration
-├── Makefile                     # Build automation
-├── info.rkt                     # Package metadata
 └── README.md                    # This file
 ```
 
@@ -405,30 +390,32 @@ The effect system enables automatic tier promotion where runtime effects become 
 - **Distributed Proofs**: Conceptual design complete, implementation pending
 - **Advanced Type Features**: Dependent safety, bounded arrays (some tests updating)
 
-### 🚀 Try the Breakthrough
+### 🚀 Try the Self-Hosting System
 
 ```bash
-# Clone and explore the Pure HoTT Effects system
-git clone https://github.com/[your-username]/path-finder
+# Clone and explore the self-hosting PathFinder
+git clone <repository-url>
 cd path-finder
 
-# Run the Pure HoTT Effects demonstration
-racket examples/simple-effects-demo.rkt
+# Run the self-hosting bootstrap
+cd rust-host
+cargo run
 
-# See mathematical I/O composition in action
-racket examples/inherent-composability-demo.rkt
+# Run self-hosting verification tests
+cargo test
 
-# Compare old vs new approaches  
-racket examples/old-vs-new-effects-demo.rkt
+# See the PathFinder parser and evaluator written in PathFinder
+ls ../src/parser/parser.sexp
+ls ../src/core/evaluator.sexp
 ```
 
 **Example Output:**
 ```
-✅ Effects are pure HoTT constructor values
-✅ Effect composition works mathematically  
-✅ Properties (determinism, cacheability) computed mathematically
-✅ No execution needed for effect analysis
-✅ Foundation ready for caching and tier promotion
+✅ PathFinder successfully parses its own source code
+✅ PathFinder evaluator executes parsed AST
+✅ Self-hosting bootstrap loads 405 forms across 12 files
+✅ Effects bridge pure HoTT to I/O operations
+✅ Content-addressable module system working
 ```
 
 Current implementation status:
@@ -691,9 +678,9 @@ at your option.
 ## Acknowledgments
 
 Built with:
-- [Racket](https://racket-lang.org/) - Implementation language
+- [Rust](https://rust-lang.org/) - Bootstrap implementation
+- [PathFinder itself](.) - Parser and evaluator written in PathFinder
 - [Devbox](https://www.jetify.com/devbox/) - Development environment
-- [Task Master](https://github.com/eyaltoledano/claude-task-master) - Project management
 
 Inspired by research in:
 - Homotopy Type Theory

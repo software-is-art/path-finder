@@ -108,7 +108,7 @@ When reporting bugs:
 ## 📚 Learning Resources
 
 - [HoTT Book](https://homotopytypetheory.org/book/) - Theoretical foundations
-- [Racket Guide](https://docs.racket-lang.org/guide/) - Implementation language
+- [Rust Book](https://doc.rust-lang.org/book/) - Bootstrap implementation language
 - `docs/values-as-proofs.md` - PathFinder's approach to dependent types
 - `examples/` directory - Working code examples
 
