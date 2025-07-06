@@ -118,9 +118,13 @@
           (fn (value)
             (eval-success value))
           
-          ;; Effect case
+          ;; Effect case (legacy)
           (fn (effect)
             (eval-success (effect-value effect)))
+          
+          ;; Computation case (HoTT-native)
+          (fn (computation)
+            (eval-success (computation-value computation)))
           
           ;; Let expression case
           (fn (var value body eval-value _)
@@ -176,6 +180,9 @@
       
       ;; Effect case - error
       (fn (effect) (eval-failure "Cannot apply effect"))
+      
+      ;; Computation case - error
+      (fn (computation) (eval-failure "Cannot apply computation"))
       
       ;; Path case - error
       (fn (type start end proof) 

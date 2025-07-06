@@ -1,318 +1,258 @@
 ;; ============================================================================
-;; PURE HOTT LEXER IMPLEMENTATION (S-EXPRESSION VERSION)
+;; S-EXPRESSION LEXER FOR PATHFINDER
 ;; ============================================================================
-;; Mathematical lexical analysis using only HoTT constructors
-;; Character-by-character tokenization with formal state transitions
+;; Simple tokenizer for S-expressions to enable self-hosting
 
-(import effects effects)
-(import core operations)
+(import core foundations)
 (import types string)
+(import types list)
 
 ;; ============================================================================
 ;; TOKEN TYPES
 ;; ============================================================================
 
-;; Complete token classification
-(data TokenType U0
+(data SExpToken U0
   ;; Delimiters
-  (case lparen TokenType)
-  (case rparen TokenType)
-  (case lbracket TokenType)
-  (case rbracket TokenType)
-  (case lbrace TokenType)
-  (case rbrace TokenType)
+  (case lparen-token SExpToken)
+  (case rparen-token SExpToken)
   
-  ;; Operators and symbols
-  (case plus TokenType)
-  (case minus TokenType)
-  (case multiply TokenType)
-  (case divide TokenType)
-  (case equal TokenType)
-  (case less-than TokenType)
-  (case greater-than TokenType)
-  (case arrow TokenType)
-  (case double-arrow TokenType)
-  (case colon TokenType)
-  (case semicolon TokenType)
-  (case comma TokenType)
-  (case dot TokenType)
-  (case pipe TokenType)
+  ;; Atoms
+  (case symbol-token (-> String SExpToken))
+  (case number-token (-> Nat SExpToken))
+  (case string-token (-> String SExpToken))
   
-  ;; Keywords
-  (case lambda-kw TokenType)
-  (case fn-kw TokenType)
-  (case let-kw TokenType)
-  (case in-kw TokenType)
-  (case if-kw TokenType)
-  (case then-kw TokenType)
-  (case else-kw TokenType)
-  (case match-kw TokenType)
-  (case case-kw TokenType)
-  (case data-kw TokenType)
-  (case where-kw TokenType)
-  (case import-kw TokenType)
-  (case type-kw TokenType)
-  (case define-kw TokenType)
-  
-  ;; Literals
-  (case number-lit TokenType)
-  (case string-lit TokenType)
-  (case char-lit TokenType)
-  (case bool-lit TokenType)
-  
-  ;; Identifiers and special
-  (case identifier TokenType)
-  (case comment TokenType)
-  (case whitespace TokenType)
-  (case eof TokenType))
-
-;; Token with position information
-(data Token U0
-  (case token (-> TokenType String Nat Nat Token)))
+  ;; Special
+  (case quote-token SExpToken)
+  (case eof-token SExpToken))
 
 ;; ============================================================================
 ;; LEXER STATE
 ;; ============================================================================
 
-;; Lexer state for stateful tokenization
 (data LexerState U0
-  (case lexer-state (-> String      ;; input
-                       Nat          ;; position
-                       Nat          ;; line
-                       Nat          ;; column
-                       (List Token) ;; tokens so far
-                       LexerState)))
+  (case lexer-state 
+    (-> (input : String)
+        (position : Nat)
+        (line : Nat)
+        (column : Nat)
+        LexerState)))
 
 ;; ============================================================================
 ;; CHARACTER CLASSIFICATION
 ;; ============================================================================
 
-;; Check if character is operator
-(type is-operator? (-> Char Bool))
-(define is-operator?
+;; Check if character is whitespace
+(define is-whitespace?
   (fn (ch)
-    (member? ch (list char-plus char-minus char-star char-slash
-                     char-equal char-less char-greater))))
+    (match ch
+      (case #\space true)
+      (case #\newline true)
+      (case #\tab true)
+      (case #\return true)
+      (case _ false))))
 
 ;; Check if character is delimiter
-(type is-delimiter? (-> Char Bool))
 (define is-delimiter?
   (fn (ch)
-    (member? ch (list char-lparen char-rparen 
-                     char-lbracket char-rbracket
-                     char-lbrace char-rbrace))))
+    (match ch
+      (case #\( true)
+      (case #\) true)
+      (case _ (is-whitespace? ch)))))
 
-;; Character constants
-(define char-plus (make-char 43))      ;; +
-(define char-minus (make-char 45))     ;; -
-(define char-star (make-char 42))      ;; *
-(define char-slash (make-char 47))     ;; /
-(define char-equal (make-char 61))     ;; =
-(define char-less (make-char 60))      ;; <
-(define char-greater (make-char 62))   ;; >
-(define char-lparen (make-char 40))    ;; (
-(define char-rparen (make-char 41))    ;; )
-(define char-lbracket (make-char 91))  ;; [
-(define char-rbracket (make-char 93))  ;; ]
-(define char-lbrace (make-char 123))   ;; {
-(define char-rbrace (make-char 125))   ;; }
-(define char-semicolon (make-char 59)) ;; ;
-(define char-colon (make-char 58))     ;; :
-(define char-comma (make-char 44))     ;; ,
-(define char-dot (make-char 46))       ;; .
-(define char-pipe (make-char 124))     ;; |
-(define char-quote (make-char 34))     ;; "
-(define char-underscore (make-char 95)) ;; _
+;; Check if character starts a symbol
+(define is-symbol-start?
+  (fn (ch)
+    (bool-elim (fn (_) Bool)
+               ;; Not delimiter
+               (bool-elim (fn (_) Bool)
+                          ;; Not digit
+                          true
+                          false
+                          (is-digit? ch))
+               false
+               (is-delimiter? ch))))
+
+;; Check if character continues a symbol
+(define is-symbol-continue?
+  (fn (ch)
+    (not (is-delimiter? ch))))
+
+;; Check if character is digit
+(define is-digit?
+  (fn (ch)
+    (match ch
+      (case #\0 true) (case #\1 true) (case #\2 true) (case #\3 true) (case #\4 true)
+      (case #\5 true) (case #\6 true) (case #\7 true) (case #\8 true) (case #\9 true)
+      (case _ false))))
 
 ;; ============================================================================
-;; TOKENIZATION
+;; LEXER HELPERS
 ;; ============================================================================
 
-;; Main tokenization function
-(type tokenize (-> String (Effect (List Token))))
+;; Get current character
+(define current-char
+  (fn (state)
+    (match state
+      (case (lexer-state input pos line col)
+        (string-char-at input pos)))))
+
+;; Advance position
+(define advance
+  (fn (state)
+    (match state
+      (case (lexer-state input pos line col)
+        (let ((ch (current-char state)))
+          (match ch
+            (case (some #\newline)
+              (lexer-state input (succ pos) (succ line) zero))
+            (case _
+              (lexer-state input (succ pos) line (succ col)))))))))
+
+;; Skip whitespace
+(define skip-whitespace
+  (fn (state)
+    (match (current-char state)
+      (case none state)
+      (case (some ch)
+        (if (is-whitespace? ch)
+            (skip-whitespace (advance state))
+            state)))))
+
+;; Skip comment (from ; to end of line)
+(define skip-comment
+  (fn (state)
+    (match (current-char state)
+      (case none state)
+      (case (some ch)
+        (match ch
+          (case #\newline (advance state))
+          (case _ (skip-comment (advance state))))))))
+
+;; Read while predicate holds
+(define read-while
+  (fn (pred state acc)
+    (match (current-char state)
+      (case none (pair (reverse-string acc) state))
+      (case (some ch)
+        (if (pred ch)
+            (read-while pred (advance state) (string-cons ch acc))
+            (pair (reverse-string acc) state))))))
+
+;; Read string literal
+(define read-string
+  (fn (state)
+    ;; Skip opening quote
+    (let ((state1 (advance state)))
+      (read-string-chars state1 empty-string))))
+
+(define read-string-chars
+  (fn (state acc)
+    (match (current-char state)
+      (case none (error "Unterminated string"))
+      (case (some ch)
+        (match ch
+          ;; Closing quote
+          (case #\" 
+            (pair (reverse-string acc) (advance state)))
+          ;; Escape sequence
+          (case #\\
+            (let ((state1 (advance state)))
+              (match (current-char state1)
+                (case none (error "Unterminated string escape"))
+                (case (some esc-ch)
+                  (let ((actual-ch (match esc-ch
+                                     (case #\n #\newline)
+                                     (case #\t #\tab)
+                                     (case #\" #\")
+                                     (case #\\ #\\)
+                                     (case _ esc-ch))))
+                    (read-string-chars (advance state1) 
+                                      (string-cons actual-ch acc)))))))
+          ;; Regular character
+          (case _
+            (read-string-chars (advance state) (string-cons ch acc))))))))
+
+;; Read number
+(define read-number
+  (fn (state)
+    (let ((result (read-while is-digit? state empty-string)))
+      (match result
+        (case (pair digits new-state)
+          (pair (string-to-nat digits) new-state))))))
+
+;; Read symbol
+(define read-symbol
+  (fn (state)
+    (read-while is-symbol-continue? state empty-string)))
+
+;; ============================================================================
+;; MAIN LEXER
+;; ============================================================================
+
+;; Get next token
+(define next-token
+  (fn (state)
+    ;; Skip whitespace and comments
+    (let ((state1 (skip-whitespace state)))
+      (match (current-char state1)
+        ;; EOF
+        (case none (pair eof-token state1))
+        
+        ;; Character dispatch
+        (case (some ch)
+          (match ch
+            ;; Comment
+            (case #\;
+              (next-token (skip-comment state1)))
+            
+            ;; Parentheses
+            (case #\( (pair lparen-token (advance state1)))
+            (case #\) (pair rparen-token (advance state1)))
+            
+            ;; Quote
+            (case #\' (pair quote-token (advance state1)))
+            
+            ;; String
+            (case #\"
+              (match (read-string state1)
+                (case (pair str new-state)
+                  (pair (string-token str) new-state))))
+            
+            ;; Number or symbol
+            (case _
+              (if (is-digit? ch)
+                  ;; Number
+                  (match (read-number state1)
+                    (case (pair n new-state)
+                      (pair (number-token n) new-state)))
+                  ;; Symbol
+                  (match (read-symbol state1)
+                    (case (pair sym new-state)
+                      (pair (symbol-token sym) new-state)))))))))))
+
+;; Tokenize entire input
 (define tokenize
   (fn (input)
-    (let ((initial-state (lexer-state input zero zero zero nil)))
-      (>>= (tokenize-loop initial-state)
-           (fn (final-state)
-             (match final-state
-               (case (lexer-state _ _ _ _ tokens)
-                 (pure (reverse tokens)))))))))
+    (tokenize-helper (lexer-state input zero zero zero) nil)))
 
-;; Tokenization loop
-(type tokenize-loop (-> LexerState (Effect LexerState)))
-(define tokenize-loop
-  (fn (state)
-    (match state
-      (case (lexer-state input pos line col tokens)
-        (if (>= pos (string-length input))
-            ;; End of input
-            (pure (lexer-state input pos line col 
-                              (cons (token eof "" line col) tokens)))
-            ;; Process next character
-            (let ((ch (string-nth input pos)))
-              (cond
-                ;; Whitespace
-                ((is-whitespace? ch)
-                 (tokenize-loop (advance-whitespace state ch)))
-                
-                ;; Comments
-                ((and (char-equal? ch char-semicolon)
-                      (char-equal? (string-nth-or input (succ pos) char-space) 
-                                  char-semicolon))
-                 (tokenize-comment state))
-                
-                ;; String literals
-                ((char-equal? ch char-quote)
-                 (tokenize-string state))
-                
-                ;; Numbers
-                ((is-digit? ch)
-                 (tokenize-number state))
-                
-                ;; Identifiers and keywords
-                ((or (is-alpha? ch) (char-equal? ch char-underscore))
-                 (tokenize-identifier state))
-                
-                ;; Operators
-                ((is-operator? ch)
-                 (tokenize-operator state))
-                
-                ;; Delimiters
-                ((is-delimiter? ch)
-                 (tokenize-delimiter state))
-                
-                ;; Special symbols
-                ((member? ch (list char-colon char-comma char-dot char-pipe))
-                 (tokenize-symbol state))
-                
-                ;; Unknown character
-                (else
-                 (error "Unknown character")))))))))
-
-;; Tokenize whitespace
-(type advance-whitespace (-> LexerState Char LexerState))
-(define advance-whitespace
-  (fn (state ch)
-    (match state
-      (case (lexer-state input pos line col tokens)
-        (if (char-equal? ch char-newline)
-            (lexer-state input (succ pos) (succ line) zero tokens)
-            (lexer-state input (succ pos) line (succ col) tokens))))))
-
-;; Tokenize comment
-(type tokenize-comment (-> LexerState (Effect LexerState)))
-(define tokenize-comment
-  (fn (state)
-    (match state
-      (case (lexer-state input pos line col tokens)
-        (let ((comment-end (find-newline input pos)))
-          (let ((comment-text (string-substring input pos comment-end)))
-            (pure (lexer-state input comment-end (succ line) zero
-                              (cons (token comment comment-text line col) 
-                                   tokens)))))))))
-
-;; Tokenize string literal
-(type tokenize-string (-> LexerState (Effect LexerState)))
-(define tokenize-string
-  (fn (state)
-    (match state
-      (case (lexer-state input pos line col tokens)
-        (let ((string-end (find-closing-quote input (succ pos))))
-          (if (= string-end (string-length input))
-              (error "Unterminated string")
-              (let ((string-content (string-substring input (succ pos) string-end)))
-                (pure (lexer-state input (succ string-end) line 
-                                  (+ col (- string-end pos))
-                                  (cons (token string-lit string-content line col)
-                                       tokens))))))))))
-
-;; Tokenize number
-(type tokenize-number (-> LexerState (Effect LexerState)))
-(define tokenize-number
-  (fn (state)
-    (match state
-      (case (lexer-state input pos line col tokens)
-        (let ((num-end (find-non-digit input pos)))
-          (let ((num-text (string-substring input pos num-end)))
-            (pure (lexer-state input num-end line (+ col (- num-end pos))
-                              (cons (token number-lit num-text line col)
-                                   tokens)))))))))
-
-;; Tokenize identifier or keyword
-(type tokenize-identifier (-> LexerState (Effect LexerState)))
-(define tokenize-identifier
-  (fn (state)
-    (match state
-      (case (lexer-state input pos line col tokens)
-        (let ((id-end (find-non-alnum input pos)))
-          (let ((id-text (string-substring input pos id-end)))
-            (let ((tok-type (classify-identifier id-text)))
-              (pure (lexer-state input id-end line (+ col (- id-end pos))
-                                (cons (token tok-type id-text line col)
-                                     tokens))))))))))
-
-;; Classify identifier as keyword or identifier
-(type classify-identifier (-> String TokenType))
-(define classify-identifier
-  (fn (text)
-    (cond
-      ((string-equal? text "fn") fn-kw)
-      ((string-equal? text "lambda") lambda-kw)
-      ((string-equal? text "let") let-kw)
-      ((string-equal? text "in") in-kw)
-      ((string-equal? text "if") if-kw)
-      ((string-equal? text "then") then-kw)
-      ((string-equal? text "else") else-kw)
-      ((string-equal? text "match") match-kw)
-      ((string-equal? text "case") case-kw)
-      ((string-equal? text "data") data-kw)
-      ((string-equal? text "where") where-kw)
-      ((string-equal? text "import") import-kw)
-      ((string-equal? text "type") type-kw)
-      ((string-equal? text "define") define-kw)
-      ((string-equal? text "true") bool-lit)
-      ((string-equal? text "false") bool-lit)
-      (else identifier))))
+(define tokenize-helper
+  (fn (state tokens)
+    (match (next-token state)
+      (case (pair eof-token _)
+        (reverse tokens))
+      (case (pair token new-state)
+        (tokenize-helper new-state (cons token tokens))))))
 
 ;; ============================================================================
-;; HELPER FUNCTIONS
+;; EXPORTS
 ;; ============================================================================
 
-;; Get nth character or default
-(type string-nth-or (-> String Nat Char Char))
-(define string-nth-or
-  (fn (str n default)
-    (if (< n (string-length str))
-        (string-nth str n)
-        default)))
-
-;; Get nth character
-(type string-nth (-> String Nat Char))
-(define string-nth
-  (fn (str n)
-    (match (string-drop n str)
-      (case empty-string (error "Index out of bounds"))
-      (case (string-cons ch _) ch))))
-
-;; Find position of newline
-(type find-newline (-> String Nat Nat))
-(define find-newline
-  (fn (str pos)
-    (find-char str pos char-newline)))
-
-;; Find position of character
-(type find-char (-> String Nat Char Nat))
-(define find-char
-  (fn (str pos ch)
-    (if (>= pos (string-length str))
-        (string-length str)
-        (if (char-equal? (string-nth str pos) ch)
-            pos
-            (find-char str (succ pos) ch)))))
-
-;; String substring
-(type string-substring (-> String Nat Nat String))
-(define string-substring
-  (fn (str start end)
-    (string-take (- end start) (string-drop start str))))
+(export SExpToken)
+(export tokenize)
+(export lparen-token)
+(export rparen-token)
+(export symbol-token)
+(export number-token)
+(export string-token)
+(export quote-token)
+(export eof-token)
