@@ -23,12 +23,76 @@
   (case constructor (-> String (List HoTT-AST) HoTT-AST))
   (case literal (-> Value HoTT-AST))
   (case effect (-> Effect HoTT-AST))
+  (case computation (-> ComputationalAction HoTT-AST))
+  
+  ;; Computation as effect nodes
+  (case computation-expr (-> HoTT-AST Evidence HoTT-AST))
+  (case evidence-annotation (-> EvidenceType EvidenceValue HoTT-AST))
+  (case optimization-directive (-> OptimizationHint HoTT-AST HoTT-AST))
+  
   (case let-expr (-> String HoTT-AST HoTT-AST HoTT-AST))
   (case match-expr (-> HoTT-AST (List MatchCase) HoTT-AST)))
 
 ;; Match case for pattern matching
 (data MatchCase U0
   (case match-case (-> Pattern HoTT-AST MatchCase)))
+
+;; ============================================================================
+;; EVIDENCE TYPES FOR AST
+;; ============================================================================
+
+;; Evidence that can be attached to AST nodes
+(data Evidence U0
+  (case termination-evidence-ast (-> TerminationBound Evidence))
+  (case complexity-evidence-ast (-> ComplexityBound Evidence))
+  (case space-evidence-ast (-> SpaceBound Evidence))
+  (case determinism-evidence-ast (-> DeterminismLevel Evidence))
+  (case combined-evidence-ast (-> (List Evidence) Evidence)))
+
+;; Evidence type categories
+(data EvidenceType U0
+  (case termination-type EvidenceType)
+  (case complexity-type EvidenceType)
+  (case space-type EvidenceType)
+  (case correctness-type EvidenceType))
+
+;; Evidence values (simplified for AST)
+(data EvidenceValue U0
+  (case constant-evidence (-> Nat EvidenceValue))
+  (case linear-evidence (-> Nat EvidenceValue))
+  (case polynomial-evidence (-> Nat Nat EvidenceValue))
+  (case proven-evidence EvidenceValue)
+  (case assumed-evidence EvidenceValue))
+
+;; Optimization hints based on evidence
+(data OptimizationHint U0
+  (case optimize-for-speed OptimizationHint)
+  (case optimize-for-space OptimizationHint)
+  (case optimize-for-proof-size OptimizationHint)
+  (case parallelize-when-safe OptimizationHint)
+  (case cache-when-deterministic OptimizationHint))
+
+;; Bounds for evidence
+(data TerminationBound U0
+  (case always-terminates (-> Nat TerminationBound))
+  (case structurally-decreasing TerminationBound)
+  (case well-founded (-> String TerminationBound)))
+
+(data ComplexityBound U0
+  (case constant-time ComplexityBound)
+  (case linear-time ComplexityBound)
+  (case logarithmic-time ComplexityBound)
+  (case polynomial-time (-> Nat ComplexityBound)))
+
+(data SpaceBound U0
+  (case constant-space (-> Nat SpaceBound))
+  (case linear-space SpaceBound)
+  (case logarithmic-space SpaceBound))
+
+(data DeterminismLevel U0
+  (case fully-deterministic DeterminismLevel)
+  (case context-deterministic DeterminismLevel)
+  (case non-deterministic DeterminismLevel))
 
 ;; Pattern for matching
 (data Pattern U0

@@ -50,6 +50,12 @@
   ;; Empty type: has no elements
   (case empty-type Type)
   
+  ;; Computation type: carries evidence of computational properties
+  (case computation-type (-> Type Type))
+  
+  ;; Evidence type: proofs about computations
+  (case evidence-type (-> EvidenceKind Type))
+  
   ;; Inductive types with constructors
   (case inductive-type (-> String (List Constructor) Type)))
 
@@ -64,6 +70,19 @@
 (define product-type
   (fn (A B)
     (sigma-type "_" A B)))
+
+;; ============================================================================
+;; EVIDENCE KINDS FOR COMPUTATION TYPES
+;; ============================================================================
+
+;; Kinds of evidence that computations can carry
+(data EvidenceKind U0
+  (case termination-kind EvidenceKind)
+  (case complexity-kind EvidenceKind)
+  (case space-kind EvidenceKind)
+  (case determinism-kind EvidenceKind)
+  (case correctness-kind EvidenceKind)
+  (case composite-kind (-> (List EvidenceKind) EvidenceKind)))
 
 ;; ============================================================================
 ;; TYPE CHECKING CONTEXT

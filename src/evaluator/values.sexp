@@ -27,8 +27,11 @@
   ;; String values (for effects and I/O)
   (case string-value (-> String Value))
   
-  ;; Effect values (algebraic effects)
+  ;; Effect values (algebraic effects - legacy)
   (case effect-value (-> Effect Value))
+  
+  ;; Computation values (HoTT-native effects)
+  (case computation-value (-> ComputationalAction Value))
   
   ;; Path values (inhabitants of identity types)
   (case path-runtime-value (-> Type Value Value Proof Value))
