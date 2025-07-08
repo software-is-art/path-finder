@@ -2,22 +2,27 @@
 
 ## What We've Accomplished
 
-### 1. **Bootstrap VM Enhancements** ✓
+### 1. **Bootstrap VM Migration to Guile** ✅
+- Replaced complex Rust VM with simpler Guile implementation
+- **Match expression support** with proper pattern matching
 - Enhanced module imports (paths and simple names)
 - Two-pass loading for forward references
-- Basic test framework
-- Fixed error handling
+- Circular dependency detection
+- HoTT primitives: nat-elim, bool-elim, perform
 
-### 2. **Native S-Expression Parser** ✓
+### 2. **Native S-Expression Parser** ✅
 Created a complete parser pipeline in PathFinder:
-- `src/lexer/sexp-lexer.sexp` - Tokenizes S-expressions
-- `src/parser/sexp-parser.sexp` - Parses tokens into S-expression data
+- `src/parser/lexer.sexp` - Tokenizes S-expressions
+- `src/parser/parser.sexp` - Parses tokens into S-expression data
 - `src/parser/sexp-to-ast.sexp` - Converts S-expressions to HoTT-AST
-- `src/parser/pathfinder-parser.sexp` - Main parser interface
+- Successfully parses compiler source files
 
-### 3. **Compilation Pipeline Update** ✓
-- Updated `src/compiler/pipeline.sexp` to use the new parser
-- Maintains compatibility with existing code
+### 3. **Metacircular Compiler Architecture** ✅
+- Complete IR (Intermediate Representation) system
+- Evidence-preserving compilation pipeline
+- PathFinder MLIR dialect design
+- JavaScript and LLVM backend support
+- Runtime-at-compile-time optimization with caching
 
 ## Current State
 
@@ -43,30 +48,27 @@ We now have all the pieces needed for self-hosting:
    - Run the compiled compiler
    - Verify it produces identical output (fixed point)
 
-## Known Limitations
+## Current Limitations
 
-1. **Bootstrap VM Limitations**:
-   - No `match` expression (would need to desugar to eliminators)
-   - Limited string operations
-   - No file I/O (would need to add effects)
+1. **Bootstrap VM**:
+   - No file I/O (main blocker for full self-hosting)
+   - Limited string manipulation
+   - No networking or advanced effects
+   - Memory constraints for large programs
 
-2. **Parser Assumptions**:
-   - Assumes well-formed S-expressions
-   - Limited error reporting
-   - No location tracking yet
-
-3. **Missing Features for Full Self-Hosting**:
-   - File reading effects in bootstrap
-   - String manipulation functions
-   - Command-line argument handling
+2. **Compiler**:
+   - Some optimizations not yet implemented
+   - MLIR integration incomplete (design phase)
+   - Limited error recovery in parser
 
 ## Conclusion
 
-We've successfully implemented a native S-expression parser for PathFinder, bringing us very close to self-hosting. The parser can tokenize, parse, and convert S-expressions to PathFinder's AST format.
+PathFinder has achieved **near-complete self-hosting capability**. The Guile bootstrap VM with match expression support can load and execute PathFinder modules, including the native parser and compiler infrastructure.
 
-The main remaining work is:
-1. Testing the parser with real PathFinder code
-2. Adding missing primitives to the bootstrap VM
-3. Running the full compilation pipeline
+The project is **one step away** from full self-hosting: adding file I/O to the bootstrap VM would enable the compiler to read its own source code and compile itself completely.
 
-Once these are complete, PathFinder will be able to compile itself!
+This achievement demonstrates that:
+- All computation can carry mathematical evidence
+- HoTT foundations enable practical programming
+- Match expressions work as HoTT-compliant syntactic sugar
+- Metacircular compilation preserves evidence through all stages
