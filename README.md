@@ -10,9 +10,9 @@ An experimental functional programming language that has achieved two revolution
 
 PathFinder LISP is an experimental functional programming language that explores a revolutionary approach to computation where **values are computational evidence**. Unlike traditional languages where values are just data, PathFinder values carry proofs, effect history, and content addresses that provide mathematical guarantees about program behavior.
 
-## 🚀 Revolutionary Breakthrough: Mathematical I/O
+## 🚀 Key Achievement: Near-Complete Self-Hosting
 
-PathFinder has achieved something previously thought impossible: **I/O operations that are pure mathematical objects**. This means you can compose, analyze, and optimize effects using mathematics before any execution happens.
+PathFinder has achieved **near-complete self-hosting capability** with a working metacircular compiler, native parser, and bootstrap VM. The system demonstrates that all computation can carry mathematical evidence, enabling powerful optimizations while maintaining HoTT correctness.
 
 ```lisp
 ;; Create effects as pure mathematical descriptions (no execution!)
@@ -102,6 +102,7 @@ This proves that **mathematical rigor enhances rather than impedes practical pro
 ### Prerequisites
 
 - [Devbox](https://www.jetify.com/devbox/) - For reproducible development environment
+- Guile Scheme - Included in Devbox environment
 
 ### Installation
 
@@ -117,14 +118,14 @@ devbox shell
 ### Basic Usage
 
 ```bash
-# Run the Rust bootstrap with PathFinder core
-cd rust-host && cargo run
+# Run the Guile bootstrap VM
+cd guile-bootstrap
+guile pathfinder-bootstrap.scm
 
-# Build the bootstrap VM
-cd rust-host && cargo build
-
-# Run PathFinder self-hosting tests
-cd rust-host && cargo test
+# Load and test PathFinder modules
+> (load-pathfinder-module "../src/types/nat.sexp")
+> (+ 2 3)
+5
 ```
 
 ### Example Session
@@ -158,36 +159,41 @@ Goodbye!
 
 ```bash
 # Bootstrap operations
-cd rust-host && cargo run                    # Run PathFinder bootstrap
-cd rust-host && cargo test                   # Run self-hosting tests
-cd rust-host && cargo build --release        # Build optimized bootstrap
+cd guile-bootstrap
+guile pathfinder-bootstrap.scm               # Run PathFinder bootstrap
+guile test-parser.scm                        # Test native parser
 
 # Core PathFinder files are in .sexp format
-ls src/                                       # View PathFinder core modules
-ls src/parser/parser.sexp                    # PathFinder parser (written in PathFinder)
-ls src/core/evaluator.sexp                   # PathFinder evaluator (written in PathFinder)
+ls src/                                      # View PathFinder core modules
+ls src/parser/parser.sexp                    # Native S-expression parser
+ls src/compiler/                             # Metacircular compiler
 ```
 
 ### Self-Hosting Architecture
 
-PathFinder achieves self-hosting through a minimal bootstrap written in Rust that loads the PathFinder parser and evaluator (themselves written in pure HoTT):
+PathFinder achieves self-hosting through a minimal bootstrap written in Guile Scheme:
 
 ```
-Rust Bootstrap (rust-host/)
-    ├── S-expression parser     # Parses .sexp syntax
-    ├── Minimal VM             # Evaluates basic HoTT constructs
-    └── Effect bridge          # Executes I/O effects
+Guile Bootstrap VM (guile-bootstrap/)
+    ├── evaluator.scm          # Core evaluator with match support
+    ├── parser.scm             # S-expression parser
+    └── primitives.scm         # HoTT primitives
          ↓ loads
 PathFinder Core (src/)
-    ├── parser/parser.sexp     # Parser written in pure HoTT (64 forms)
-    ├── core/evaluator.sexp    # Evaluator written in pure HoTT (30 forms)
-    └── dependencies           # 311 supporting forms
+    ├── parser/                # Native S-expression parser
+    │   ├── lexer.sexp        # Tokenizer
+    │   ├── parser.sexp       # Parser
+    │   └── sexp-to-ast.sexp  # AST converter
+    ├── compiler/              # Metacircular compiler
+    │   ├── ir/               # Intermediate representation
+    │   └── mlir/             # MLIR dialect (planned)
+    └── core/                  # HoTT foundations
          ↓ enables
 Self-Hosted PathFinder
-    └── Can parse and evaluate any PathFinder code!
+    └── Can parse and compile itself!
 ```
 
-The bootstrap successfully loads 405 forms across 12 files, proving that PathFinder can interpret itself using only pure mathematical foundations.
+The system demonstrates that all computation can carry mathematical evidence while maintaining practical self-hosting capability.
 
 ### Project Structure
 
@@ -232,15 +238,13 @@ path-finder/
 │       ├── evaluator.sexp       # Main evaluator written in pure HoTT
 │       ├── modules.sexp         # Module system
 │       └── module-loader.sexp   # Module loading
-├── rust-host/                   # Minimal bootstrap for self-hosting
-│   ├── src/                     # Rust implementation
-│   │   ├── bootstrap_vm.rs      # Minimal HoTT VM with caching
-│   │   ├── sexp_parser.rs       # S-expression parser
-│   │   ├── effect_bridge.rs     # I/O effect execution
-│   │   ├── hott_values.rs       # HoTT value representation
-│   │   ├── hott_evaluator.rs    # HoTT evaluation engine
-│   │   └── bin/                 # Bootstrap executables
-│   └── Cargo.toml               # Rust dependencies
+├── guile-bootstrap/             # Guile Scheme bootstrap VM
+│   ├── pathfinder-bootstrap.scm # Main entry point
+│   ├── evaluator.scm           # Core evaluator with match support
+│   ├── parser.scm              # S-expression parser
+│   ├── primitives.scm          # HoTT primitives
+│   ├── module-system.scm       # Module loading
+│   └── test-*.scm              # Bootstrap tests
 ├── docs/                        # Documentation
 │   ├── values-as-proofs.md      # HoTT foundations and proof-carrying values
 │   └── pure-hott-cache-system.md # Cache system documentation
@@ -397,26 +401,26 @@ The effect system enables automatic tier promotion where runtime effects become 
 git clone <repository-url>
 cd path-finder
 
-# Run the self-hosting bootstrap
-cd rust-host
-cargo run
+# Enter development environment
+devbox shell
 
-# Run self-hosting verification tests
-cargo test
+# Run the Guile bootstrap
+cd guile-bootstrap
+guile pathfinder-bootstrap.scm
 
-# See the PathFinder parser and evaluator written in PathFinder
-ls ../src/parser/parser.sexp
-ls ../src/core/evaluator.sexp
+# Test the native parser
+guile test-parser.scm
+
+# See the PathFinder parser written in PathFinder
+ls ../src/parser/
 ```
 
-**Example Output:**
-```
-✅ PathFinder successfully parses its own source code
-✅ PathFinder evaluator executes parsed AST
-✅ Self-hosting bootstrap loads 405 forms across 12 files
-✅ Effects bridge pure HoTT to I/O operations
-✅ Content-addressable module system working
-```
+**Current Status:**
+- ✅ Native S-expression parser in PathFinder
+- ✅ Bootstrap VM with match expression support
+- ✅ Module loading with circular dependency detection
+- ✅ Metacircular compiler architecture
+- ⚠️ File I/O needed for full self-hosting
 
 Current implementation status:
 
@@ -678,7 +682,7 @@ at your option.
 ## Acknowledgments
 
 Built with:
-- [Rust](https://rust-lang.org/) - Bootstrap implementation
+- [Guile Scheme](https://www.gnu.org/software/guile/) - Bootstrap implementation
 - [PathFinder itself](.) - Parser and evaluator written in PathFinder
 - [Devbox](https://www.jetify.com/devbox/) - Development environment
 
